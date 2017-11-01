@@ -12,9 +12,11 @@ The server has a few tasks to do:
 * Provide basic safety checking (bounding box & displacement).
 
 ## Dependances & supported platform
-Require Google Protobuf.
-Require Eigen3.
-Can be compiled as a ROS package, or independently with CMake.
+* Google Protobuf.
+* Eigen3.
+* cmake
+
+The repo can be compiled as a ROS package, or compiled independently with cmake.
 
 
 
