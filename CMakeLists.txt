@@ -60,7 +60,7 @@ target_link_libraries(${PROJECT_NAME}
 #   CATKIN_DEPENDS roscpp
 #   )
 
-# install(DIRECTORY include/${PROJECT_NAME}/ ${PROJECT_BINARY_DIR}/
+# install(DIRECTORY include ${PROJECT_BINARY_DIR}/
 #     DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 #     FILES_MATCHING PATTERN "*.h"
 #     )
@@ -68,14 +68,15 @@ target_link_libraries(${PROJECT_NAME}
 
 # 
 #   Uncomment this part if used as an independent library.
-#   Installation to /usr/local. 
+#   Install headers/libs to /usr/local. 
 # 
 # headers
-install(DIRECTORY include/
+install(DIRECTORY include ${PROJECT_BINARY_DIR}/
     DESTINATION /usr/local/include/${PROJECT_NAME}
+    FILES_MATCHING PATTERN "*.h"
     )
 
 # binaries
-install(TARGETS ${PROJECT_NAME}
+install(TARGETS ${PROJECT_NAME} egm_proto practical_socket
     DESTINATION /usr/local/lib/${PROJECT_NAME}
     )

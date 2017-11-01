@@ -1,6 +1,12 @@
 # egm
 C++ Interface with ABB EGM module
 
+The library help you write a server that talks with the robot.
+The server has a few tasks to do:
+1. Open&listen to the udp port for the handshake signal from EGM (the robot side)
+2. Receive & unwrap messages from EGM
+3. After receiving a message, send a wrapped message to EGM.
+
 ## Features:
 * Support Cartesian Pose reading/writting
 * Provide basic safety checking (bounding box & displacement).
@@ -12,7 +18,6 @@ Can be compiled as a ROS package, or independently with CMake.
 
 
 
-
 # Installation
 ## Install the google protobuf.
 * Download code from: (Tested on 3.1 and 3.4, you can try newer version)
@@ -21,7 +26,7 @@ https://github.com/google/protobuf/tree/v3.1.0
 https://github.com/google/protobuf/blob/master/src/README.md
 
 ## Download this repo
-If use in ROS, download it as a package.
+If use in ROS, download it as a ROS package.
 ```
 cd path_to_catkin_workspace/src
 git clone git@mlab.ri.cmu.edu:mlab-infra/egm.git
@@ -33,9 +38,41 @@ git clone git@mlab.ri.cmu.edu:mlab-infra/egm.git
 ```
 
 ## Compile & Install
+Open ```CMakeLists.txt```. At the bottom, uncomment the install rules you want (ROS/non-ROS).
+
+Next, if build in ROS, just run ```catkin_make```.
+```
+cd path_to_catkin_workspace
+catkin_make
+```
+
+If build independently,
+```
+cd egm
+mkdir build & cd build
+cmake ..
+make
+sudo make install
+```
+The last step will install egm headers to /usr/local/include/egm/, shared libraries to /usr/local/lib/egm/.
 
 
-# Code Example
+## Compile EGM Proto
+Normally you don't need to do this. The ```CMakeLists.txt``` already handles compiling of the proto. However, if you encouter problems with this part and have to compile proto file manually, here is how:
+(remember to install the protobuf compiler first)
+
+``` 
+$ cd egm/proto
+$ protoc  --cpp_out=. egm.proto 
+```
+There will be a warning saying default syntax is used, and that is fine.
+
+This generates the following files, which shall be used in your CMakeLists.txt.
+- egm.pb.h, the header which declares your generated classes.
+- egm.pb.cc, which contains the implementation of your classes.
+
+
+# Usage
 ## Prepare RAPID code on Robot
 There are a set of RAPID commands just for EGM. You can control a variety of parameters from that. For details please refer to the ABB official manual listed in *Reference* section.
 
@@ -43,18 +80,106 @@ For MLab people:
 There are already programs with EGM on ABB R120 robot.
 You can just load one of them.
 
-## Writting your application
-In EGM, the server is the thread that talks with the robot.
-The server has a few tasks to do:
-1. Open&listen to the udp port for the handshake signal from EGM (the robot side)
-2. Receive & unwrap messages from EGM
-3. After receiving a message, send a wrapped message to EGM.
+## Example Code (ROS)
+Make sure you have the following in ```CMakeLists.txt``` of your package:
+```
+find_package(catkin REQUIRED COMPONENTS
+  egm_hardware
+)
 
-Here *wrap* means package into Google ProtocolBuf.
- 
-There are two code examples for you to choose from: 
-1. egm-server: A minimal server example. Everything you need to write is in one file.
-2. egm-comm: A C++ class wrapping up all the EGM function with easy to use interface. Also can be used with ROS.
+include_directories(${egm_INCLUDE_DIRS})
+
+target_link_libraries(targetname egm)
+```
+
+For writing C++ code, refer to the next section.
+## Example Code (Independent)
+Create a repo. In command line:
+```
+cd somewhere_clean
+mkdir test & cd test
+touch CMakeLists.txt
+touch main.cpp
+```
+Write the following into ```main.cpp```
+```
+#include <egm/EGMClass.h>
+
+using namespace std;
+
+
+int main(void)
+{
+	// get current time
+	std::chrono::high_resolution_clock::time_point time0 = std::chrono::high_resolution_clock::now();
+	unsigned short portnum = 6510;
+	float max_dist_tran    = 10;
+	float max_dist_rot     = 1;
+	float egm_safety[6]    = {-100, 100, -100, 100, -100, 100};
+	EGMSafetyMode mode     = SAFETY_MODE_STOP;
+	bool print_flag        = true;
+	string filefullpath    = "/home/mlab/data/egmdata.txt";
+
+	EGMClass *egm = EGMClass::Instance();
+	// create thread to communite with EGM at 250Hz
+	egm->init(time0, portnum, max_dist_tran, max_dist_rot, egm_safety, mode, print_flag, filefullpath);
+
+
+	// write your control loop here
+	float pose[7];
+	float pose_set[7];
+	while (true)
+	{
+		// read feedback
+		egm->GetCartesian(pose);
+
+		// compute command
+		pose_set[0] = pose[0]; // x
+		pose_set[1] = pose[1]; // y
+		pose_set[2] = pose[2]; // z
+		pose_set[3] = pose[3]; // q0
+		pose_set[4] = pose[4]; // q1
+		pose_set[5] = pose[5]; // q2
+		pose_set[6] = pose[6]; // q3
+
+		// send command
+		egm->SetCartesian(pose_set);
+
+		// spin once
+	}
+
+
+	return 0;
+}
+```
+
+Put the following into ```CMakeLists.txt```
+```
+cmake_minimum_required(VERSION 2.8.3)
+#######################
+project(egmtest)
+set (CMAKE_CXX_FLAGS "--std=gnu++11 ${CMAKE_CXX_FLAGS}")
+
+# find_package(Boost REQUIRED COMPONENTS system)
+
+include_directories(/usr/local/include/egm)
+
+add_executable(${PROJECT_NAME} main.cpp)
+target_link_libraries(${PROJECT_NAME} /usr/local/lib/egm/libegm.so)
+```
+Then compile your code in command line: (you are at root of the repo)
+```
+mkdir build & cd build
+cmake ..
+make
+```
+
+# Experiment with Robot
+To test EGM, follow the steps below.
+1. Power on the robot.
+2. In RoboStudio, choose the correct RAPID program.
+3. On your computer, run the server program. The process will be blocked at egm->init, waiting for connection.
+4. On robot Teach Pedant, click "start" button. A signal will be sent to server, and the 4ms communication shall begin. 
 
 
 # About EGM Communication
@@ -70,6 +195,9 @@ More about ```protobuf```:
 https://developers.google.com/protocol-buffers/docs/cpptutorial
 
 # About EGM Position Guidance
+*Official Manual*
+Application manual-Controller software IRC5
+
 *EGM Position Guidance does not contain interpolator functionality. It only does filtering, supervision of references, and state handling.
 *The inner controller works as:
 	speed = k * (pos_ref – pos) + speed_ref
