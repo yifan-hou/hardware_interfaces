@@ -40,15 +40,16 @@ git clone git@mlab.ri.cmu.edu:mlab-infra/egm.git
 ```
 
 ## Compile & Install
-Open ```CMakeLists.txt```. At the bottom, uncomment the install rules you want (ROS/non-ROS).
+### Build as a ROS package
+Rename ```CMakeLists.txt.egm``` to ```CMakeLists.txt``` (replace the origin ```CMakeLists.txt```. 
 
-Next, if build in ROS, just run ```catkin_make```.
+Then just run ```catkin_make```.
 ```
 cd path_to_catkin_workspace
 catkin_make
 ```
 
-If build independently,
+### Build independently
 ```
 cd egm
 mkdir build & cd build
@@ -56,11 +57,11 @@ cmake ..
 make
 sudo make install
 ```
-The last step will install egm headers to /usr/local/include/egm/, shared libraries to /usr/local/lib/egm/.
+The last step will install egm headers to /usr/local/include/egm/, *shared* libraries to /usr/local/lib/egm/.
 
 
 ## Compile EGM Proto
-Normally you don't need to do this. The ```CMakeLists.txt``` already handles compiling of the proto. However, if you encouter problems with this part and have to compile proto file manually, here is how:
+Normally you DO NOT need to do this. The ```CMakeLists.txt``` already handles compiling of the proto. However, if you encouter problems with this part and have to compile proto file manually, here is how:
 (remember to install the protobuf compiler first)
 
 ``` 
