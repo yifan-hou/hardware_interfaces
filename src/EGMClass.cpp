@@ -2,9 +2,9 @@
 #include <cmath>
 #include <cassert>
 #include <Eigen/Dense>
-#include "EGMClass.h"
 
-#include <utilities.h> 
+#include "EGMClass.h"
+#include "utilities.h" 
 
 
 #define RCBFLENGTH 1400
@@ -72,17 +72,18 @@ int SlerpFixAngle(const Vector4d &qa, const Vector4d &qb, Vector4d &qm, float an
 
 EGMClass* EGMClass::Instance()
 {
-	if (pinstance == 0) // first time call
-	{
-		pinstance = new EGMClass;
-	}
-	return pinstance;
+  if (pinstance == 0) // first time call
+  {
+    pinstance = new EGMClass;
+  }
+  return pinstance;
 }
 
 EGMClass::EGMClass()
 {
-	// do some initialization
+  // do some initialization
     _pose          = new float[7];
+    _joints = new float[6];
     _set_pose      = new float[7];
     _safe_zone     = new float[6];
     _isInitialized = false;
@@ -92,9 +93,9 @@ EGMClass::EGMClass()
 
 EGMClass & EGMClass::operator=(const EGMClass & olc)
 {
-	// shall never get called
-	EGMClass* lc = new EGMClass();
-	return *lc;
+  // shall never get called
+  EGMClass* lc = new EGMClass();
+  return *lc;
 }
 
 EGMClass::~EGMClass()
@@ -102,10 +103,32 @@ EGMClass::~EGMClass()
     if (_print_flag)
         _file.close();
 
-	delete pinstance;
+  delete pinstance;
     delete [] _pose;
     delete [] _set_pose;
     delete [] _safe_zone;
+    delete [] _joints;
+}
+
+void* EMG_JOINT_MODE(void *pParam) {
+  std::cout << "EGMClss Joint Mode is running." << std::endl;
+  EGMClass *egm = (EGMClass*)pParam;
+  //float[6] set_joints;
+  //egm->GetJoints(set_joints);
+
+  while(true) {
+    //UT::copyArray(egm->_set_joints, set_joints);
+    std::cout << "debug" << std::endl;
+    for (int i = 0; i < 6; ++i) {
+      std::cout << egm->_set_joints[i] << "|";
+    }
+
+    std::cout << std::endl;
+    sleep(10.0 / 1000.0);
+    egm->send(egm->_set_joints, JOINT_MOVE);
+    egm->listen();
+    //UT::copyArray(egm->_set_joints, set_joints);
+  }
 }
 
 //
@@ -123,69 +146,68 @@ void* EGM_Monitor(void* pParam)
     
     Clock::time_point timenow_clock;
     // begin the loop
-    for (;;)
-    {
-        // read from buffer
-        bool issafe = egm->GetCartesian(pose);
-        // check safety zone
-        if (!issafe)
-        {
-            cout << "[EGMClass] [Out of safety zone!!!] Motion Stopped." << endl;
-            egm->send(pose);
-            egm->listen();
-            exit(1);
-        }
+    for (;;) {
+      // read from buffer
+      bool issafe = egm->GetCartesian(pose);
+      // check safety zone
+      if (!issafe)
+      {
+          cout << "[EGMClass] [Out of safety zone!!!] Motion Stopped." << endl;
+          egm->send(pose);
+          egm->listen();
+          exit(1);
+      }
 
-        if(egm->_print_flag)
-        {
-            timenow_clock = Clock::now();
-            double timenow = double(std::chrono::duration_cast<std::chrono::nanoseconds>(timenow_clock - egm->_time0).count())/1e6; // milli second
-            egm->_file << timenow << "\t";
-            UT::stream_array_in(egm->_file, pose, 7);
-        }
+      if(egm->_print_flag)
+      {
+          timenow_clock = Clock::now();
+          double timenow = double(std::chrono::duration_cast<std::chrono::nanoseconds>(timenow_clock - egm->_time0).count())/1e6; // milli second
+          egm->_file << timenow << "\t";
+          UT::stream_array_in(egm->_file, pose, 7);
+      }
 
-        // command is given by _set_pose
-        for(int i=0; i<3; i++) 
-            tran(i) = egm->_set_pose[i] - pose[i];
-        for(int i = 0; i < 4; i++)
-        {
-            quatNow(i) = pose[i+3];
-            quatGoal(i) = egm->_set_pose[i+3];
-        }
+      // command is given by _set_pose
+      for(int i=0; i<3; i++) 
+          tran(i) = egm->_set_pose[i] - pose[i];
+      for(int i = 0; i < 4; i++)
+      {
+          quatNow(i) = pose[i+3];
+          quatGoal(i) = egm->_set_pose[i+3];
+      }
 
-        if (egm->_mode == SAFETY_MODE_NONE)
-        {
-            quatSet(0) = quatGoal(0);
-            quatSet(1) = quatGoal(1);
-            quatSet(2) = quatGoal(2);
-            quatSet(3) = quatGoal(3);
-        }
-        else 
-        {
-            // check translation and rotation
-            // compute the truncated motion
-            bool violated = false;
-            if (tran.norm() > egm->_max_dist_tran) 
-            {
-                violated = true;
-                tran *= (egm->_max_dist_tran/tran.norm());
-            }
-            
-            if (SlerpFixAngle(quatNow, quatGoal, quatSet, egm->_max_dist_rot))
-            {
-                violated = true;
-            }
-            assert(abs(quatSet.norm()-1) < 0.01);
+      if (egm->_mode == SAFETY_MODE_NONE)
+      {
+          quatSet(0) = quatGoal(0);
+          quatSet(1) = quatGoal(1);
+          quatSet(2) = quatGoal(2);
+          quatSet(3) = quatGoal(3);
+      }
+      else 
+      {
+          // check translation and rotation
+          // compute the truncated motion
+          bool violated = false;
+          if (tran.norm() > egm->_max_dist_tran) 
+          {
+              violated = true;
+              tran *= (egm->_max_dist_tran/tran.norm());
+          }
+          
+          if (SlerpFixAngle(quatNow, quatGoal, quatSet, egm->_max_dist_rot))
+          {
+              violated = true;
+          }
+          assert(abs(quatSet.norm()-1) < 0.01);
 
-            // stop if necessary
-            if ((egm->_mode == SAFETY_MODE_STOP) & violated)
-            {
-                cout << "[EGMClass] [Command is Too Fast!!] Motion Stopped." << endl;
-                egm->send(pose);
-                egm->listen();
-                exit(1);
-            }
-        }
+          // stop if necessary
+          if ((egm->_mode == SAFETY_MODE_STOP) & violated)
+          {
+              cout << "[EGMClass] [Command is Too Fast!!] Motion Stopped." << endl;
+              egm->send(pose);
+              egm->listen();
+              exit(1);
+          }
+      }
 
         tranSet[0] = pose[0] + tran(0);
         tranSet[1] = pose[1] + tran(1);
@@ -213,63 +235,78 @@ void* EGM_Monitor(void* pParam)
     }
 }
 
-int EGMClass::init(std::chrono::high_resolution_clock::time_point time0, unsigned short portnum, float max_dist_tran, float max_dist_rot, float *safe_zone, EGMSafetyMode mode, bool printflag, string filefullpath)
-{
-    /* Establish connection with ABB EGM */ 
-    _EGMsock.setLocalPort(portnum);
-    _print_flag    = printflag;
-    _isInitialized = true;
+int EGMClass::init(std::chrono::high_resolution_clock::time_point time0, unsigned short portnum, float max_dist_tran, float max_dist_rot, float *safe_zone, EGMSafetyMode mode, bool printflag, string filefullpath) {
+  /* Establish connection with ABB EGM */ 
+  _EGMsock.setLocalPort(portnum);
+  _print_flag    = printflag;
+  _isInitialized = true;
 
-    if (printflag)
-        _file.open(filefullpath);
+  if (printflag)
+      _file.open(filefullpath);
 
-    cout << "EGM server is waiting for connection..\n";
-    listen(); // _pose is set here
-    _time0 = time0;
-    cout << "EGM connection established.\n";
-    
-    _mode          = mode;
-    _max_dist_tran = max_dist_tran;
-    _max_dist_rot  = max_dist_rot;
+  cout << "EGM server is waiting for connection..\n";
+  listen(); // _pose is set here
+  _time0 = time0;
+  cout << "EGM connection established.\n";
+  
+  _mode          = mode;
+  _max_dist_tran = max_dist_tran;
+  _max_dist_rot  = max_dist_rot;
 
-    /* Initialize goal */
-    UT::copyArray(_pose, _set_pose, 7);
-    UT::copyArray(safe_zone, _safe_zone, 6);
-    /* Create thread to run communication with EGM */
-    cout << "EGM is trying to create thread.\n";
-    int rc = pthread_create(&_thread, NULL, EGM_Monitor, this);
-    if (rc){
-        cout <<"EGM error:unable to create thread.\n";
-        return false;
-    }
-    cout << "EGM thread created.\n";
-    
-    return true;
+  /* Initialize goal */
+  UT::copyArray(_pose, _set_pose, 7);
+  UT::copyArray(_joints, _set_joints, 6);
+  UT::copyArray(safe_zone, _safe_zone, 6);
+  /* Create thread to run communication with EGM */
+  cout << "EGM is trying to create thread.\n";
+ // int rc = pthread_create(&_thread, NULL, EGM_Monitor, this);
+  int rc = pthread_create(&_thread, NULL, EMG_JOINT_MODE, this);
+  if (rc){
+      cout <<"EGM error:unable to create thread.\n";
+      return false;
+  }
+  cout << "EGM thread created.\n";
+  
+  return true;
 }
 
-int EGMClass::GetCartesian(float *pose)
+bool EGMClass::GetCartesian(float *pose)
 {
-    if (!_isInitialized) return false;
+  if (!_isInitialized) return false;
 
-    UT::copyArray(_pose, pose, 7);
+  UT::copyArray(_pose, pose, 7);
 
-    // check safety
-    if ((_pose[0]>_safe_zone[0]) || (_pose[0]<_safe_zone[1]))
-        return false;
-    if ((_pose[1]>_safe_zone[2]) || (_pose[1]<_safe_zone[3]))
-        return false;
-    if ((_pose[2]>_safe_zone[4]) || (_pose[2]<_safe_zone[5]))
-        return false;
+  // check safety
+  if ((_pose[0] < _safe_zone[0]) || (_pose[0] > _safe_zone[1]))
+      return false;
+  if ((_pose[1] < _safe_zone[2]) || (_pose[1] > _safe_zone[3]))
+      return false;
+  if ((_pose[2] < _safe_zone[4]) || (_pose[2] > _safe_zone[5]))
+      return false;
 
-    return true;
+  return true;
 }
 
-int EGMClass::SetCartesian(const float *pose)
+bool EGMClass::SetCartesian(const float *pose)
 {
-    UT::copyArray(pose, _set_pose, 7);
-
-    return true;
+  UT::copyArray(pose, _set_pose, 7);
+  return true;
 }
+
+bool EGMClass::GetJoints(float *joints) {
+  if (!_isInitialized) 
+    return false;
+
+  UT::copyArray(_joints, joints, 6);   
+  // Todo(Jiaji:) Check joint limits here.
+  return true;
+}
+
+bool EGMClass::SetJoints(const float *joints) {
+  UT::copyArray(joints, _set_joints, 6);
+  return true;
+}
+
 
 int EGMClass::listen()
 {
@@ -279,49 +316,52 @@ int EGMClass::listen()
         return false;
     }
 
-	// cout << "If can not receive message, run 'sudo ufw allow 6510'\n";
+  // cout << "If can not receive message, run 'sudo ufw allow 6510'\n";
     char recvBuffer[RCBFLENGTH];
-	int n = _EGMsock.recvFrom(recvBuffer, RCBFLENGTH, _RobotAddress, _RobotPort);
-	if (n < 0)
-	{
-	    cout << "EGM error: Error receiving message.\n";
-	    exit(1);
-	}
-	// cout << "[Egm server node] message received, connection established!\n";
-	// cout << "Address: " << _RobotAddress.c_str() << ", port:" << _RobotPort << endl;
-	
-	_pRecvMessage = new EgmRobot();
-	_pRecvMessage->ParseFromArray(recvBuffer, n);
-	ReadRobotMessage(_pRecvMessage);
-	// printf("x: %lf\ny: %lf\nz: %lf\n", x, y, z);
-	delete _pRecvMessage;
+  int n = _EGMsock.recvFrom(recvBuffer, RCBFLENGTH, _RobotAddress, _RobotPort);
+  if (n < 0)
+  {
+      cout << "EGM error: Error receiving message.\n";
+      exit(1);
+  }
+  // cout << "[Egm server node] message received, connection established!\n";
+  // cout << "Address: " << _RobotAddress.c_str() << ", port:" << _RobotPort << endl;
+  
+  _pRecvMessage = new EgmRobot();
+  _pRecvMessage->ParseFromArray(recvBuffer, n);
+  ReadRobotMessage(_pRecvMessage);
+  // printf("x: %lf\ny: %lf\nz: %lf\n", x, y, z);
+  delete _pRecvMessage;
 
     return true;
 }
 
-void EGMClass::send(float *setpose)
+void EGMClass::send(float *set_cmd, int type)
 {
     if (_RobotPort == 0)
     {
         cout << "EGM error: send() is called before listen().\n";
         return;
     }
-	// -----------------------------------------------------------------------------
-	//      create and send a sensor message
-	// -----------------------------------------------------------------------------
-	_pSendingMessage = new EgmSensor();
-	if(!CreateSensorMessage(_pSendingMessage, setpose))
-    {
-        cout << "EGM error: the goal pos is too far away from current pos.\n";
-        return;
-    }
-	_pSendingMessage->SerializeToString(&_sendBuffer);
-	delete _pSendingMessage;
+  // -----------------------------------------------------------------------------
+  //      create and send a sensor message
+  // -----------------------------------------------------------------------------
+  _pSendingMessage = new EgmSensor();
+  if (type == CARTESIAN_MOVE) {
+    assert(CreateCartesianTargetSensorMessage(set_cmd, _pSendingMessage)); 
+  } else if (type == JOINT_MOVE) {
+    assert(CreateJointTargetSensorMessage(set_cmd, _pSendingMessage));
+  }
 
-    _EGMsock.sendTo(_sendBuffer.c_str(), _sendBuffer.length(), _RobotAddress, _RobotPort);
+  _pSendingMessage->SerializeToString(&_sendBuffer);
+  delete _pSendingMessage;
+
+  _EGMsock.sendTo(_sendBuffer.c_str(), _sendBuffer.length(), 
+      _RobotAddress, _RobotPort);
 }
 
-int EGMClass::CreateSensorMessage(EgmSensor* pSensorMessage, float *setpose)
+int EGMClass::CreateCartesianTargetSensorMessage(const float* setpose, 
+    EgmSensor* pSensorMessage)
 {
     static unsigned int sequenceNumber = 0;
     EgmHeader* header = new EgmHeader();
@@ -358,6 +398,38 @@ int EGMClass::CreateSensorMessage(EgmSensor* pSensorMessage, float *setpose)
     return true;
 }
 
+/// Create a protocol buffer message based on commanded joint.
+int EGMClass::CreateJointTargetSensorMessage(const float* joints, 
+    EgmSensor* pSensorMessage) {
+
+  static unsigned int sequenceNumber = 0;
+  EgmHeader* header = new EgmHeader();
+  header->set_mtype(EgmHeader_MessageType_MSGTYPE_CORRECTION);
+  header->set_seqno(sequenceNumber++);
+
+  Clock::time_point timenow_clock = Clock::now();
+  double time = double(std::chrono::duration_cast<std::chrono::nanoseconds>(timenow_clock - _time0).count())/1e6; // milli second
+  header->set_tm(time);
+
+  pSensorMessage->set_allocated_header(header);
+
+  EgmJoints * pb_joints = new EgmJoints();
+  std::cout << "Joints size " << pb_joints->joints_size() << std::endl;
+  constexpr int num_dofs = 6;
+  for (int i = 0; i < num_dofs; ++i) {
+    float val = joints[i] * 180 / M_PI;
+    pb_joints->add_joints(val);
+  }
+
+  EgmPlanned * pb_plan = new EgmPlanned();
+  pb_plan->set_allocated_joints(pb_joints);
+ 
+  pSensorMessage->set_allocated_planned(pb_plan);
+
+  return true;   
+}
+
+
 // Create a simple robot message
 void EGMClass::CreateSensorMessageEmpty(EgmSensor* pSensorMessage)
 {
@@ -386,6 +458,11 @@ void EGMClass::ReadRobotMessage(EgmRobot *pRobotMessage)
         _pose[4] =  pRobotMessage->feedback().cartesian().orient().u1();
         _pose[5] =  pRobotMessage->feedback().cartesian().orient().u2();
         _pose[6] =  pRobotMessage->feedback().cartesian().orient().u3();
+        std::cout << "read egm joint size " << pRobotMessage->feedback().joints().joints_size() << std::endl;
+        // Get joints value.
+        for (int i = 0; i < 6; ++i) {
+          _joints[i] = pRobotMessage->feedback().joints().joints(i);
+        }
     }
     else
     {
