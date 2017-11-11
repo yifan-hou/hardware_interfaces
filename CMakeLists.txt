@@ -47,7 +47,7 @@ target_link_libraries(${PROJECT_NAME}
 #   Install headers/libs to /usr/local. 
 # 
 # headers
-install(DIRECTORY include/ ${PROJECT_BINARY_DIR}/
+install(DIRECTORY include/egm/ ${PROJECT_BINARY_DIR}/
     DESTINATION /usr/local/include/${PROJECT_NAME}
     FILES_MATCHING PATTERN "*.h"
     )

@@ -3,8 +3,8 @@
 #include <cassert>
 #include <Eigen/Dense>
 
-#include "EGMClass.h"
-#include "utilities.h" 
+#include "egm/EGMClass.h"
+#include "egm/utilities.h" 
 
 
 #define RCBFLENGTH 1400
@@ -83,12 +83,14 @@ EGMClass::EGMClass()
 {
   // do some initialization
     _pose          = new float[7];
-    _joints = new float[6];
+    _joints        = new float[6];
     _set_pose      = new float[7];
+    _set_joints    = new float[6];
     _safe_zone     = new float[6];
     _isInitialized = false;
     _RobotPort     = 0;
-    _mode          = SAFETY_MODE_STOP;
+    _safetyMode    = SAFETY_MODE_STOP;
+    _operationMode = OPERATION_MODE_CARTESIAN;
 }
 
 EGMClass & EGMClass::operator=(const EGMClass & olc)
@@ -103,41 +105,44 @@ EGMClass::~EGMClass()
     if (_print_flag)
         _file.close();
 
-  delete pinstance;
+    delete pinstance;
     delete [] _pose;
-    delete [] _set_pose;
-    delete [] _safe_zone;
     delete [] _joints;
+    delete [] _set_pose;
+    delete [] _set_joints;
+    delete [] _safe_zone;
 }
 
-void* EMG_JOINT_MODE(void *pParam) {
-  std::cout << "EGMClss Joint Mode is running." << std::endl;
-  EGMClass *egm = (EGMClass*)pParam;
-  //float[6] set_joints;
-  //egm->GetJoints(set_joints);
+// todo: finish this function
+void* EGM_JOINT_MODE_MONITOR(void *pParam) {
 
-  while(true) {
-    //UT::copyArray(egm->_set_joints, set_joints);
-    std::cout << "debug" << std::endl;
-    for (int i = 0; i < 6; ++i) {
-      std::cout << egm->_set_joints[i] << "|";
+    std::cout << "EGMClss Joint Mode is running." << std::endl;
+    EGMClass *egm = (EGMClass*)pParam;
+    assert(egm->_operationMode == OPERATION_MODE_JOINT);
+
+    while(true) {
+        //UT::copyArray(egm->_set_joints, set_joints);
+        std::cout << "debug" << std::endl;
+        for (int i = 0; i < 6; ++i) 
+        {
+            std::cout << egm->_set_joints[i] << "|";
+        }
+        std::cout << std::endl;
+        // sleep(10.0 / 1000.0);
+        egm->send(egm->_set_joints);
+        egm->listen();
+        //UT::copyArray(egm->_set_joints, set_joints);
     }
-
-    std::cout << std::endl;
-    sleep(10.0 / 1000.0);
-    egm->send(egm->_set_joints, JOINT_MOVE);
-    egm->listen();
-    //UT::copyArray(egm->_set_joints, set_joints);
-  }
 }
 
 //
 //  The thread Function.
 //
-void* EGM_Monitor(void* pParam)
+void* EGM_CARTESIAN_MODE_MONITOR(void* pParam)
 {
     cout << "[EGMClass] EGM_Monitor is running." << endl;
     EGMClass *egm = (EGMClass*)pParam;
+    assert(egm->_operationMode == OPERATION_MODE_CARTESIAN);
     float pose[7], poseSet[7]; 
 
     Vector3d tran;
@@ -175,7 +180,7 @@ void* EGM_Monitor(void* pParam)
           quatGoal(i) = egm->_set_pose[i+3];
       }
 
-      if (egm->_mode == SAFETY_MODE_NONE)
+      if (egm->_safetyMode == SAFETY_MODE_NONE)
       {
           quatSet(0) = quatGoal(0);
           quatSet(1) = quatGoal(1);
@@ -200,7 +205,7 @@ void* EGM_Monitor(void* pParam)
           assert(abs(quatSet.norm()-1) < 0.01);
 
           // stop if necessary
-          if ((egm->_mode == SAFETY_MODE_STOP) & violated)
+          if ((egm->_safetyMode == SAFETY_MODE_STOP) & violated)
           {
               cout << "[EGMClass] [Command is Too Fast!!] Motion Stopped." << endl;
               egm->send(pose);
@@ -235,7 +240,7 @@ void* EGM_Monitor(void* pParam)
     }
 }
 
-int EGMClass::init(std::chrono::high_resolution_clock::time_point time0, unsigned short portnum, float max_dist_tran, float max_dist_rot, float *safe_zone, EGMSafetyMode mode, bool printflag, string filefullpath) {
+int EGMClass::init(std::chrono::high_resolution_clock::time_point time0, unsigned short portnum, float max_dist_tran, float max_dist_rot, float *safe_zone, EGMSafetyMode sf_mode, EGMOperationMode op_mode, bool printflag, string filefullpath) {
   /* Establish connection with ABB EGM */ 
   _EGMsock.setLocalPort(portnum);
   _print_flag    = printflag;
@@ -246,10 +251,11 @@ int EGMClass::init(std::chrono::high_resolution_clock::time_point time0, unsigne
 
   cout << "EGM server is waiting for connection..\n";
   listen(); // _pose is set here
-  _time0 = time0;
   cout << "EGM connection established.\n";
   
-  _mode          = mode;
+  _time0         = time0;
+  _safetyMode    = sf_mode;
+  _operationMode = op_mode;
   _max_dist_tran = max_dist_tran;
   _max_dist_rot  = max_dist_rot;
 
@@ -257,10 +263,16 @@ int EGMClass::init(std::chrono::high_resolution_clock::time_point time0, unsigne
   UT::copyArray(_pose, _set_pose, 7);
   UT::copyArray(_joints, _set_joints, 6);
   UT::copyArray(safe_zone, _safe_zone, 6);
+  assert(safe_zone[0] < safe_zone[1]); // make sure the order is min max
+
   /* Create thread to run communication with EGM */
   cout << "EGM is trying to create thread.\n";
- // int rc = pthread_create(&_thread, NULL, EGM_Monitor, this);
-  int rc = pthread_create(&_thread, NULL, EMG_JOINT_MODE, this);
+  int rc = 0;
+  if (_operationMode == OPERATION_MODE_JOINT)
+    rc = pthread_create(&_thread, NULL, EGM_JOINT_MODE_MONITOR, this);
+  else
+   rc = pthread_create(&_thread, NULL, EGM_CARTESIAN_MODE_MONITOR, this);
+
   if (rc){
       cout <<"EGM error:unable to create thread.\n";
       return false;
@@ -289,24 +301,25 @@ bool EGMClass::GetCartesian(float *pose)
 
 bool EGMClass::SetCartesian(const float *pose)
 {
-  UT::copyArray(pose, _set_pose, 7);
-  return true;
+    assert(_operationMode == OPERATION_MODE_CARTESIAN);
+    UT::copyArray(pose, _set_pose, 7);
+    return true;
 }
 
 bool EGMClass::GetJoints(float *joints) {
-  if (!_isInitialized) 
-    return false;
+    if (!_isInitialized) 
+        return false;
 
-  UT::copyArray(_joints, joints, 6);   
-  // Todo(Jiaji:) Check joint limits here.
-  return true;
+    UT::copyArray(_joints, joints, 6);   
+    // Todo(Jiaji:) Check joint limits here.
+    return true;
 }
 
 bool EGMClass::SetJoints(const float *joints) {
-  UT::copyArray(joints, _set_joints, 6);
-  return true;
+    assert(_operationMode == OPERATION_MODE_JOINT);
+    UT::copyArray(joints, _set_joints, 6);
+    return true;
 }
-
 
 int EGMClass::listen()
 {
@@ -316,27 +329,27 @@ int EGMClass::listen()
         return false;
     }
 
-  // cout << "If can not receive message, run 'sudo ufw allow 6510'\n";
+    // cout << "If can not receive message, run 'sudo ufw allow 6510'\n";
     char recvBuffer[RCBFLENGTH];
-  int n = _EGMsock.recvFrom(recvBuffer, RCBFLENGTH, _RobotAddress, _RobotPort);
-  if (n < 0)
-  {
-      cout << "EGM error: Error receiving message.\n";
-      exit(1);
-  }
-  // cout << "[Egm server node] message received, connection established!\n";
-  // cout << "Address: " << _RobotAddress.c_str() << ", port:" << _RobotPort << endl;
+    int n = _EGMsock.recvFrom(recvBuffer, RCBFLENGTH, _RobotAddress, _RobotPort);
+    if (n < 0)
+    {
+        cout << "EGM error: Error receiving message.\n";
+        exit(1);
+    }
+    // cout << "[Egm server node] message received, connection established!\n";
+    // cout << "Address: " << _RobotAddress.c_str() << ", port:" << _RobotPort << endl;
   
-  _pRecvMessage = new EgmRobot();
-  _pRecvMessage->ParseFromArray(recvBuffer, n);
-  ReadRobotMessage(_pRecvMessage);
-  // printf("x: %lf\ny: %lf\nz: %lf\n", x, y, z);
-  delete _pRecvMessage;
+    _pRecvMessage = new EgmRobot();
+    _pRecvMessage->ParseFromArray(recvBuffer, n);
+    ReadRobotMessage(_pRecvMessage);
+    // printf("x: %lf\ny: %lf\nz: %lf\n", x, y, z);
+    delete _pRecvMessage;
 
     return true;
 }
 
-void EGMClass::send(float *set_cmd, int type)
+void EGMClass::send(float *set_cmd)
 {
     if (_RobotPort == 0)
     {
@@ -347,9 +360,9 @@ void EGMClass::send(float *set_cmd, int type)
   //      create and send a sensor message
   // -----------------------------------------------------------------------------
   _pSendingMessage = new EgmSensor();
-  if (type == CARTESIAN_MOVE) {
+  if (_operationMode == OPERATION_MODE_CARTESIAN) {
     assert(CreateCartesianTargetSensorMessage(set_cmd, _pSendingMessage)); 
-  } else if (type == JOINT_MOVE) {
+  } else if (_operationMode == OPERATION_MODE_JOINT) {
     assert(CreateJointTargetSensorMessage(set_cmd, _pSendingMessage));
   }
 
@@ -363,6 +376,7 @@ void EGMClass::send(float *set_cmd, int type)
 int EGMClass::CreateCartesianTargetSensorMessage(const float* setpose, 
     EgmSensor* pSensorMessage)
 {
+    assert(_operationMode == OPERATION_MODE_CARTESIAN);
     static unsigned int sequenceNumber = 0;
     EgmHeader* header = new EgmHeader();
     header->set_mtype(EgmHeader_MessageType_MSGTYPE_CORRECTION);
@@ -400,33 +414,34 @@ int EGMClass::CreateCartesianTargetSensorMessage(const float* setpose,
 
 /// Create a protocol buffer message based on commanded joint.
 int EGMClass::CreateJointTargetSensorMessage(const float* joints, 
-    EgmSensor* pSensorMessage) {
+    EgmSensor* pSensorMessage) 
+{
+    assert(_operationMode == OPERATION_MODE_JOINT);
+    static unsigned int sequenceNumber = 0;
+    EgmHeader* header = new EgmHeader();
+    header->set_mtype(EgmHeader_MessageType_MSGTYPE_CORRECTION);
+    header->set_seqno(sequenceNumber++);
 
-  static unsigned int sequenceNumber = 0;
-  EgmHeader* header = new EgmHeader();
-  header->set_mtype(EgmHeader_MessageType_MSGTYPE_CORRECTION);
-  header->set_seqno(sequenceNumber++);
+    Clock::time_point timenow_clock = Clock::now();
+    double time = double(std::chrono::duration_cast<std::chrono::nanoseconds>(timenow_clock - _time0).count())/1e6; // milli second
+    header->set_tm(time);
 
-  Clock::time_point timenow_clock = Clock::now();
-  double time = double(std::chrono::duration_cast<std::chrono::nanoseconds>(timenow_clock - _time0).count())/1e6; // milli second
-  header->set_tm(time);
+    pSensorMessage->set_allocated_header(header);
 
-  pSensorMessage->set_allocated_header(header);
+    EgmJoints * pb_joints = new EgmJoints();
+    std::cout << "Joints size " << pb_joints->joints_size() << std::endl;
+    constexpr int num_dofs = 6;
+    for (int i = 0; i < num_dofs; ++i) {
+        float val = joints[i] * 180 / M_PI;
+        pb_joints->add_joints(val);
+    }
 
-  EgmJoints * pb_joints = new EgmJoints();
-  std::cout << "Joints size " << pb_joints->joints_size() << std::endl;
-  constexpr int num_dofs = 6;
-  for (int i = 0; i < num_dofs; ++i) {
-    float val = joints[i] * 180 / M_PI;
-    pb_joints->add_joints(val);
-  }
-
-  EgmPlanned * pb_plan = new EgmPlanned();
-  pb_plan->set_allocated_joints(pb_joints);
+    EgmPlanned * pb_plan = new EgmPlanned();
+    pb_plan->set_allocated_joints(pb_joints);
  
-  pSensorMessage->set_allocated_planned(pb_plan);
+    pSensorMessage->set_allocated_planned(pb_plan);
 
-  return true;   
+    return true;   
 }
 
 

@@ -115,17 +115,18 @@ int main(void)
 {
 	// get current time
 	std::chrono::high_resolution_clock::time_point time0 = std::chrono::high_resolution_clock::now();
-	unsigned short portnum = 6510;
-	float max_dist_tran    = 10;
-	float max_dist_rot     = 1;
-	float egm_safety[6]    = {-100, 100, -100, 100, -100, 100};
-	EGMSafetyMode mode     = SAFETY_MODE_STOP;
-	bool print_flag        = true;
-	string filefullpath    = "/home/mlab/data/egmdata.txt";
+	unsigned short portnum   = 6510;
+	float max_dist_tran      = 10;
+	float max_dist_rot       = 1;
+	float egm_safety[6]      = {-100, 100, -100, 100, -100, 100};
+	EGMSafetyMode sf_mode    = SAFETY_MODE_STOP;
+	EGMOperationMode op_mode = OPERATION_MODE_CARTESIAN;
+	bool print_flag          = true;
+	string filefullpath      = "/home/mlab/data/egmdata.txt";
 
 	EGMClass *egm = EGMClass::Instance();
 	// create thread to communite with EGM at 250Hz
-	egm->init(time0, portnum, max_dist_tran, max_dist_rot, egm_safety, mode, print_flag, filefullpath);
+	egm->init(time0, portnum, max_dist_tran, max_dist_rot, egm_safety, sf_mode, op_mode, print_flag, filefullpath);
 
 
 	// write your control loop here
@@ -165,10 +166,10 @@ set (CMAKE_CXX_FLAGS "--std=gnu++11 ${CMAKE_CXX_FLAGS}")
 
 # find_package(Boost REQUIRED COMPONENTS system)
 
-include_directories(/usr/local/include/egm)
+include_directories(/usr/local/include/egm) # so as to find egm.pb.h
 
 add_executable(${PROJECT_NAME} main.cpp)
-target_link_libraries(${PROJECT_NAME} /usr/local/lib/egm/libegm.so)
+target_link_libraries(${PROJECT_NAME} libegm.so)
 ```
 Then compile your code in command line: (you are at root of the repo)
 ```
@@ -176,6 +177,8 @@ mkdir build & cd build
 cmake ..
 make
 ```
+
+If can not receive message, run 'sudo ufw allow 6510'\n";
 
 # Experiment with Robot
 To test EGM, follow the steps below.
