@@ -54,5 +54,6 @@ install(DIRECTORY include/ ${PROJECT_BINARY_DIR}/
 
 # binaries
 install(TARGETS ${PROJECT_NAME} egm_proto practical_socket
-    DESTINATION /usr/local/lib/${PROJECT_NAME}
+    DESTINATION /usr/local/lib
+    #${PROJECT_NAME}
     )
