@@ -120,17 +120,27 @@ void* EGM_JOINT_MODE_MONITOR(void *pParam) {
     EGMClass *egm = (EGMClass*)pParam;
     assert(egm->_operationMode == OPERATION_MODE_JOINT);
 
+    float tempjoint[6];
     while(true) {
         //UT::copyArray(egm->_set_joints, set_joints);
-        std::cout << "debug" << std::endl;
+        std::cout << "[monitor] [_set_joints] ";
         for (int i = 0; i < 6; ++i) 
         {
             std::cout << egm->_set_joints[i] << "|";
         }
         std::cout << std::endl;
-        // sleep(10.0 / 1000.0);
+
         egm->send(egm->_set_joints);
         egm->listen();
+
+        egm->GetJoints(tempjoint);
+        std::cout << "[monitor] [_joints] ";
+        for (int i = 0; i < 6; ++i) 
+        {
+            std::cout << tempjoint[i] << "|";
+        }
+        std::cout << std::endl;
+        
         //UT::copyArray(egm->_set_joints, set_joints);
     }
 }
@@ -429,12 +439,18 @@ int EGMClass::CreateJointTargetSensorMessage(const float* joints,
     pSensorMessage->set_allocated_header(header);
 
     EgmJoints * pb_joints = new EgmJoints();
-    std::cout << "Joints size " << pb_joints->joints_size() << std::endl;
+    // std::cout << "Joints size " << pb_joints->joints_size() << std::endl;
     constexpr int num_dofs = 6;
     for (int i = 0; i < num_dofs; ++i) {
         float val = joints[i] * 180 / M_PI;
         pb_joints->add_joints(val);
     }
+    std::cout << "[CreateJointMessage] [pb_joints] ";
+    for (int i = 0; i < num_dofs; ++i)
+    {
+        std::cout << pb_joints->joints(i) << "|";
+    }
+    std::cout<< std::endl;
 
     EgmPlanned * pb_plan = new EgmPlanned();
     pb_plan->set_allocated_joints(pb_joints);
@@ -473,7 +489,7 @@ void EGMClass::ReadRobotMessage(EgmRobot *pRobotMessage)
         _pose[4] =  pRobotMessage->feedback().cartesian().orient().u1();
         _pose[5] =  pRobotMessage->feedback().cartesian().orient().u2();
         _pose[6] =  pRobotMessage->feedback().cartesian().orient().u3();
-        std::cout << "read egm joint size " << pRobotMessage->feedback().joints().joints_size() << std::endl;
+        // std::cout << "read egm joint size " << pRobotMessage->feedback().joints().joints_size() << std::endl;
         // Get joints value.
         for (int i = 0; i < 6; ++i) {
           _joints[i] = pRobotMessage->feedback().joints().joints(i);
