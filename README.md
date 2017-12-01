@@ -22,6 +22,9 @@ The repo can be compiled as a ROS package, or compiled independently with cmake.
 
 # Installation
 ## Install the google protobuf.
+First try the easy way: 
+ sudo apt-get install libprotobuf-dev protobuf-compiler
+If that doesn't work, then try this: 
 * Download code from: (Tested on 3.1 and 3.4, you can try newer version)
 https://github.com/google/protobuf/tree/v3.1.0
 * Then follow the instructions:
