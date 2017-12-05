@@ -116,6 +116,22 @@ namespace UT
 		return m;
 	}
 
+	static double vec_max_abs(const double * vec, const int size, int *id)
+	{
+		double m = vec[0];
+		double t1;
+		for (int i = 0; i < size; ++i)
+		{
+			t1 = fabs(vec[i]);
+			if (t1 > m) 
+			{	
+				*id = i;
+				m = t1;
+			}
+		}
+		return m;
+	}
+
 	static double vec_min(const double * vec, const int size)
 	{
 		double m = vec[0];

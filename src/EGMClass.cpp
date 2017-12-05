@@ -155,10 +155,14 @@ void* EGM_CARTESIAN_MODE_MONITOR(void* pParam)
     assert(egm->_operationMode == OPERATION_MODE_CARTESIAN);
     float pose[7], poseSet[7]; 
 
+    double qvalue[4];
+
     Vector3d tran;
     float tranSet[3];
     Vector4d quatGoal, quatNow, quatSet;
+
     
+
     Clock::time_point timenow_clock;
     // begin the loop
     for (;;) {
@@ -188,6 +192,18 @@ void* EGM_CARTESIAN_MODE_MONITOR(void* pParam)
       {
           quatNow(i) = pose[i+3];
           quatGoal(i) = egm->_set_pose[i+3];
+          qvalue[i] = egm->_set_pose[i+3];
+      }
+
+      // numerical stability: reverse quatGoal if it is in the other hemisphere
+      int id = 0;
+      UT::vec_max_abs(qvalue, 4, &id);
+      if (quatNow(id)*quatGoal(id) < 0)
+      {
+          quatGoal(0) = -quatGoal(0);
+          quatGoal(1) = -quatGoal(1);
+          quatGoal(2) = -quatGoal(2);
+          quatGoal(3) = -quatGoal(3);
       }
 
       if (egm->_safetyMode == SAFETY_MODE_NONE)
