@@ -1,10 +1,11 @@
 #include <iostream>
 #include <cmath>
 #include <cassert>
+#include <mutex>
 #include <Eigen/Dense>
 
 #include "egm/EGMClass.h"
-#include "egm/utilities.h" 
+#include "egm/utilities.h"
 
 
 #define RCBFLENGTH 1400
@@ -14,17 +15,18 @@ using namespace std;
 using namespace Eigen;
 
 EGMClass* EGMClass::pinstance = 0;
+mutex mtx;
 
 typedef std::chrono::high_resolution_clock Clock;
 
 // Slerp with angle limit.
 // qa, qb: starting and ending quaternions.
 // angle: maximum angle limit
-// 
+//
 // return
 //  0: qb-qa is within angle limit.
 //  1: qb-qa is out of angle limit.
-// 
+//
 // Modified from:
 //  http://www.euclideanspace.com/maths/algebra/realNormedAlgebra/quaternions/slerp/
 int SlerpFixAngle(const Vector4d &qa, const Vector4d &qb, Vector4d &qm, float angle)
@@ -52,7 +54,7 @@ int SlerpFixAngle(const Vector4d &qa, const Vector4d &qb, Vector4d &qm, float an
     double sinHalfTheta = sqrt(1.0 - cosHalfTheta*cosHalfTheta);
     // if theta = 180 degrees then result is not fully defined
     // throw error
-    if (fabs(sinHalfTheta) < 0.001){ 
+    if (fabs(sinHalfTheta) < 0.001){
         // qm(0) = qa(0); qm(1) = qa(1); qm(2) = qa(2);qm(3) = qa(3);
         cout << "[EGMClass] [Commanded orientation is 180 deg away from current orientation! ] Motion Stopped." << endl;
         exit(1);
@@ -60,7 +62,7 @@ int SlerpFixAngle(const Vector4d &qa, const Vector4d &qb, Vector4d &qm, float an
 
     angle /=2;
     double ratioA = sin(halfTheta-angle) / sinHalfTheta;
-    double ratioB = sin(angle) / sinHalfTheta; 
+    double ratioB = sin(angle) / sinHalfTheta;
 
     //calculate Quaternion.
     qm(0) = (qa(0) * ratioA + qb(0) * ratioB);
@@ -123,24 +125,25 @@ void* EGM_JOINT_MODE_MONITOR(void *pParam) {
     float tempjoint[6];
     while(true) {
         //UT::copyArray(egm->_set_joints, set_joints);
-        std::cout << "[monitor] [_set_joints] ";
-        for (int i = 0; i < 6; ++i) 
-        {
-            std::cout << egm->_set_joints[i] << "|";
-        }
-        std::cout << std::endl;
-
+        // std::cout << "[monitor] [_set_joints] ";
+        // for (int i = 0; i < 6; ++i)
+        // {
+        //     std::cout << egm->_set_joints[i] << "|";
+        // }
+        // std::cout << std::endl;
+        // mtx.lock();
         egm->send(egm->_set_joints);
+        // mtx.unlock();
         egm->listen();
 
         egm->GetJoints(tempjoint);
         std::cout << "[monitor] [_joints] ";
-        for (int i = 0; i < 6; ++i) 
+        for (int i = 0; i < 6; ++i)
         {
             std::cout << tempjoint[i] << "|";
         }
         std::cout << std::endl;
-        
+
         //UT::copyArray(egm->_set_joints, set_joints);
     }
 }
@@ -153,7 +156,7 @@ void* EGM_CARTESIAN_MODE_MONITOR(void* pParam)
     cout << "[EGMClass] EGM_Monitor is running." << endl;
     EGMClass *egm = (EGMClass*)pParam;
     assert(egm->_operationMode == OPERATION_MODE_CARTESIAN);
-    float pose[7], poseSet[7]; 
+    float pose[7], poseSet[7];
 
     double qvalue[4];
 
@@ -161,7 +164,7 @@ void* EGM_CARTESIAN_MODE_MONITOR(void* pParam)
     float tranSet[3];
     Vector4d quatGoal, quatNow, quatSet;
 
-    
+
 
     Clock::time_point timenow_clock;
     // begin the loop
@@ -186,7 +189,8 @@ void* EGM_CARTESIAN_MODE_MONITOR(void* pParam)
       }
 
       // command is given by _set_pose
-      for(int i=0; i<3; i++) 
+      // mtx.lock();
+      for(int i=0; i<3; i++)
           tran(i) = egm->_set_pose[i] - pose[i];
       for(int i = 0; i < 4; i++)
       {
@@ -194,6 +198,7 @@ void* EGM_CARTESIAN_MODE_MONITOR(void* pParam)
           quatGoal(i) = egm->_set_pose[i+3];
           qvalue[i] = egm->_set_pose[i+3];
       }
+      // mtx.unlock();
 
       // numerical stability: reverse quatGoal if it is in the other hemisphere
       int id = 0;
@@ -213,17 +218,17 @@ void* EGM_CARTESIAN_MODE_MONITOR(void* pParam)
           quatSet(2) = quatGoal(2);
           quatSet(3) = quatGoal(3);
       }
-      else 
+      else
       {
           // check translation and rotation
           // compute the truncated motion
           bool violated = false;
-          if (tran.norm() > egm->_max_dist_tran) 
+          if (tran.norm() > egm->_max_dist_tran)
           {
               violated = true;
               tran *= (egm->_max_dist_tran/tran.norm());
           }
-          
+
           if (SlerpFixAngle(quatNow, quatGoal, quatSet, egm->_max_dist_rot))
           {
               violated = true;
@@ -257,7 +262,7 @@ void* EGM_CARTESIAN_MODE_MONITOR(void* pParam)
             UT::stream_array_in(egm->_file, poseSet, 7);
             egm->_file << endl;
         }
-        
+
         //  sending
         egm->send(poseSet);
 
@@ -266,8 +271,11 @@ void* EGM_CARTESIAN_MODE_MONITOR(void* pParam)
     }
 }
 
-int EGMClass::init(std::chrono::high_resolution_clock::time_point time0, unsigned short portnum, float max_dist_tran, float max_dist_rot, float *safe_zone, EGMSafetyMode sf_mode, EGMOperationMode op_mode, bool printflag, string filefullpath) {
-  /* Establish connection with ABB EGM */ 
+int EGMClass::init(std::chrono::high_resolution_clock::time_point time0,
+        unsigned short portnum, float max_dist_tran, float max_dist_rot,
+        float *safe_zone, EGMSafetyMode sf_mode, EGMOperationMode op_mode,
+        bool printflag, string filefullpath) {
+  /* Establish connection with ABB EGM */
   _EGMsock.setLocalPort(portnum);
   _print_flag    = printflag;
   _isInitialized = true;
@@ -278,7 +286,7 @@ int EGMClass::init(std::chrono::high_resolution_clock::time_point time0, unsigne
   cout << "EGM server is waiting for connection..\n";
   listen(); // _pose is set here
   cout << "EGM connection established.\n";
-  
+
   _time0         = time0;
   _safetyMode    = sf_mode;
   _operationMode = op_mode;
@@ -289,6 +297,7 @@ int EGMClass::init(std::chrono::high_resolution_clock::time_point time0, unsigne
   UT::copyArray(_pose, _set_pose, 7);
   UT::copyArray(_joints, _set_joints, 6);
   UT::copyArray(safe_zone, _safe_zone, 6);
+  std::cout << "safe_zone: " << safe_zone[0] << ", " << safe_zone[1] << std::endl;
   assert(safe_zone[0] < safe_zone[1]); // make sure the order is min max
 
   /* Create thread to run communication with EGM */
@@ -304,7 +313,7 @@ int EGMClass::init(std::chrono::high_resolution_clock::time_point time0, unsigne
       return false;
   }
   cout << "EGM thread created.\n";
-  
+
   return true;
 }
 
@@ -328,22 +337,26 @@ bool EGMClass::GetCartesian(float *pose)
 bool EGMClass::SetCartesian(const float *pose)
 {
     assert(_operationMode == OPERATION_MODE_CARTESIAN);
+    // mtx.lock();
     UT::copyArray(pose, _set_pose, 7);
+    // mtx.unlock();
     return true;
 }
 
 bool EGMClass::GetJoints(float *joints) {
-    if (!_isInitialized) 
+    if (!_isInitialized)
         return false;
 
-    UT::copyArray(_joints, joints, 6);   
+    UT::copyArray(_joints, joints, 6);
     // Todo(Jiaji:) Check joint limits here.
     return true;
 }
 
 bool EGMClass::SetJoints(const float *joints) {
     assert(_operationMode == OPERATION_MODE_JOINT);
+    // mtx.lock();
     UT::copyArray(joints, _set_joints, 6);
+    // mtx.unlock();
     return true;
 }
 
@@ -365,7 +378,7 @@ int EGMClass::listen()
     }
     // cout << "[Egm server node] message received, connection established!\n";
     // cout << "Address: " << _RobotAddress.c_str() << ", port:" << _RobotPort << endl;
-  
+
     _pRecvMessage = new EgmRobot();
     _pRecvMessage->ParseFromArray(recvBuffer, n);
     ReadRobotMessage(_pRecvMessage);
@@ -387,7 +400,7 @@ void EGMClass::send(float *set_cmd)
   // -----------------------------------------------------------------------------
   _pSendingMessage = new EgmSensor();
   if (_operationMode == OPERATION_MODE_CARTESIAN) {
-    assert(CreateCartesianTargetSensorMessage(set_cmd, _pSendingMessage)); 
+    assert(CreateCartesianTargetSensorMessage(set_cmd, _pSendingMessage));
   } else if (_operationMode == OPERATION_MODE_JOINT) {
     assert(CreateJointTargetSensorMessage(set_cmd, _pSendingMessage));
   }
@@ -395,11 +408,11 @@ void EGMClass::send(float *set_cmd)
   _pSendingMessage->SerializeToString(&_sendBuffer);
   delete _pSendingMessage;
 
-  _EGMsock.sendTo(_sendBuffer.c_str(), _sendBuffer.length(), 
+  _EGMsock.sendTo(_sendBuffer.c_str(), _sendBuffer.length(),
       _RobotAddress, _RobotPort);
 }
 
-int EGMClass::CreateCartesianTargetSensorMessage(const float* setpose, 
+int EGMClass::CreateCartesianTargetSensorMessage(const float* setpose,
     EgmSensor* pSensorMessage)
 {
     assert(_operationMode == OPERATION_MODE_CARTESIAN);
@@ -407,7 +420,7 @@ int EGMClass::CreateCartesianTargetSensorMessage(const float* setpose,
     EgmHeader* header = new EgmHeader();
     header->set_mtype(EgmHeader_MessageType_MSGTYPE_CORRECTION);
     header->set_seqno(sequenceNumber++);
- 
+
     Clock::time_point timenow_clock = Clock::now();
     double time = double(std::chrono::duration_cast<std::chrono::nanoseconds>(timenow_clock - _time0).count())/1e6; // milli second
     header->set_tm(time);
@@ -416,12 +429,12 @@ int EGMClass::CreateCartesianTargetSensorMessage(const float* setpose,
     EgmCartesian *pc = new EgmCartesian();
 
     // in mm
-    pc->set_x(setpose[0]);    
+    pc->set_x(setpose[0]);
     pc->set_y(setpose[1]);
     pc->set_z(setpose[2]);
-    
+
     EgmQuaternion *pq = new EgmQuaternion();
-    pq->set_u0(setpose[3]);   
+    pq->set_u0(setpose[3]);
     pq->set_u1(setpose[4]);
     pq->set_u2(setpose[5]);
     pq->set_u3(setpose[6]);
@@ -439,8 +452,8 @@ int EGMClass::CreateCartesianTargetSensorMessage(const float* setpose,
 }
 
 /// Create a protocol buffer message based on commanded joint.
-int EGMClass::CreateJointTargetSensorMessage(const float* joints, 
-    EgmSensor* pSensorMessage) 
+int EGMClass::CreateJointTargetSensorMessage(const float* joints,
+    EgmSensor* pSensorMessage)
 {
     assert(_operationMode == OPERATION_MODE_JOINT);
     static unsigned int sequenceNumber = 0;
@@ -470,10 +483,10 @@ int EGMClass::CreateJointTargetSensorMessage(const float* joints,
 
     EgmPlanned * pb_plan = new EgmPlanned();
     pb_plan->set_allocated_joints(pb_joints);
- 
+
     pSensorMessage->set_allocated_planned(pb_plan);
 
-    return true;   
+    return true;
 }
 
 

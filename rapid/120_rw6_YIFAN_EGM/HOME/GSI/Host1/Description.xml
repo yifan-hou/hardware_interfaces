@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Description>
+<Name>Host1</Name>
+<Convention>CDP</Convention>
+<Type>host</Type>
+<Class>host</Class>
+<Network Address="192.168.125.10" Port="Service">
+<Channel Type="Cyclic" Protocol="Udp" Port="13000" />
+</Network>
+<Settings>
+<TimeOut>2000</TimeOut>
+<MaxLost>20</MaxLost>
+<DryRun>true</DryRun>
+</Settings>
+</Description>
