@@ -4,7 +4,6 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-find_library(RUT Utilities HINTS /usr/local/lib/RobotUtilities)
 
 add_library(NETFT_DRIVER src/netft_rdt_driver.cpp)
 target_link_libraries(NETFT_DRIVER ${Boost_LIBRARIES} ${catkin_LIBRARIES})

@@ -17,6 +17,9 @@ find_package(Boost REQUIRED COMPONENTS
   program_options
 )
 
+find_library(RUT Utilities HINTS /usr/local/lib/RobotUtilities)
+
+
 include_directories(
   include/
   robots/abb_egm/include
@@ -36,3 +39,4 @@ catkin_package(
 
 add_subdirectory(robots/abb_egm)
 add_subdirectory(robots/ati_netft)
+add_subdirectory(robots/ur_socket)

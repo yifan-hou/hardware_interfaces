@@ -69,8 +69,7 @@ double buffToDouble(uint8_t * buff){
 
 int main(int argc, char const *argv[])
 {
-
-    int sock = 0, valread;
+    int sock = 0;
     struct sockaddr_in serv_addr;
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
@@ -94,36 +93,34 @@ int main(int argc, char const *argv[])
         return -1;
     }
 
-
     /**
      * Send pose
+     */
+    // float pose[6] = {-806.8, -234.17, -335.42, 1.563, 0.001, 0.001};
+    // char buffer1 [100];
+    // sprintf (buffer1, "movej(p[ %f, %f, %f, %f, %f, %f], a = %f, v = %f)\n",
+    //     pose[0]/1000.0, pose[1]/1000.0, pose[2]/1000.0,
+    //     pose[3], pose[4], pose[5], 0.4, 0.6);
+
+    // send(sock , buffer1 , strlen(buffer1) , 0 );
+    // printf("Pose sent\n");
+
+
+    /**
+     * Send joint
      */
     // float joint_command_deg[6] = {94.28, -81.68, 119.96, -129.11, 275.54, -0.0};
     // float joint_command_rad[6];
     // for (int i = 0; i < 6; ++i) joint_command_rad[i] = joint_command_deg[i]*PIf/180.0f;
 
-    // char buffer1 [100];
-    // sprintf (buffer1, "movej([ %f, %f, %f, %f, %f, %f], a = %f, v = %f)\n",
+    // char buffer2 [100];
+    // sprintf (buffer2, "movej([ %f, %f, %f, %f, %f, %f], a = %f, v = %f)\n",
     //     joint_command_rad[0], joint_command_rad[1], joint_command_rad[2],
     //     joint_command_rad[3], joint_command_rad[4], joint_command_rad[5],
     //     0.4, 0.6);
 
-    // send(sock , buffer1 , strlen(buffer1) , 0 );
+    // send(sock , buffer2 , strlen(buffer2) , 0 );
     // printf("Pose sent\n");
-
-    // // test
-    // char buf[8];
-    // buf[0] = 0x98;
-    // buf[1] = 0xf9;
-    // buf[2] = 0x38;
-    // buf[3] = 0x4e;
-    // buf[4] = 0x3a;
-    // buf[5] = 0x9f;
-    // buf[6] = 0x1c;
-    // buf[7] = 0x43;
-    // double x = buffToDouble(buf);
-    // printf("test double: %f, %f");
-    // return 0;
 
     /**
      * Read from robot
@@ -138,7 +135,20 @@ int main(int argc, char const *argv[])
         // decode the message
         unsigned char *pointer = buffer;
         int length = buffToInteger(pointer);
-        pointer += 444;
+        pointer += 12;
+        double j1 = buffToDouble(pointer);
+        pointer += 8;
+        double j2 = buffToDouble(pointer);
+        pointer += 8;
+        double j3 = buffToDouble(pointer);
+        pointer += 8;
+        double j4 = buffToDouble(pointer);
+        pointer += 8;
+        double j5 = buffToDouble(pointer);
+        pointer += 8;
+        double j6 = buffToDouble(pointer);
+        pointer += 8;
+        pointer += 384;
         double x = buffToDouble(pointer);
         pointer += 8;
         double y = buffToDouble(pointer);
@@ -151,8 +161,10 @@ int main(int argc, char const *argv[])
         pointer += 8;
         double Rz = buffToDouble(pointer);
 
-        printf("Length: %d, x: %.3f, y: %.3f, z: %.3f, rx: %.3f, ry: %.3f, rz: %.3f\n", length,
+        printf("Length: %d, pose: %f, %f, %f, %f, %f, %f\n", length,
                 x, y, z, Rx, Ry, Rz);
+        // printf("Length: %d, pose: %f, %f, %f, %f, %f, %f; J: %f, %f, %f, %f, %f, %f\n", length,
+        //         x, y, z, Rx, Ry, Rz, j1*180.0/PIf, j2*180.0/PIf, j3*180.0/PIf, j4*180.0/PIf, j5*180.0/PIf, j6*180.0/PIf);
 
     }
 

@@ -115,7 +115,6 @@ private:
 	Clock::time_point _time0;
 	ofstream _file;
 	bool _print_flag;
-
 };
 
 #endif
