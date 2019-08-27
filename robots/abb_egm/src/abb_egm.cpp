@@ -369,12 +369,6 @@ bool ABBEGM::setJoints(const double *joints) {
 
 int ABBEGM::listen()
 {
-  if (_isInitialized == false)
-  {
-    cout << "EGM error: listen() is called before initialization().\n";
-    return false;
-  }
-
     // cout << "If can not receive message, run 'sudo ufw allow 6510'\n";
   char recvBuffer[RCBFLENGTH];
   int n = _EGMsock.recvFrom(recvBuffer, RCBFLENGTH, _RobotAddress, _RobotPort);

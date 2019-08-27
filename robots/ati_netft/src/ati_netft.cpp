@@ -82,6 +82,7 @@ void* ATI_Monitor(void* pParam) {
 
 ATINetft::ATINetft() {
   _force  = new double[3];
+  _WrenchSafety = new double[6];
   _torque = new double[3];
   _stall_counts = 0;
   _time_out_flag = false;
@@ -89,7 +90,7 @@ ATINetft::ATINetft() {
 
 bool ATINetft::init(ros::NodeHandle& root_nh, Clock::time_point time0) {
   using namespace hardware_interface;
-
+  cout << "[ATINetft] initializing..\n";
   _time0 = time0;
 
   // Get parameters from the server
@@ -139,22 +140,23 @@ bool ATINetft::init(ros::NodeHandle& root_nh, Clock::time_point time0) {
     ROS_WARN_STREAM("Parameter [/netft/print_flag] not found");
   if (!root_nh.hasParam("/netft/file_path"))
     ROS_WARN_STREAM("Parameter [/netft/file_path] not found");
-  if (!root_nh.hasParam("/ati/offset"))
-    ROS_WARN_STREAM("Parameter [/ati/offset] not found");
-  if (!root_nh.hasParam("/ati/gravity"))
-    ROS_WARN_STREAM("Parameter [/ati/gravity] not found");
-  if (!root_nh.hasParam("/ati/COM"))
-    ROS_WARN_STREAM("Parameter [/ati/COM] not found");
-  if (!root_nh.hasParam("/ati/safety"))
-    ROS_WARN_STREAM("Parameter [/ati/safety] not found");
-  if (!root_nh.hasParam("/ati/transform_sensor_to_tool"))
-    ROS_WARN_STREAM("Parameter [/ati/transform_sensor_to_tool] not found");
+  if (!root_nh.hasParam("/ftsensor/offset"))
+    ROS_WARN_STREAM("Parameter [/ftsensor/offset] not found");
+  if (!root_nh.hasParam("/ftsensor/gravity"))
+    ROS_WARN_STREAM("Parameter [/ftsensor/gravity] not found");
+  if (!root_nh.hasParam("/ftsensor/COM"))
+    ROS_WARN_STREAM("Parameter [/ftsensor/COM] not found");
+  if (!root_nh.hasParam("/ftsensor/safety"))
+    ROS_WARN_STREAM("Parameter [/ftsensor/safety] not found");
+  if (!root_nh.hasParam("/ftsensor/transform_sensor_to_tool"))
+    ROS_WARN_STREAM("Parameter [/ftsensor/transform_sensor_to_tool] not found");
 
   _adj_sensor_tool = SE32Adj(pose2SE3(PoseSensorTool));
 
   _netft = shared_ptr<netft_rdt_driver::NetFTRDTDriver>(new netft_rdt_driver::NetFTRDTDriver(ip_address));
 
   // Setup publishers
+  cout << "[ATINetft] setting up ROS message publishing..\n";
   _pub      = root_nh.advertise<geometry_msgs::WrenchStamped>(sensor_name + "/data", 100);
   _diag_pub = root_nh.advertise<diagnostic_msgs::DiagnosticArray>(sensor_name + "/diagnostics", 2);
 
@@ -168,6 +170,7 @@ bool ATINetft::init(ros::NodeHandle& root_nh, Clock::time_point time0) {
       ROS_ERROR_STREAM("[ATINetft] Failed to open file." << endl);
   }
 
+  cout << "[ATINetft] Creating thread for callback..\n";
   // create thread
   int rc = pthread_create(&_thread, NULL, ATI_Monitor, this);
   if (rc){
@@ -255,6 +258,7 @@ int ATINetft::getWrenchNetTool(const double *pose, double *wrench_net_T) {
 ATINetft::~ATINetft(){
   delete [] _force;
   delete [] _torque;
+  delete [] _WrenchSafety;
   _netft.reset();
   if (_print_flag)
     _file.close();

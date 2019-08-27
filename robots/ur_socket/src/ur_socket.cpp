@@ -77,16 +77,19 @@ URSocket* URSocket::Instance() {
 }
 
 URSocket::URSocket() {
-  _pose          = new double[7];
-  _joints        = new double[6];
-  _safe_zone     = new double[6];
-  _send_buffer   = new char[1000];
-  _isInitialized = false;
-  _safetyMode    = SAFETY_MODE_STOP;
-  _operationMode = OPERATION_MODE_CARTESIAN;
+  _pose            = new double[7];
+  _joints          = new double[6];
+  _safe_zone       = new double[6];
+  _send_buffer     = new char[1000];
+  _isInitialized   = false;
+  _stop_monitoring = false;
+  _safetyMode      = SAFETY_MODE_STOP;
+  _operationMode   = OPERATION_MODE_CARTESIAN;
 }
 
 URSocket::~URSocket() {
+  cout << "[URSocket] finishing.." << endl;
+  _stop_monitoring = true;
   _thread.join();
 
   delete pinstance;
@@ -109,6 +112,9 @@ int URSocket::init(ros::NodeHandle& root_nh, Clock::time_point time0) {
 
   root_nh.param(std::string("/ur/portnum"), ur_portnum, 30003);
   root_nh.param(std::string("/ur/ip"), ur_ip, std::string("192.168.1.98"));
+  root_nh.param(std::string("/ur/t"), _move_para_t, 0.02f);
+  root_nh.param(std::string("/ur/lookahead"), _move_para_lookahead, 0.2f);
+  root_nh.param(std::string("/ur/gain"), _move_para_gain, 300.0f);
   root_nh.param(std::string("/robot/max_dist_tran"), max_dist_tran, 0.0);
   root_nh.param(std::string("/robot/max_dist_rot"), max_dist_rot, 0.0);
   root_nh.param(std::string("/robot/safety_mode"), safety_mode_int, 0);
@@ -151,6 +157,7 @@ int URSocket::init(ros::NodeHandle& root_nh, Clock::time_point time0) {
   }
 
   /* Establish connection with UR */
+  cout << "[URSocket] Connecting to robot at " << ur_ip << ":" << ur_portnum << endl;
   _mtx_sock.lock();
   _sock = 0;
   struct sockaddr_in serv_addr;
@@ -207,11 +214,11 @@ void URSocket::UR_STATE_MONITOR() {
     int length = buffToInteger(pointer);
     assert(length == 1116);
     pointer += 444;
-    double x = buffToDouble(pointer);
+    double x = buffToDouble(pointer) * 1000.0;
     pointer += 8;
-    double y = buffToDouble(pointer);
+    double y = buffToDouble(pointer) * 1000.0;
     pointer += 8;
-    double z = buffToDouble(pointer);
+    double z = buffToDouble(pointer) * 1000.0;
     pointer += 8;
     double Rx = buffToDouble(pointer);
     pointer += 8;
@@ -227,16 +234,27 @@ void URSocket::UR_STATE_MONITOR() {
     ax << Rx, Ry, Rz;
     double angle = ax.norm();
     Quaterniond q(Eigen::AngleAxisd(angle, ax.normalized()));
-    _pose_mtx.lock();
-    _pose[0] = x*1000.0;
-    _pose[1] = y*1000.0;
-    _pose[2] = z*1000.0;
+
+    _mtx_pose.lock();
+    _pose[0] = x;
+    _pose[1] = y;
+    _pose[2] = z;
     _pose[3] = q.w();
     _pose[4] = q.x();
     _pose[5] = q.y();
     _pose[6] = q.z();
-    _pose_mtx.unlock();
+    _mtx_pose.unlock();
     _isInitialized = true;
+
+    // check safety
+    if ((x < _safe_zone[0]) || (x > _safe_zone[1]) || (y < _safe_zone[2]) ||
+        (y > _safe_zone[3]) || (z < _safe_zone[4]) || (z > _safe_zone[5])) {
+      ROS_ERROR_STREAM("[URSocket] Error: out of safety bound");
+      exit(1);
+    }
+
+    // stop condition
+    if (_stop_monitoring) break;
   }
 }
 
@@ -244,9 +262,9 @@ void URSocket::UR_STATE_MONITOR() {
 bool URSocket::getCartesian(double *pose) {
   if (!_isInitialized) return false;
 
-  _pose_mtx.lock();
+  _mtx_pose.lock();
   RUT::copyArray(_pose, pose, 7);
-  _pose_mtx.unlock();
+  _mtx_pose.unlock();
 
   // check safety
   if ((_pose[0] < _safe_zone[0]) || (_pose[0] > _safe_zone[1]))
@@ -266,10 +284,12 @@ bool URSocket::setCartesian(const double *pose) {
   Quaterniond q(pose[3], pose[4], pose[5], pose[6]);
   Eigen::AngleAxisd aa(q);
   Vector3d aa_scaled = aa.axis()*aa.angle();
-  // printf("[set] %f, %f, %f\n", aa_scaled[0], aa_scaled[1], aa_scaled[2]);
-  sprintf (_send_buffer, "movej(p[ %f, %f, %f, %f, %f, %f], a = %f, v = %f)\n",
+  sprintf (_send_buffer, "servoj(get_inverse_kin(p[ %f, %f, %f, %f, %f, %f]), t = %f, lookahead_time = %f, gain = %f)\n",
       pose[0]/1000.0, pose[1]/1000.0, pose[2]/1000.0,
-      aa_scaled[0], aa_scaled[1], aa_scaled[2], 0.4, 0.6);
+      aa_scaled[0], aa_scaled[1], aa_scaled[2], _move_para_t, _move_para_lookahead, _move_para_gain);
+  // sprintf (_send_buffer, "movel(p[ %f, %f, %f, %f, %f, %f], a = %f, v = %f, t = %f, r = %f)\n",
+  //     pose[0]/1000.0, pose[1]/1000.0, pose[2]/1000.0,
+  //     aa_scaled[0], aa_scaled[1], aa_scaled[2], _move_para_a, _move_para_v, _move_para_t, _move_para_r);
   _mtx_sock.lock();
   send(_sock, _send_buffer, strlen(_send_buffer), 0);
   _mtx_sock.unlock();

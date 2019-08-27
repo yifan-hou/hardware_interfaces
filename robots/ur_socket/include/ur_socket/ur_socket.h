@@ -63,18 +63,24 @@ private:
     // callbacks
     void UR_STATE_MONITOR();
 
+    // motion parameters
+    float _move_para_t;
+    float _move_para_lookahead;
+    float _move_para_gain;
+
     char *_send_buffer;
 
     double *_pose;
     double *_joints;
-    std::mutex _pose_mtx;
-    std::mutex _joint_mtx;
+    std::mutex _mtx_pose;
+    std::mutex _mtx_joint;
 
     int _sock;
     std::mutex _mtx_sock;
     std::thread _thread;
     Clock::time_point _time0;
 
+    bool _stop_monitoring;
 };
 
 #endif
