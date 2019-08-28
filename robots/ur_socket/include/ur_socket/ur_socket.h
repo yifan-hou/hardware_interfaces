@@ -71,12 +71,13 @@ private:
     char *_send_buffer;
 
     double *_pose;
+    double *_pose_set;
     double *_joints;
     std::mutex _mtx_pose;
+    std::mutex _mtx_pose_set;
     std::mutex _mtx_joint;
 
     int _sock;
-    std::mutex _mtx_sock;
     std::thread _thread;
     Clock::time_point _time0;
 

@@ -78,6 +78,7 @@ URSocket* URSocket::Instance() {
 
 URSocket::URSocket() {
   _pose            = new double[7];
+  _pose_set        = new double[7];
   _joints          = new double[6];
   _safe_zone       = new double[6];
   _send_buffer     = new char[1000];
@@ -94,6 +95,7 @@ URSocket::~URSocket() {
 
   delete pinstance;
   delete [] _pose;
+  delete [] _pose_set;
   delete [] _joints;
   delete [] _safe_zone;
   delete [] _send_buffer;
@@ -158,7 +160,6 @@ int URSocket::init(ros::NodeHandle& root_nh, Clock::time_point time0) {
 
   /* Establish connection with UR */
   cout << "[URSocket] Connecting to robot at " << ur_ip << ":" << ur_portnum << endl;
-  _mtx_sock.lock();
   _sock = 0;
   struct sockaddr_in serv_addr;
   if ((_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -179,7 +180,6 @@ int URSocket::init(ros::NodeHandle& root_nh, Clock::time_point time0) {
     cout << "\nConnection Failed \n";
     return false;
   }
-  _mtx_sock.unlock();
 
   cout << "UR socket connection established.\n";
 
@@ -205,9 +205,10 @@ void URSocket::UR_STATE_MONITOR() {
   unsigned int length = 0;
   assert(sizeof(length) == 4);
   while(true) {
-    _mtx_sock.lock();
+    /**
+     * Read pose feedback
+     */
     ReadXBytes(_sock, 1116, (void*)(buffer));
-    _mtx_sock.unlock();
 
     // decode the message
     unsigned char *pointer = buffer;
@@ -244,7 +245,6 @@ void URSocket::UR_STATE_MONITOR() {
     _pose[5] = q.y();
     _pose[6] = q.z();
     _mtx_pose.unlock();
-    _isInitialized = true;
 
     // check safety
     if ((x < _safe_zone[0]) || (x > _safe_zone[1]) || (y < _safe_zone[2]) ||
@@ -252,6 +252,30 @@ void URSocket::UR_STATE_MONITOR() {
       ROS_ERROR_STREAM("[URSocket] Error: out of safety bound");
       exit(1);
     }
+
+    if (!_isInitialized) {
+      RUT::copyArray(_pose, _pose_set, 7);
+      _isInitialized = true;
+    }
+
+    /**
+     * Send pose command
+     */
+    // Quaternion to axis angle
+    Vector3d ax_send;
+    _mtx_pose_set.lock();
+    angle = 2.0*acos(_pose_set[3]);
+    ax_send << _pose_set[4], _pose_set[5], _pose_set[6];
+    ax_send.normalize();
+    ax_send *= angle;
+    sprintf (_send_buffer, "servoj(get_inverse_kin(p[ %f, %f, %f, %f, %f, %f]), t = %f, lookahead_time = %f, gain = %f)\n",
+        _pose_set[0]/1000.0, _pose_set[1]/1000.0, _pose_set[2]/1000.0,
+        ax_send[0], ax_send[1], ax_send[2], _move_para_t, _move_para_lookahead, _move_para_gain);
+    // sprintf (_send_buffer, "movel(p[ %f, %f, %f, %f, %f, %f], a = %f, v = %f, t = %f, r = %f)\n",
+    //     _pose_set[0]/1000.0, _pose_set[1]/1000.0, _pose_set[2]/1000.0,
+    //     ax_send[0], ax_send[1], ax_send[2], _move_para_a, _move_para_v, _move_para_t, _move_para_r);
+    _mtx_pose_set.unlock();
+    send(_sock, _send_buffer, strlen(_send_buffer), 0);
 
     // stop condition
     if (_stop_monitoring) break;
@@ -280,19 +304,9 @@ bool URSocket::getCartesian(double *pose) {
 bool URSocket::setCartesian(const double *pose) {
   assert(_operationMode == OPERATION_MODE_CARTESIAN);
 
-  // Quaternion to axis angle
-  Quaterniond q(pose[3], pose[4], pose[5], pose[6]);
-  Eigen::AngleAxisd aa(q);
-  Vector3d aa_scaled = aa.axis()*aa.angle();
-  sprintf (_send_buffer, "servoj(get_inverse_kin(p[ %f, %f, %f, %f, %f, %f]), t = %f, lookahead_time = %f, gain = %f)\n",
-      pose[0]/1000.0, pose[1]/1000.0, pose[2]/1000.0,
-      aa_scaled[0], aa_scaled[1], aa_scaled[2], _move_para_t, _move_para_lookahead, _move_para_gain);
-  // sprintf (_send_buffer, "movel(p[ %f, %f, %f, %f, %f, %f], a = %f, v = %f, t = %f, r = %f)\n",
-  //     pose[0]/1000.0, pose[1]/1000.0, pose[2]/1000.0,
-  //     aa_scaled[0], aa_scaled[1], aa_scaled[2], _move_para_a, _move_para_v, _move_para_t, _move_para_r);
-  _mtx_sock.lock();
-  send(_sock, _send_buffer, strlen(_send_buffer), 0);
-  _mtx_sock.unlock();
+  _mtx_pose_set.lock();
+  RUT::copyArray(pose, _pose_set, 7);
+  _mtx_pose_set.unlock();
 
   return true;
 }
