@@ -1,9 +1,8 @@
 include_directories(
-  ${PROJECT_BINARY_DIR} ## point to build directory where egm.pb.h will be generated   currently it doesn't work
   include/
   /usr/include/eigen3
 )
-# MESSAGE(STATUS "PROJECT_BINARY_DIR: " ${PROJECT_BINARY_DIR})
+MESSAGE(STATUS "PROJECT_BINARY_DIR: " ${PROJECT_BINARY_DIR})
 
 # ####################
 # ## Protobuf Stuff ##
@@ -20,6 +19,9 @@ MESSAGE(STATUS "Protobuf include_directories : " ${PROTOBUF_INCLUDE_DIRS})
 add_library(egm_proto SHARED ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(egm_proto ${PROTOBUF_LIBRARIES})
 
+include_directories(
+  ${PROJECT_BINARY_DIR}/robots/abb_egm/ ## point to build directory where egm.pb.h will be generated
+)
 #######################
 ## Compile Libraries ##
 #######################
