@@ -35,8 +35,7 @@ typedef enum
   OPERATION_MODE_JOINT
 } RobotOperationMode;
 
-class RobotInterfaces
-{
+class RobotInterfaces {
 public:
   // ----------------------------------------
   //  user interfaces

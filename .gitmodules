@@ -1,0 +1,4 @@
+[submodule "external/robomaster_hardware"]
+	path = external/robomaster_hardware
+	url = ssh://git@mlab.ri.cmu.edu:26/hardware_interface/robomaster_hardware.git
+	branch = master
