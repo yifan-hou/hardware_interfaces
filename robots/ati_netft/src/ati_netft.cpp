@@ -1,8 +1,28 @@
 #include "ati_netft/ati_netft.h"
+
+#include <sched.h>
+
 #include <RobotUtilities/utilities.h>
 
 typedef std::chrono::high_resolution_clock Clock;
 using namespace RUT;
+
+void set_realtime_priority() {
+  int ret;
+  // We'll operate on the currently running thread.
+  pthread_t this_thread = pthread_self();
+
+
+  sched_param sch;
+  int policy;
+  pthread_getschedparam(this_thread, &policy, &sch);
+  sch.sched_priority = 99;
+  if (pthread_setschedparam(this_thread, SCHED_FIFO, &sch)) {
+      std::cout << "Failed to setschedparam: " << std::strerror(errno) << '\n';
+  }
+
+  std::cout << "Thread priority is " << sch.sched_priority << std::endl;
+}
 
 void* ATI_Monitor(void* pParam) {
   ATINetft *netft_hardware = (ATINetft*)pParam;
@@ -16,30 +36,12 @@ void* ATI_Monitor(void* pParam) {
   diagnostic_updater::DiagnosticStatusWrapper diag_status;
   ros::Time last_diag_pub_time(ros::Time::now());
 
+  set_realtime_priority();
+
   while (ros::ok()) {
     if (netft_hardware->_netft->waitForNewData()) {
-      netft_hardware->_time_out_flag_mtx.lock();
-      netft_hardware->_time_out_flag = false;
-      netft_hardware->_time_out_flag_mtx.unlock();
-
       netft_hardware->_netft->getData(data);
-      double data_change = fabs(netft_hardware->_force[0] - data.wrench.force.x);
-      data_change += fabs(netft_hardware->_force[1] - data.wrench.force.y);
-      data_change += fabs(netft_hardware->_force[2] - data.wrench.force.z);
-      data_change += fabs(netft_hardware->_torque[0] - data.wrench.torque.x);
-      data_change += fabs(netft_hardware->_torque[1] - data.wrench.torque.y);
-      data_change += fabs(netft_hardware->_torque[2] - data.wrench.torque.z);
 
-      netft_hardware->_stall_counts_mtx.lock();
-      if (data_change > 1e-5) {
-        netft_hardware->_stall_counts = 0;
-      } else {
-        netft_hardware->_stall_counts ++;
-        if (netft_hardware->_stall_counts >= 50) {
-          cout << "\033[1;31m[ATINetft] Dead Stream\033[0m\n";
-        }
-      }
-      netft_hardware->_stall_counts_mtx.unlock();
       // read data
       netft_hardware->_force[0]  = data.wrench.force.x;
       netft_hardware->_force[1]  = data.wrench.force.y;
@@ -50,9 +52,6 @@ void* ATI_Monitor(void* pParam) {
       data.header.frame_id       = netft_hardware->_frame_id;
       netft_hardware->_pub.publish(data);
     } else {
-      netft_hardware->_time_out_flag_mtx.lock();
-      netft_hardware->_time_out_flag = true;
-      netft_hardware->_time_out_flag_mtx.unlock();
       cout << "\033[1;31m[ATINetft] Time out\033[0m\n";
     }
 
@@ -66,15 +65,15 @@ void* ATI_Monitor(void* pParam) {
       netft_hardware->_file << endl;
     }
 
-    ros::Time current_time(ros::Time::now());
-    if ( (current_time - last_diag_pub_time) > diag_pub_duration ) {
-      diag_array.status.clear();
-      netft_hardware->_netft->diagnostics(diag_status);
-      diag_array.status.push_back(diag_status);
-      diag_array.header.stamp = ros::Time::now();
-      netft_hardware->_diag_pub.publish(diag_array);
-      last_diag_pub_time = current_time;
-    }
+    // ros::Time current_time(ros::Time::now());
+    // if ( (current_time - last_diag_pub_time) > diag_pub_duration ) {
+    //   diag_array.status.clear();
+    //   netft_hardware->_netft->diagnostics(diag_status);
+    //   diag_array.status.push_back(diag_status);
+    //   diag_array.header.stamp = ros::Time::now();
+    //   netft_hardware->_diag_pub.publish(diag_array);
+    //   last_diag_pub_time = current_time;
+    // }
     ros::spinOnce();
     pub_rate.sleep();
   }
@@ -82,10 +81,16 @@ void* ATI_Monitor(void* pParam) {
 
 ATINetft::ATINetft() {
   _force  = new double[3];
+  _force_old  = new double[3];
   _WrenchSafety = new double[6];
   _torque = new double[3];
+  _torque_old = new double[3];
   _stall_counts = 0;
-  _time_out_flag = false;
+
+  for (int i = 0; i < 3; ++i) {
+    _force_old[i] = 0;
+    _torque_old[i] = 0;
+  }
 }
 
 bool ATINetft::init(ros::NodeHandle& root_nh, Clock::time_point time0) {
@@ -191,25 +196,31 @@ int ATINetft::getWrenchSensor(double *wrench)
   wrench[4] = _torque[1];
   wrench[5] = _torque[2];
 
-  _time_out_flag_mtx.lock();
-  if (_time_out_flag) {
-    _time_out_flag_mtx.unlock();
-    return 1;
-  }
-  _time_out_flag_mtx.unlock();
+  double data_change =  fabs(wrench[0] - _force_old[0]);
+  data_change        += fabs(wrench[1] - _force_old[1]);
+  data_change        += fabs(wrench[2] - _force_old[2]);
+  data_change        += 10*fabs(wrench[3] - _torque_old[0]);
+  data_change        += 10*fabs(wrench[4] - _torque_old[1]);
+  data_change        += 10*fabs(wrench[5] - _torque_old[2]);
 
-  _stall_counts_mtx.lock();
-  if (_stall_counts >= 50) {
-    _stall_counts_mtx.unlock();
-    return 2;
-  }
-  _stall_counts_mtx.unlock();
+  _force_old[0]  = wrench[0];
+  _force_old[1]  = wrench[1];
+  _force_old[2]  = wrench[2];
+  _torque_old[0] = wrench[3];
+  _torque_old[1] = wrench[4];
+  _torque_old[2] = wrench[5];
+  // cout << "         data_change: " << data_change << endl;
 
-  // safety
-  for (int i = 0; i < 6; ++i) {
-    if(abs(wrench[i]) >_WrenchSafety[i])
-      return 3;
+  if (data_change > 0.05) {
+    _stall_counts = 0;
+  } else {
+    _stall_counts ++;
+    if (_stall_counts >= 5) {
+      cout << "\033[1;31m[ATINetft] Dead Stream\033[0m\n";
+      return 2;
+    }
   }
+
   return 0;
 }
 
@@ -251,6 +262,12 @@ int ATINetft::getWrenchNetTool(const double *pose, double *wrench_net_T) {
   wrench_net_T[3] = wrench_T[3] + _Toffset[0] - GinT[0];
   wrench_net_T[4] = wrench_T[4] + _Toffset[1] - GinT[1];
   wrench_net_T[5] = wrench_T[5] + _Toffset[2] - GinT[2];
+
+  // safety
+  for (int i = 0; i < 6; ++i) {
+    if(abs(wrench_net_T[i]) >_WrenchSafety[i])
+      return 3;
+  }
 
   return flag;
 }

@@ -47,7 +47,6 @@ class ATINetft : public FTInterfaces {
      *
      * @return  0: no error.
      *   1: still waiting for new data. 2: dead stream.
-     *   3: force is too big.
      */
     int getWrenchSensor(double *wrench) override;
     /**
@@ -56,7 +55,6 @@ class ATINetft : public FTInterfaces {
      * @param      wrench_T  The wrench in tool frame
      *
      * @return     0: no error. 1: still waiting for new data. 2: dead stream.
-     *             3: force is too big.
      */
     int getWrenchTool(double *wrench_T) override;
     /**
@@ -71,8 +69,8 @@ class ATINetft : public FTInterfaces {
     int getWrenchNetTool(const double *pose, double *wrench_net_T) override;
 
 
-    double *_force;
-    double *_torque;
+    double *_force, *_force_old;
+    double *_torque, *_torque_old;
     double _publish_rate;
 
     Clock::time_point _time0; ///< high resolution timer.
@@ -88,10 +86,6 @@ class ATINetft : public FTInterfaces {
     // monitor pausing of the data stream.
     // if the data is the same in 50 frames, the stream is considered dead.
     int _stall_counts;
-    mutex _stall_counts_mtx;
-    // set to true when a timeout happens. Set to false when a good data comes.
-    bool _time_out_flag;
-    mutex _time_out_flag_mtx;
 
   private:
 

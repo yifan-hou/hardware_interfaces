@@ -146,7 +146,7 @@ void ABBEGM::EGM_CARTESIAN_MODE_MONITOR() {
     bool issafe = getCartesian(pose);
     // check safety zone
     if (!issafe) {
-      cout << "[ABBEGM] [Out of safety zone!!!] Motion Stopped." << endl;
+      cerr << "[ABBEGM] [Out of safety zone!!!] Motion Stopped." << endl;
       send(pose);
       listen();
       exit(1);
