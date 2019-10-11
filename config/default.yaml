@@ -11,6 +11,12 @@ robot:
     zmin: 0
     zmax: 500
 
+delta:
+  k_hB: 0.040 # base, distance from center to motor axis
+  k_hP: 0.02 # platform, distance from center to axis
+  k_L: 0.1 # upper legs length
+  k_l: 0.1 # lower legs parallelogram length
+
 ftsensor:
   offset: # will be added to the reading; in tool frame
     fx: 0.577
