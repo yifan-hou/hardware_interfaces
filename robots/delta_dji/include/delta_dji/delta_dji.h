@@ -3,6 +3,8 @@
 
 #include "hardware_interfaces/delta_interfaces.h"
 
+#include "external/robomaster_hardware/include/Robomaster/robomaster_communicator.h"
+
 class DeltaDJI: public DeltaInterfaces {
 public:
   DeltaDJI();
