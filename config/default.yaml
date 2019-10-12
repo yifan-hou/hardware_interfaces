@@ -11,6 +11,7 @@ robot:
     zmin: 0
     zmax: 500
 
+
 delta:
   k_hB: 0.040 # base, distance from center to motor axis
   k_hP: 0.02 # platform, distance from center to axis
