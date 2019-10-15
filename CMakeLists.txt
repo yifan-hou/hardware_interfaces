@@ -32,7 +32,7 @@ include_directories(
 #   Installation for ROS.
 #
 catkin_package(
-  INCLUDE_DIRS include robots/abb_egm/include robots/ati_netft/include robots/ur_socket/include ${PROJECT_BINARY_DIR}/robots/abb_egm/
+  INCLUDE_DIRS include robots/abb_egm/include robots/ati_netft/include robots/ur_socket/include ${PROJECT_BINARY_DIR}
   LIBRARIES ABB_EGM ATI_NETFT_HW UR_SOCKET
   CATKIN_DEPENDS roscpp diagnostic_updater diagnostic_msgs geometry_msgs message_runtime
 )

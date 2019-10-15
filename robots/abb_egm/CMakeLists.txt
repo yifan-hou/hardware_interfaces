@@ -20,8 +20,9 @@ add_library(egm_proto SHARED ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(egm_proto ${PROTOBUF_LIBRARIES})
 
 include_directories(
-  ${PROJECT_BINARY_DIR}/robots/abb_egm/ ## point to build directory where egm.pb.h will be generated
+  ${PROJECT_BINARY_DIR}/ ## egm.pb.h will be generated at ${PROJECT_BINARY_DIR}/robots/abb_egm/
 )
+
 #######################
 ## Compile Libraries ##
 #######################
