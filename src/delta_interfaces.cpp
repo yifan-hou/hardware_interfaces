@@ -54,8 +54,12 @@ bool threeSphereIntersection(const Vector3d &c1, const Vector3d &c2,
   return true;
 }
 
+DeltaInterfaces::DeltaInterfaces() {
+  _JointUpperLimit = new double[3];
+  _JointLowerLimit = new double[3];
+}
 
-DeltaInterfaces::DeltaInterfaces(double baseCenter2Edge,
+void DeltaInterfaces::init(double baseCenter2Edge,
     double platformCenter2Edge,
     double upperLegLength, double lowerLegLength, bool modeUp,
     double *jointUpperLimit, double *jointLowerLimit) {
@@ -71,8 +75,6 @@ DeltaInterfaces::DeltaInterfaces(double baseCenter2Edge,
   _c = _kPlatformCenter2Edge - 0.5*_kBaseCenter2Edge;
 
   _ModeUp = modeUp;
-  _JointUpperLimit = new double[3];
-  _JointLowerLimit = new double[3];
   for (int i = 0; i < 3; ++i) {
     _JointUpperLimit[i] = jointUpperLimit[i];
     _JointLowerLimit[i] = jointLowerLimit[i];

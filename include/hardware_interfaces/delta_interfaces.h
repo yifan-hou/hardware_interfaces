@@ -6,7 +6,6 @@
 
     TODO(Yifan):
       Jacobian interface
-      safety range
 
     Author:
         Yifan Hou <yifanh@cmu.edu>
@@ -17,6 +16,8 @@
 
 class DeltaInterfaces {
 public:
+  DeltaInterfaces();
+  ~DeltaInterfaces();
   /**
    * Constructs a Delta robot. Input arguments specify the dimensions.
    *
@@ -34,10 +35,9 @@ public:
    *                                  kinematics.
    * @param[in]  jointLowerLimit      The joint angle lower limits
    */
-  DeltaInterfaces(double baseCenter2Edge, double platformCenter2Edge,
+  void init(double baseCenter2Edge, double platformCenter2Edge,
     double upperLegLength, double lowerLegLength, bool modeUp,
     double *jointUpperLimit, double *jointLowerLimit);
-  ~DeltaInterfaces();
 
   // ----------------------------------------
   //  user interfaces
@@ -75,6 +75,12 @@ public:
    * @return     True if success.
    */
   virtual bool setJoints(const double *joints) = 0;
+
+  // ----------------------------------------
+  //  helper functions (implemented)
+  // ----------------------------------------
+
+
   /**
    * Forward kinematics. Compute the platform location given joint angles. When
    * there are two solutions, the choice is made based on _kModeUp.
