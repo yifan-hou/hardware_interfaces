@@ -54,16 +54,14 @@ public:
 private:
   DeltaDJI(){};
   /**
-   * Convert joint angles (delta robot convention) to motor commands.
-   * joint = direction*(motor - motor0)
+   * Convert joint angles (delta robot convention) to motor commands. joint =
+   * direction*(motor - motor0)
    *
    * @param[in]  joints  The joint angles in rad.
    * @param      motors  The motor commands
-   *
-   * @return     True if success.
    */
-  bool joint2motor(const double *joints, double *motors);
-  bool motor2joint(const double *motors, double *joints);
+  void joint2motor(const double *joints, double *motors);
+  void motor2joint(const double *motors, double *joints);
 
   RobomasterCommunicator _robot;
   double *_motor_directions;

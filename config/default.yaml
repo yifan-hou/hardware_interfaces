@@ -18,6 +18,8 @@ delta:
   upper_leg_length: 0.1 # upper legs length
   lower_leg_length: 0.1 # lower legs length
   modeUp: true # True if Z of the platform is higher than Z of base
+  PGain: 100
+  DGain: 0.1
   jointUpperLimit:
     j1: 3.14
     j2: 3.14
@@ -27,10 +29,14 @@ delta:
     j2: -3.14
     j3: -3.14
   motor1:
-    offset: 30 # degree: motor angle at joint = 0 pose
-    direction: 1 # is the motor positive direction the same with the joint
-
-
+    offset: 120 # degree: motor angle at joint = 0 pose
+    direction: -1 # is the motor positive direction the same with the joint
+  motor2:
+    offset: 120 # degree: motor angle at joint = 0 pose
+    direction: -1 # is the motor positive direction the same with the joint
+  motor3:
+    offset: 120 # degree: motor angle at joint = 0 pose
+    direction: -1 # is the motor positive direction the same with the joint
 
 ftsensor:
   offset: # will be added to the reading; in tool frame
