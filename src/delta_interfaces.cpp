@@ -1,7 +1,9 @@
-#include "delta_interfaces.h"
+#include "hardware_interfaces/delta_interfaces.h"
 
 #include <cmath>
 #include <Eigen/Dense>
+
+using namespace Eigen;
 
 double sqrt3 = sqrt(3);
 double sqrt3_2 = sqrt3/2.0;
@@ -40,9 +42,9 @@ bool threeSphereIntersection(const Vector3d &c1, const Vector3d &c2,
   double j = (T.transpose()*(c3 - p0))(1);
 
   // solve
-  x = d/2;
-  y = (i^2 + j^2)/(2*j) - i/j*x;
-  z = sqrt(r^2 - x^2 - y^2);
+  double x = d/2.0;
+  double y = (i*i + j*j)/(2.0*j) - i/j*x;
+  double z = sqrt(r*r - x*x - y*y);
 
   // transform back
   Vector3d p1_t, p2_t;
@@ -71,7 +73,7 @@ void DeltaInterfaces::init(double baseCenter2Edge,
   _k_uP = 2.0*_kPlatformCenter2Edge;
   _k_sP = sqrt3*_k_uP;
   _a = _kBaseCenter2Edge - _k_uP;
-  _b = k_sP*0.5 - sqrt3_2*_kBaseCenter2Edge;
+  _b = _k_sP*0.5 - sqrt3_2*_kBaseCenter2Edge;
   _c = _kPlatformCenter2Edge - 0.5*_kBaseCenter2Edge;
 
   _ModeUp = modeUp;
@@ -93,10 +95,10 @@ bool DeltaInterfaces::fk(const double *theta, double *p) {
   p_BA_1v << 0,
       -_kBaseCenter2Edge-_kUpperLegLength*cos(theta[0])+_k_uP,
       -_kUpperLegLength*sin(theta[0]);
-  p_BA_2v << sqrt3_2*(_kBaseCenter2Edge+_kUpperLegLength*cos(theta[1])) - _k_sP/2,
+  p_BA_2v << sqrt3_2*(_kBaseCenter2Edge+_kUpperLegLength*cos(theta[1])) - _k_sP/2.0,
       0.5*(_kBaseCenter2Edge + _kUpperLegLength*cos(theta[1])) - _kPlatformCenter2Edge,
       -_kUpperLegLength*sin(theta[1]);
-  p_BA_3v = -sqrt3_2*(_kBaseCenter2Edge + _kUpperLegLength*cos(theta[2])) + _k_sP/2,
+  p_BA_3v << -sqrt3_2*(_kBaseCenter2Edge + _kUpperLegLength*cos(theta[2])) + _k_sP/2.0,
       0.5*(_kBaseCenter2Edge + _kUpperLegLength*cos(theta[2])) - _kPlatformCenter2Edge,
       - _kUpperLegLength*sin(theta[2]);
 
@@ -134,7 +136,7 @@ bool DeltaInterfaces::ik(const double *p, double *theta) {
       _kLowerLegLength*_kLowerLegLength;
   double Delta2 = sqrt(E2*E2 + F2*F2 - G2*G2);
 
-  double E3 = _kUpperLegLength*(sqrt3*(x-b) - y - _c);
+  double E3 = _kUpperLegLength*(sqrt3*(x-_b) - y - _c);
   double F3 = F1;
   double G3 = x*x + y*y + z*z + _b*_b + _c*_c + _kUpperLegLength*_kUpperLegLength + 2.0*(-x*_b + y*_c) - _kLowerLegLength*_kLowerLegLength;
   double Delta3 = sqrt(E3*E3 + F3*F3 - G3*G3);
@@ -142,13 +144,13 @@ bool DeltaInterfaces::ik(const double *p, double *theta) {
   theta[0] = 2.0*atan((-F1 + Delta1)/(G1 - E1));
   theta[1] = 2.0*atan((-F2 + Delta2)/(G2 - E2));
   theta[2] = 2.0*atan((-F3 + Delta3)/(G3 - E3));
-  if ((t > _JointUpperLimit[0]) || (t < _JointLowerLimit[0])) {
+  if ((theta[0] > _JointUpperLimit[0]) || (theta[0] < _JointLowerLimit[0])) {
     theta[0] = 2.0*atan((-F1 - Delta1)/(G1 - E1));
   }
-  if ((t > _JointUpperLimit[1]) || (t < _JointLowerLimit[1])) {
+  if ((theta[1] > _JointUpperLimit[1]) || (theta[1] < _JointLowerLimit[1])) {
     theta[1] = 2.0*atan((-F2 - Delta2)/(G2 - E2));
   }
-  if ((t > _JointUpperLimit[2]) || (t < _JointLowerLimit[2])) {
+  if ((theta[2] > _JointUpperLimit[2]) || (theta[2] < _JointLowerLimit[2])) {
     theta[2] = 2.0*atan((-F3 - Delta3)/(G3 - E3));
   }
   return true;

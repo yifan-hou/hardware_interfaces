@@ -46,19 +46,20 @@ public:
   /**
    * Gets the position of the platform measured in the base frame.
    *
-   * @param      pos  The [x y z] position in mm.
+   * @param      pos   The [x y z] position in mm.
    *
-   * @return     True if success.
+   * @return     0 if success. -1 if motor joints are not available. -2 if FK
+   *             has no solution..
    */
-  virtual bool getPos(double *pos) = 0;
+  virtual int getPos(double *pos) = 0;
   /**
    * Sets the position of the platform about the base.
    *
-   * @param[in]  pos  The [x y z] position in mm.
+   * @param[in]  pos   The [x y z] position in mm.
    *
-   * @return     True if success.
+   * @return     0 if success, -1 if set motor fails, -2 if fk has no solution.
    */
-  virtual bool setPos(const double *pos) = 0;
+  virtual int setPos(const double *pos) = 0;
   /**
    * Gets the joint angles in rad.
    *

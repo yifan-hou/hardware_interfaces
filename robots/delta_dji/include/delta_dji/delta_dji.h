@@ -10,7 +10,7 @@
 class DeltaDJI: public DeltaInterfaces {
 public:
   DeltaDJI(ros::NodeHandle& root_nh);
-  ~DeltaDJI(){}
+  ~DeltaDJI();
 
   // ----------------------------------------
   //  user interfaces
@@ -28,7 +28,7 @@ public:
   /**
    * Sets the position of the platform about the base.
    *
-   * @param[in]  pos  The [x y z] position in mm.
+   * @param[in]  pos   The [x y z] position in mm.
    *
    * @return     0 if success, -1 if set motor fails, -2 if fk has no solution.
    */

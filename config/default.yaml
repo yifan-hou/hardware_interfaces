@@ -17,17 +17,18 @@ delta:
   platform_center2edge: 0.02 # platform, distance from center to axis
   upper_leg_length: 0.1 # upper legs length
   lower_leg_length: 0.1 # lower legs length
-  modeUp: true # True if Z of the platform is higher than Z of base
+  modeUp: false # True if Z of the platform is higher than Z of base
+  control_rate: 1000 # Hz of PID position control loop
   PGain: 100
   DGain: 0.1
   jointUpperLimit:
-    j1: 3.14
-    j2: 3.14
-    j3: 3.14
+    j1: 1.5
+    j2: 1.5
+    j3: 1.5
   jointLowerLimit:
-    j1: -3.14
-    j2: -3.14
-    j3: -3.14
+    j1: -0.1
+    j2: -0.1
+    j3: -0.1
   motor1:
     offset: 120 # degree: motor angle at joint = 0 pose
     direction: -1 # is the motor positive direction the same with the joint

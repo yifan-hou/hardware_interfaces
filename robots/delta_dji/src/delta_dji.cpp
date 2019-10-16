@@ -1,5 +1,8 @@
 #include "delta_dji/delta_dji.h"
 
+
+using std::cout, std::endl;
+
 DeltaDJI::DeltaDJI(ros::NodeHandle& root_nh) {
   _robot.init("can0");
   cout<<"Robomaster_communicator initialized\n";
@@ -30,12 +33,12 @@ DeltaDJI::DeltaDJI(ros::NodeHandle& root_nh) {
   root_nh.param(std::string("/delta/upper_leg_length"), UpperLegLength, 0.1);
   root_nh.param(std::string("/delta/lower_leg_length"), LowerLegLength, 0.1);
   root_nh.param(std::string("/delta/modeUp"), ModeUp, true);
-  root_nh.param(std::string("/delta/jointUpperLimit/j1"), jointUpperLimit[0], 0);
-  root_nh.param(std::string("/delta/jointUpperLimit/j2"), jointUpperLimit[1], 0);
-  root_nh.param(std::string("/delta/jointUpperLimit/j3"), jointUpperLimit[2], 0);
-  root_nh.param(std::string("/delta/jointLowerLimit/j1"), jointLowerLimit[0], 0);
-  root_nh.param(std::string("/delta/jointLowerLimit/j2"), jointLowerLimit[1], 0);
-  root_nh.param(std::string("/delta/jointLowerLimit/j3"), jointLowerLimit[2], 0);
+  root_nh.param(std::string("/delta/jointUpperLimit/j1"), jointUpperLimit[0], 0.0);
+  root_nh.param(std::string("/delta/jointUpperLimit/j2"), jointUpperLimit[1], 0.0);
+  root_nh.param(std::string("/delta/jointUpperLimit/j3"), jointUpperLimit[2], 0.0);
+  root_nh.param(std::string("/delta/jointLowerLimit/j1"), jointLowerLimit[0], 0.0);
+  root_nh.param(std::string("/delta/jointLowerLimit/j2"), jointLowerLimit[1], 0.0);
+  root_nh.param(std::string("/delta/jointLowerLimit/j3"), jointLowerLimit[2], 0.0);
 
   init(BaseCenter2Edge, PlatformCenter2Edge, UpperLegLength, LowerLegLength,
       ModeUp, jointUpperLimit, jointLowerLimit);
@@ -53,6 +56,7 @@ DeltaDJI::DeltaDJI(ros::NodeHandle& root_nh) {
     ROS_WARN_STREAM("Parameter [/delta/DGain] not found");
 
   double Kp, Kd;
+  int rate;
   _motor_offsets = new double[3];
   _motor_directions = new double[3];
 
@@ -63,11 +67,12 @@ DeltaDJI::DeltaDJI(ros::NodeHandle& root_nh) {
   root_nh.param(std::string("/delta/motor1/direction"), _motor_directions[0], 1.0);
   root_nh.param(std::string("/delta/motor2/direction"), _motor_directions[1], 1.0);
   root_nh.param(std::string("/delta/motor3/direction"), _motor_directions[2], 1.0);
+  root_nh.param(std::string("/delta/control_rate"), rate, 100);
   root_nh.param(std::string("/delta/PGain"), Kp, 10.0);
   root_nh.param(std::string("/delta/DGain"), Kd, 1.0);
 
   _robot.set_gains(Kp, 0, Kd);
-  _robot.spin();
+  _robot.spin(rate);
 }
 
 DeltaDJI::~DeltaDJI() {
@@ -100,20 +105,18 @@ bool DeltaDJI::getJoints(double *joints) {
   motor[0] = _robot.get_position(1);
   motor[1] = _robot.get_position(2);
   motor[2] = _robot.get_position(3);
+  motor2joint(motor, joints);
 
-  return motor2joint(motor, joints);
+  return true;
 }
 
 bool DeltaDJI::setJoints(const double *joints) {
   double motor[3];
-  if(joint2motor(joints, motor)) {
-    _robot.set_command_position(1, motor[0]);
-    _robot.set_command_position(2, motor[1]);
-    _robot.set_command_position(3, motor[2]);
-    return true;
-  } else {
-    return false;
-  }
+  joint2motor(joints, motor);
+  _robot.set_command_position(1, motor[0]);
+  _robot.set_command_position(2, motor[1]);
+  _robot.set_command_position(3, motor[2]);
+  return true;
 }
 
 void DeltaDJI::joint2motor(const double *joints, double *motors) {
