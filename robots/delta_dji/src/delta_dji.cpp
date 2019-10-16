@@ -37,7 +37,7 @@ DeltaDJI::DeltaDJI(ros::NodeHandle& root_nh) {
   // _robot.set_command_position(1, setpoint);
   // _robot.set_command_position(2, setpoint);
   // _robot.set_command_position(3, setpoint);
-  // cout<<"Set command position\n";
+  // cout << "Set command position\n";
   // _robot.set_gains(Kp, 0, Kd);
   // cout<<"Set gains position\n";
 
