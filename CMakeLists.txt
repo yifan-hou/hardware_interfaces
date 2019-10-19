@@ -39,7 +39,7 @@ catkin_package(
 
 add_library(DELTA_INTERFACES src/delta_interfaces.cpp)
 
-add_subdirectory(robots/abb_egm)
-add_subdirectory(robots/ati_netft)
-add_subdirectory(robots/ur_socket)
+#add_subdirectory(robots/abb_egm)
+#add_subdirectory(robots/ati_netft)
+#add_subdirectory(robots/ur_socket)
 add_subdirectory(robots/delta_dji)

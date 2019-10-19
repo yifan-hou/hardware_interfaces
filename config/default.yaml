@@ -29,6 +29,7 @@ delta:
     j1: -0.1
     j2: -0.1
     j3: -0.1
+  default_joints: 45 # initial joint angle (deg) for all joints
   motor1:
     offset: 120 # degree: motor angle at joint = 0 pose
     direction: -1 # is the motor positive direction the same with the joint
