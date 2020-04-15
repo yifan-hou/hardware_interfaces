@@ -11,6 +11,9 @@ Current implementations includes (see `robots/`):
 * ATI force torque sensor via netft;
 * Delta platform with DJI BLDC module (under development)
 
+Author: Yifan Hou
+yifanh at cmu dot edu
+
 # Install
 ## Dependency
 This package depends on [cpplibrary](https://github.com/yifan-hou/cpplibrary).
