@@ -211,11 +211,11 @@ int ATINetft::getWrenchSensor(double *wrench)
   _torque_old[2] = wrench[5];
   // cout << "         data_change: " << data_change << endl;
 
-  if (data_change > 0.05) {
+  if (data_change > 0.01) {
     _stall_counts = 0;
   } else {
     _stall_counts ++;
-    if (_stall_counts >= 5) {
+    if (_stall_counts >= 10) {
       cout << "\033[1;31m[ATINetft] Dead Stream\033[0m\n";
       return 2;
     }
