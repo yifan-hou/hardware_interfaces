@@ -19,7 +19,6 @@ find_package(Boost REQUIRED COMPONENTS
 
 find_library(RUT Utilities HINTS /usr/local/lib/RobotUtilities)
 
-
 include_directories(
   include/
   robots/abb_egm/include
@@ -39,7 +38,8 @@ catkin_package(
 
 add_library(DELTA_INTERFACES src/delta_interfaces.cpp)
 
+# comment out / uncomment the library you need
 add_subdirectory(robots/abb_egm)
 add_subdirectory(robots/ati_netft)
 add_subdirectory(robots/ur_socket)
-add_subdirectory(robots/delta_dji)
+#add_subdirectory(robots/delta_dji)

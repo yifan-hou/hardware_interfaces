@@ -19,7 +19,7 @@ public:
   /**
    * Gets the position of the platform measured in the base frame.
    *
-   * @param      pos   The [x y z] position in mm.
+   * @param      pos   The [x y z] position in meter.
    *
    * @return     0 if success. -1 if motor joints are not available. -2 if FK has
    *             no solution.
@@ -28,7 +28,7 @@ public:
   /**
    * Sets the position of the platform about the base.
    *
-   * @param[in]  pos   The [x y z] position in mm.
+   * @param[in]  pos   The [x y z] position in meter.
    *
    * @return     0 if success, -1 if set motor fails, -2 if fk has no solution.
    */
