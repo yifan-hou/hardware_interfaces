@@ -1,18 +1,9 @@
 /*
-    roscontrol hardware_interface wrapper for ati Netft RDT interface.
-
-    Three methods to use this interface:
+    Two methods to use this interface:
     1. use it as a hardware_interface. It provides force_torque_sensor_interface.
     2. read the public member _force and _torque, or call getWrench()
-    3. use it as the netft_rdt_node. Messages and services are established.
 */
 #pragma once
-#include <hardware_interface/robot_hw.h>
-#include <hardware_interface/force_torque_sensor_interface.h>
-
-
-#include <ros/ros.h>
-
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -22,24 +13,34 @@
 #include <pthread.h>
 #include <memory>
 #include <mutex>
-#include <geometry_msgs/WrenchStamped.h>
-#include <diagnostic_msgs/DiagnosticArray.h>
-#include <diagnostic_updater/DiagnosticStatusWrapper.h>
 
-// ATI Netft Specific headers
-#include "netft_rdt_driver/netft_rdt_driver.h"
+#include <RobotUtilities/utilities.h>
 
 #include "hardware_interfaces/ft_interfaces.h"
+#include "netft_rdt_driver/netft_rdt_driver.h"
 
-using namespace std;
 
 typedef std::chrono::high_resolution_clock Clock;
 
 class ATINetft : public FTInterfaces {
   public:
+    struct ATINetftConfig {
+       std::string ip_address{"192.168.1.1"};
+       std::string sensor_name{"netft"};
+       std::string fullpath{};
+       bool print_flag{false};
+       double publish_rate{100.0};
+       RUT::Vector3d Foffset{};
+       RUT::Vector3d Toffset{};
+       RUT::Vector3d Gravity{};
+       RUT::Vector3d Pcom{};
+       RUT::Vector6d WrenchSafety{};
+       RUT::Vector7d PoseSensorTool{};
+    };
+
     ATINetft();
     ~ATINetft();
-    bool init(ros::NodeHandle& root_nh, Clock::time_point time0);
+    bool init(Clock::time_point time0, const ATINetftConfig &ati_netft_config);
     /**
      * Get the sensor reading.
      *
@@ -74,14 +75,11 @@ class ATINetft : public FTInterfaces {
     double _publish_rate;
 
     Clock::time_point _time0; ///< high resolution timer.
-    ofstream _file;
+    std::ofstream _file;
     bool _print_flag;
 
     // netft
-    ros::Publisher _pub;
-    ros::Publisher _diag_pub;
     std::shared_ptr<netft_rdt_driver::NetFTRDTDriver> _netft;
-    string _frame_id;
 
     // monitor pausing of the data stream.
     // if the data is the same in 50 frames, the stream is considered dead.

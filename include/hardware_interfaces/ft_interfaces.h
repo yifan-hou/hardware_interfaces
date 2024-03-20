@@ -54,7 +54,7 @@ protected:
   static FTInterfaces* pinstance;
   FTInterfaces(){}
   FTInterfaces(const FTInterfaces&){}
-  FTInterfaces& operator= (const FTInterfaces&){}
+  FTInterfaces& operator= (const FTInterfaces&){return *this;}
   ~FTInterfaces(){}
 };
 

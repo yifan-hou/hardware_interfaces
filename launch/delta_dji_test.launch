@@ -1,4 +1,0 @@
-<launch>
-  <rosparam file="$(find hardware_interfaces)/config/default.yaml" command="load"/>
-  <node pkg="hardware_interfaces" name="test_DELTA_DJI" type="test_DELTA_DJI"  output="screen" />
-</launch>

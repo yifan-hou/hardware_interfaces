@@ -13,7 +13,6 @@
 #define PIf 3.1416
 #define PORT 30003
 
-using namespace std;
 using namespace RUT;
 
 typedef union {

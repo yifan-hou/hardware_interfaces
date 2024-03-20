@@ -1,4 +1,0 @@
-<launch>
-  <rosparam file="$(find hardware_interfaces)/config/default.yaml" command="load"/>
-  <node pkg="hardware_interfaces" name="UR_TEST" type="UR_TEST"  output="screen" />
-</launch>

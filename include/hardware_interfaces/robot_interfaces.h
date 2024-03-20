@@ -78,30 +78,31 @@ public:
   //  public state and parameters
   // ----------------------------------------
 
-  /**
-   * Indicates whether the initialization() function is called.
-   */
-  bool _isInitialized;
-  /**
-   * Current safety mode. see RobotSafetyMode
-   */
-  RobotSafetyMode _safetyMode;
-  /**
-   * Joint mode or Cartesian mode.
-   */
-  RobotOperationMode _operationMode;
-  /**
-   * Safety increments. Maximum distance between current configuration
-   * and the goal.
-   */
-  double _max_dist_tran;
-  double _max_dist_rot;
-  double _max_dist_joint;
-  /**
-   * Safety zone. Robot will stop if the commanded pose is out of the zone.
-   * [xmin,xmax,ymin,ymax,zmin,zmax]
-   */
-  double *_safe_zone;
+  struct RobotInterfaceConfig {
+
+    /**
+     * Current safety mode. see RobotSafetyMode
+     */
+    RobotSafetyMode safetyMode;
+    /**
+     * Joint mode or Cartesian mode.
+     */
+    RobotOperationMode operationMode;
+    /**
+     * Safety increments. Maximum distance between current configuration
+     * and the goal.
+     */
+    double max_dist_tran;
+    double max_dist_rot;
+    double max_dist_joint;
+    /**
+     * Safety zone. Robot will stop if the commanded pose is out of the zone.
+     * [xmin,xmax,ymin,ymax,zmin,zmax]
+     */
+    double *safe_zone;
+  };
+
+  RobotInterfaceConfig robot_interface_config;
 };
 
 #endif

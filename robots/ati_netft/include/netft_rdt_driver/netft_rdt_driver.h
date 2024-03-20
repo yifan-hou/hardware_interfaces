@@ -42,8 +42,7 @@
 #include <boost/thread/condition.hpp>
 #include <string>
 
-#include "diagnostic_updater/DiagnosticStatusWrapper.h"
-#include "geometry_msgs/WrenchStamped.h"
+#include <RobotUtilities/TimerLinux.h>
 
 namespace netft_rdt_driver
 {
@@ -61,7 +60,7 @@ struct RDTRecord
   int32_t tz_;
 
   // constexpr std::size_t RDT_RECORD_SIZE = 36;
-#define RDT_RECORD_SIZE 36 
+#define RDT_RECORD_SIZE 36
 // :-( but I don't want to force C++11...
 
   void unpack(const uint8_t *buffer);
@@ -69,6 +68,16 @@ struct RDTRecord
 
 };
 
+struct WrenchData {
+  double fx;
+  double fy;
+  double fz;
+  double tx;
+  double ty;
+  double tz;
+  uint seq;
+  RUT::TimePoint stamp;
+};
 
 class Writer {
 public:
@@ -109,12 +118,9 @@ public:
   ~NetFTRDTDriver();
 
   //! Get newest RDT data from netFT device
-  void getData(geometry_msgs::WrenchStamped &data);
+  void getData(WrenchData &data);
 
-  //! Add device diagnostics status wrapper
-  void diagnostics(diagnostic_updater::DiagnosticStatusWrapper &d);
-
-  //! Wait for new NetFT data to arrive.  
+  //! Wait for new NetFT data to arrive.
   // Returns true if new data has arrived, false it function times out
   bool waitForNewData(void);
 
@@ -149,7 +155,7 @@ protected:
   std::string recv_thread_error_msg_; 
 
   //! Newest data received from netft device
-  geometry_msgs::WrenchStamped new_data_;
+  WrenchData new_data_;
   //! Count number of received <good> packets
   unsigned packet_count_;
   //! Count of lost RDT packets using RDT sequence number
@@ -164,11 +170,6 @@ protected:
   //! Scaling factor for converting raw torque values into Newton*meters
   double torque_scale_;
 
-  //! Packet count last time diagnostics thread published output
-  unsigned diag_packet_count_;
-  //! Last time diagnostics was published
-  ros::Time last_diag_pub_time_;
-  
   //! to keep track of out-of-order or duplicate packet
   uint32_t last_rdt_sequence_;
   //! to keep track of any error codes reported by netft

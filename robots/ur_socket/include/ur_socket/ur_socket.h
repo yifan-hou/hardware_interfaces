@@ -9,79 +9,66 @@
 #ifndef _UR_SOCKET_HEADER_
 #define _UR_SOCKET_HEADER_
 
-#include <thread>
-#include <mutex>
-#include <sys/socket.h>
-#include <arpa/inet.h>
+#include <chrono>
+#include <yaml-cpp/yaml.h>
 
-#include <ros/ros.h>
-
+#include <RobotUtilities/utilities.h>
 #include "hardware_interfaces/robot_interfaces.h"
-
-
 
 typedef std::chrono::high_resolution_clock Clock;
 
-
 class URSocket : public RobotInterfaces {
 public:
-    /// for singleton implementation
+    struct URSocketConfig {
+        int ur_portnum{};
+        std::string ur_ip{};
+        double move_para_t{};
+        double move_para_lookahead{};
+        double move_para_gain{};
+        double max_dist_tran{};
+        double max_dist_rot{};
+        int safety_mode_int{};
+        int operation_mode_int{};
+        RUT::Vector6d safe_zone{};
+
+        RobotInterfaceConfig robot_interface_config{};
+    };
+
+    // for singleton implementation
     static URSocket* Instance();
 
     /**
      * Initialize socket communication. Create a thread to run the 500Hz
-     * communication with URe. The function will read parameters from ROS
-     * parameter server.
+     * communication with URe.
      *
-     * @param      root_nh  ROS node handle. Used to access parameters.
      * @param[in]  time0    Start time. Time will count from this number.
+     * @param[in]  config   controller configs.
      *
      * @return     True if success.
      */
-    int init(ros::NodeHandle& root_nh, Clock::time_point time0);
+    bool init(Clock::time_point time0, const URSocketConfig& config);
 
     bool getCartesian(double *pose) override;
     bool setCartesian(const double *pose) override;
 
     /**
-     * Not implemented yet
+     * Not implemented yet. Keep empty implementation to not make an abstract class
      */
     bool getJoints(double *joints) override;
     bool setJoints(const double *joints) override;
 
-
 private:
+    struct Implementation;
+    std::unique_ptr<Implementation> m_impl;
+
     /**
      * For singleton implementation
      */
     static URSocket* pinstance;
     URSocket();
     URSocket(const URSocket&){}
-    URSocket& operator= (const URSocket&){}
+    URSocket& operator= (const URSocket&){return *this;}
     ~URSocket();
-
-    // callbacks
-    void UR_STATE_MONITOR();
-
-    // motion parameters
-    float _move_para_t;
-    float _move_para_lookahead;
-    float _move_para_gain;
-
-    char *_send_buffer;
-
-    double *_pose;
-    double *_pose_set;
-    double *_joints;
-    std::mutex _mtx_pose;
-    std::mutex _mtx_pose_set;
-    std::mutex _mtx_joint;
-
-    int _sock;
-    std::thread _thread;
-    Clock::time_point _time0;
-
-    bool _stop_monitoring;
 };
 
 #endif

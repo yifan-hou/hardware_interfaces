@@ -35,6 +35,7 @@
 #include "netft_rdt_driver/netft_rdt_driver.h"
 #include <stdint.h>
 #include <exception>
+#include <iostream>
 
 using boost::asio::ip::udp;
 
@@ -118,8 +119,6 @@ NetFTRDTDriver::NetFTRDTDriver(const std::string &address) :
   lost_packets_(0),
   out_of_order_count_(0),
   seq_counter_(0),
-  diag_packet_count_(0),
-  last_diag_pub_time_(ros::Time::now()),
   last_rdt_sequence_(0),
   system_status_(0)
 {
@@ -168,11 +167,11 @@ NetFTRDTDriver::~NetFTRDTDriver()
   stop_recv_thread_ = true;
   if (!recv_thread_.timed_join(boost::posix_time::time_duration(0,0,1,0)))
   {
-    ROS_WARN("Interrupting recv thread");
+    std::cerr << "Interrupting recv thread" << std::endl;
     recv_thread_.interrupt();
     if (!recv_thread_.timed_join(boost::posix_time::time_duration(0,0,1,0)))
     {
-      ROS_WARN("Failed second join to recv thread");
+      std::cerr << "Failed second join to recv thread" << std::endl;
     }
   }
   socket_.close();
@@ -230,67 +229,6 @@ boost::system::error_code NetFTRDTDriver::setSoftwareBias()
   return writer.write(boost::asio::buffer(buffer, RDTCommand::RDT_COMMAND_SIZE)); 
 }
 
-// void NetFTRDTDriver::recvThreadFunc()
-// {
-//   try {
-//     recv_thread_running_ = true;
-//     RDTRecord rdt_record;
-//     geometry_msgs::WrenchStamped tmp_data;
-//     uint8_t buffer[RDTRecord::RDT_RECORD_SIZE+1];
-//     while (!stop_recv_thread_)
-//     {
-//       size_t len = socket_.receive(boost::asio::buffer(buffer, RDTRecord::RDT_RECORD_SIZE+1));
-//       if (len != RDTRecord::RDT_RECORD_SIZE)
-//       {
-//         ROS_WARN("Receive size of %d bytes does not match expected size of %d", 
-//                  int(len), int(RDTRecord::RDT_RECORD_SIZE));
-//       }
-//       else
-//       {
-//         rdt_record.unpack(buffer);
-//         if (rdt_record.status_ != 0)
-//         {
-//           // Latch any system status error code
-//           boost::unique_lock<boost::mutex> lock(mutex_);
-//           system_status_ = rdt_record.status_;
-//         }
-//         int32_t seqdiff = int32_t(rdt_record.rdt_sequence_ - last_rdt_sequence_);
-//         last_rdt_sequence_ = rdt_record.rdt_sequence_;
-//         if (seqdiff < 1)
-//         { boost::unique_lock<boost::mutex> lock(mutex_);
-//           // Don't use data that is old
-//           ++out_of_order_count_;
-//         }
-//         else 
-//         {
-//           tmp_data.header.seq = seq_counter_++;
-//           tmp_data.header.stamp = ros::Time::now();
-//           tmp_data.header.frame_id = "base_link";
-//           tmp_data.wrench.force.x = double(rdt_record.fx_) * force_scale_;
-//           tmp_data.wrench.force.y = double(rdt_record.fy_) * force_scale_;
-//           tmp_data.wrench.force.z = double(rdt_record.fz_) * force_scale_;
-//           tmp_data.wrench.torque.x = double(rdt_record.tx_) * torque_scale_;
-//           tmp_data.wrench.torque.y = double(rdt_record.ty_) * torque_scale_;
-//           tmp_data.wrench.torque.z = double(rdt_record.tz_) * torque_scale_;
-//           { boost::unique_lock<boost::mutex> lock(mutex_);
-//             new_data_ = tmp_data;
-//             lost_packets_ += (seqdiff - 1);
-//             ++packet_count_;
-//             condition_.notify_all();
-//           }
-//         }
-//       }
-//     } // end while
-//   }
-//   catch (std::exception &e)
-//   {    
-//     recv_thread_running_ = false;
-//     { boost::unique_lock<boost::mutex> lock(mutex_);
-//       recv_thread_error_msg_ = e.what();
-//     }
-//   }
-// }
-
 void NetFTRDTDriver::recvData(boost::system::error_code const & ec, std::size_t bytes_transferred)
 {
   if (ec) { 
@@ -300,11 +238,12 @@ void NetFTRDTDriver::recvData(boost::system::error_code const & ec, std::size_t 
     }    
   } else {
     RDTRecord rdt_record;
-    geometry_msgs::WrenchStamped tmp_data;
+    WrenchData tmp_data;
     if (bytes_transferred != RDT_RECORD_SIZE)
     {
-      ROS_WARN("Receive size of %d bytes does not match expected size of %d", 
-	       int(bytes_transferred), int(RDT_RECORD_SIZE));
+      std::cerr << "Receive size of " << int(bytes_transferred) <<
+          " bytes does not match expected size of " << int(RDT_RECORD_SIZE)
+          << std::endl;
     }
     else
     {
@@ -324,15 +263,14 @@ void NetFTRDTDriver::recvData(boost::system::error_code const & ec, std::size_t 
       }
       else 
       {
-        tmp_data.header.seq = seq_counter_++;
-        tmp_data.header.stamp = ros::Time::now();
-        tmp_data.header.frame_id = "base_link";
-        tmp_data.wrench.force.x = double(rdt_record.fx_) * force_scale_;
-        tmp_data.wrench.force.y = double(rdt_record.fy_) * force_scale_;
-        tmp_data.wrench.force.z = double(rdt_record.fz_) * force_scale_;
-        tmp_data.wrench.torque.x = double(rdt_record.tx_) * torque_scale_;
-        tmp_data.wrench.torque.y = double(rdt_record.ty_) * torque_scale_;
-        tmp_data.wrench.torque.z = double(rdt_record.tz_) * torque_scale_;
+        tmp_data.seq = seq_counter_++;
+        tmp_data.stamp = RUT::Clock::now();
+        tmp_data.fx = double(rdt_record.fx_) * force_scale_;
+        tmp_data.fy = double(rdt_record.fy_) * force_scale_;
+        tmp_data.fz = double(rdt_record.fz_) * force_scale_;
+        tmp_data.tx = double(rdt_record.tx_) * torque_scale_;
+        tmp_data.ty = double(rdt_record.ty_) * torque_scale_;
+        tmp_data.tz = double(rdt_record.tz_) * torque_scale_;
         { boost::unique_lock<boost::mutex> lock(mutex_);
           new_data_ = tmp_data;
           lost_packets_ += (seqdiff - 1);
@@ -365,63 +303,12 @@ void Writer::write_handler(boost::system::error_code const & ec, std::size_t) {
 }
 
 
-void NetFTRDTDriver::getData(geometry_msgs::WrenchStamped &data)
+void NetFTRDTDriver::getData(WrenchData &data)
 {
   { boost::unique_lock<boost::mutex> lock(mutex_);
     data = new_data_;
-  }  
+  }
 }
-
-
-void NetFTRDTDriver::diagnostics(diagnostic_updater::DiagnosticStatusWrapper &d)
-{
-  // Publish diagnostics
-  d.name = "NetFT RDT Driver : " + address_;
-  
-  d.summary(d.OK, "OK");
-  d.hardware_id = "0";
-
-  if (diag_packet_count_ == packet_count_)
-  {
-    d.mergeSummary(d.ERROR, "No new data in last second");
-  }
-
-  if (!recv_thread_running_)
-  {
-    d.mergeSummaryf(d.ERROR, "Receive thread has stopped : %s", recv_thread_error_msg_.c_str());
-  }
-
-  if (system_status_ != 0)
-  {
-    d.mergeSummaryf(d.ERROR, "NetFT reports error 0x%08x", system_status_);
-  }
-
-  ros::Time current_time(ros::Time::now());
-  double recv_rate = double(int32_t(packet_count_ - diag_packet_count_)) / (current_time - last_diag_pub_time_).toSec();
-    
-  d.clear();
-  d.addf("IP Address", "%s", address_.c_str());
-  d.addf("System status", "0x%08x", system_status_);
-  d.addf("Good packets", "%u", packet_count_);
-  d.addf("Lost packets", "%u", lost_packets_);
-  d.addf("Out-of-order packets", "%u", out_of_order_count_);
-  d.addf("Recv rate (pkt/sec)", "%.2f", recv_rate);
-  d.addf("Force scale (N/bit)", "%f", force_scale_);
-  d.addf("Torque scale (Nm/bit)", "%f", torque_scale_);
-
-  geometry_msgs::WrenchStamped data;
-  getData(data);
-  d.addf("Force X (N)",   "%f", data.wrench.force.x);
-  d.addf("Force Y (N)",   "%f", data.wrench.force.y);
-  d.addf("Force Z (N)",   "%f", data.wrench.force.z);
-  d.addf("Torque X (Nm)", "%f", data.wrench.torque.x);
-  d.addf("Torque Y (Nm)", "%f", data.wrench.torque.y);
-  d.addf("Torque Z (Nm)", "%f", data.wrench.torque.z);
-
-  last_diag_pub_time_ = current_time;
-  diag_packet_count_ = packet_count_;
-}
-
 
 } // end namespace netft_rdt_driver
 

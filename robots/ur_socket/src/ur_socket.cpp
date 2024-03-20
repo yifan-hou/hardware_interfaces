@@ -1,5 +1,13 @@
 #include "ur_socket/ur_socket.h"
 
+#include <thread>
+#include <memory>
+#include <mutex>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <yaml-cpp/yaml.h>
+
 #include <Eigen/Dense>
 #include <RobotUtilities/utilities.h>
 
@@ -23,7 +31,7 @@ void ReadXBytes(int socket, unsigned int x, void* buffer) {
     int bytesRead = 0;
     int result;
     while (bytesRead < x) {
-        result = read(socket, buffer + bytesRead, x - bytesRead);
+        result = recv(socket, buffer + bytesRead, x - bytesRead, 0);
         if (result < 1 ){
             // Throw your error.
         }
@@ -63,152 +71,116 @@ double reverseDouble(const char *data){
     return result;
 }
 
-double buffToDouble(uint8_t * buff){
+double buffToDouble(uint8_t * buff) {
     double value;
     memcpy(&value,buff,sizeof(double));
     return reverseDouble((char *)&value);
 }
 
-URSocket* URSocket::Instance() {
-  if (pinstance == 0) {
-    pinstance = new URSocket();
-  }
-  return pinstance;
+struct URSocket::Implementation {
+  // Indicates whether the initialization() function is called.
+  bool is_initialized;
+  // motion parameters
+  float move_para_t;
+  float move_para_lookahead;
+  float move_para_gain;
+
+  char *send_buffer;
+
+  double *pose_xyzq;
+  double *pose_xyzq_set;
+  double *joints;
+  std::mutex mtx_pose_xyzq;
+  std::mutex mtx_pose_xyzq_set;
+  std::mutex mtx_joint;
+
+  int sock;
+  std::thread thread;
+  Clock::time_point time0;
+
+  bool stop_monitoring;
+
+  URSocket::URSocketConfig config;
+
+  Implementation();
+  ~Implementation();
+
+  bool initialize(Clock::time_point time0, const URSocket::URSocketConfig &config);
+  void ur_state_monitor_call_back();
+  bool getCartesian(double *pose_xyzq);
+  bool setCartesian(const double *pose_xyzq);
+};
+
+URSocket::Implementation::Implementation() {
+  pose_xyzq       = new double[7];
+  pose_xyzq_set   = new double[7];
+  joints          = new double[6];
+  send_buffer     = new char[1000];
+  stop_monitoring = false;
 }
 
-URSocket::URSocket() {
-  _pose            = new double[7];
-  _pose_set        = new double[7];
-  _joints          = new double[6];
-  _safe_zone       = new double[6];
-  _send_buffer     = new char[1000];
-  _isInitialized   = false;
-  _stop_monitoring = false;
-  _safetyMode      = SAFETY_MODE_STOP;
-  _operationMode   = OPERATION_MODE_CARTESIAN;
-}
-
-URSocket::~URSocket() {
-  cout << "[URSocket] finishing.." << endl;
-  _stop_monitoring = true;
-  _thread.join();
+URSocket::Implementation::~Implementation() {
+  std::cout << "[URSocket] finishing.." << endl;
+  stop_monitoring = true;
+  thread.join();
 
   delete pinstance;
-  delete [] _pose;
-  delete [] _pose_set;
-  delete [] _joints;
-  delete [] _safe_zone;
-  delete [] _send_buffer;
+  delete [] pose_xyzq;
+  delete [] pose_xyzq_set;
+  delete [] joints;
+  delete [] send_buffer;
 }
 
-int URSocket::init(ros::NodeHandle& root_nh, Clock::time_point time0) {
-  _time0 = time0;
-  // read egm parameters from parameter server
-  int ur_portnum;
-  std::string ur_ip;
-
-  double max_dist_tran, max_dist_rot;
-  double safe_zone[6];
-  int safety_mode_int;
-  int operation_mode_int;
-
-  root_nh.param(std::string("/ur/portnum"), ur_portnum, 30003);
-  root_nh.param(std::string("/ur/ip"), ur_ip, std::string("192.168.1.98"));
-  root_nh.param(std::string("/ur/t"), _move_para_t, 0.02f);
-  root_nh.param(std::string("/ur/lookahead"), _move_para_lookahead, 0.2f);
-  root_nh.param(std::string("/ur/gain"), _move_para_gain, 300.0f);
-  root_nh.param(std::string("/robot/max_dist_tran"), max_dist_tran, 0.0);
-  root_nh.param(std::string("/robot/max_dist_rot"), max_dist_rot, 0.0);
-  root_nh.param(std::string("/robot/safety_mode"), safety_mode_int, 0);
-  root_nh.param(std::string("/robot/operation_mode"), operation_mode_int, 0);
-  root_nh.param(std::string("/robot/safe_zone/xmin"), safe_zone[0], 0.0);
-  root_nh.param(std::string("/robot/safe_zone/xmax"), safe_zone[1], 0.0);
-  root_nh.param(std::string("/robot/safe_zone/ymin"), safe_zone[2], 0.0);
-  root_nh.param(std::string("/robot/safe_zone/ymax"), safe_zone[3], 0.0);
-  root_nh.param(std::string("/robot/safe_zone/zmin"), safe_zone[4], 0.0);
-  root_nh.param(std::string("/robot/safe_zone/zmax"), safe_zone[5], 0.0);
-
-  if (!root_nh.hasParam("/ur/portnum"))
-    ROS_WARN_STREAM("Parameter [/ur/portnum] not found");
-  if (!root_nh.hasParam("/ur/ip"))
-    ROS_WARN_STREAM("Parameter [/ur/ip] not found");
-  if (!root_nh.hasParam("/robot/max_dist_tran"))
-    ROS_WARN_STREAM("Parameter [/robot/max_dist_tran] not found");
-  if (!root_nh.hasParam("/robot/max_dist_rot"))
-    ROS_WARN_STREAM("Parameter [/robot/max_dist_rot] not found");
-  if (!root_nh.hasParam("/robot/safety_mode"))
-    ROS_WARN_STREAM("Parameter [/robot/safety_mode] not found");
-  if (!root_nh.hasParam("/robot/operation_mode"))
-    ROS_WARN_STREAM("Parameter [/robot/operation_mode] not found");
-  if (!root_nh.hasParam("/robot/safe_zone"))
-    ROS_WARN_STREAM("Parameter [/egm/robot/safe_zone] not found");
-
-  switch(safety_mode_int) {
-    case 0 : _safetyMode = SAFETY_MODE_NONE;
-    break;
-    case 1 : _safetyMode = SAFETY_MODE_TRUNCATE;
-    break;
-    case 2 : _safetyMode = SAFETY_MODE_STOP;
-    break;
-  }
-  switch(operation_mode_int) {
-    case 0 : _operationMode = OPERATION_MODE_CARTESIAN;
-    break;
-    case 1 : _operationMode = OPERATION_MODE_JOINT;
-    break;
-  }
+bool URSocket::Implementation::initialize(Clock::time_point time0,
+    const URSocket::URSocketConfig &ur_socket_config) {
+  time0 = time0;
+  config = ur_socket_config;
 
   /* Establish connection with UR */
-  cout << "[URSocket] Connecting to robot at " << ur_ip << ":" << ur_portnum << endl;
-  _sock = 0;
+  std::cout << "[URSocket] Connecting to robot at " << config.ur_ip << ":" << config.ur_portnum << endl;
+  sock = 0;
   struct sockaddr_in serv_addr;
-  if ((_sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-    cout << "\n Socket creation error \n";
+  if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+    std::cout << "\n[URSocket] Socket creation error \n";
     return false;
   }
 
   serv_addr.sin_family = AF_INET;
-  serv_addr.sin_port = htons(ur_portnum);
+  serv_addr.sin_port = htons(config.ur_portnum);
 
   // Convert IPv4 and IPv6 addresses from text to binary form
-  if(inet_pton(AF_INET, ur_ip.c_str(), &serv_addr.sin_addr)<=0) {
-    cout << "\nInvalid address/ Address not supported \n";
+  if(inet_pton(AF_INET, config.ur_ip.c_str(), &serv_addr.sin_addr)<=0) {
+    std::cout << "\n[URSocket] Invalid address/ Address not supported \n";
     return false;
   }
 
-  if (connect(_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-    cout << "\nConnection Failed \n";
+  if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+    std::cout << "\n[URSocket]Connection Failed \n";
     return false;
   }
 
-  cout << "UR socket connection established.\n";
-
-  _max_dist_tran = max_dist_tran;
-  _max_dist_rot  = max_dist_rot;
-
-  /* Initialize goal */
-  RUT::copyArray(safe_zone, _safe_zone, 6);
-  assert(safe_zone[0] < safe_zone[1]); // make sure the order is min max
+  std::cout << "[URSocket] UR socket connection established.\n";
 
   /* Create thread to listen to UR states */
-  cout << "Trying to create thread.\n";
-  _thread = std::thread(&URSocket::UR_STATE_MONITOR, this);
+  std::cout << "[URSocket] Trying to create thread.\n";
+  thread = std::thread(&URSocket::Implementation::ur_state_monitor_call_back, this);
 
-  while (!_isInitialized)
+  while (!is_initialized)
     usleep(200*1000);
-  cout << "UR thread is created and running.\n";
+  std::cout << "[URSocket] UR thread is created and running.\n";
   return true;
 }
 
-void URSocket::UR_STATE_MONITOR() {
+// callbacks
+void URSocket::Implementation::ur_state_monitor_call_back() {
   unsigned char buffer[1116];
   unsigned int length = 0;
   assert(sizeof(length) == 4);
   while(true) {
     /**
-     * Read pose feedback
+     * Read pose_xyzq feedback
      */
-    ReadXBytes(_sock, 1116, (void*)(buffer));
+    ReadXBytes(sock, 1116, (void*)(buffer));
 
     // decode the message
     unsigned char *pointer = buffer;
@@ -230,97 +202,117 @@ void URSocket::UR_STATE_MONITOR() {
     // printf("Length: %d, x: %.3f, y: %.3f, z: %.3f, rx: %.3f, ry: %.3f, rz: %.3f\n", length,
     //   x, y, z, Rx, Ry, Rz);
 
-    // convert to pose
+    // convert to pose_xyzq
     Vector3d ax;
     ax << Rx, Ry, Rz;
     double angle = ax.norm();
     Quaterniond q(Eigen::AngleAxisd(angle, ax.normalized()));
 
-    _mtx_pose.lock();
-    _pose[0] = x;
-    _pose[1] = y;
-    _pose[2] = z;
-    _pose[3] = q.w();
-    _pose[4] = q.x();
-    _pose[5] = q.y();
-    _pose[6] = q.z();
-    _mtx_pose.unlock();
+    mtx_pose_xyzq.lock();
+    pose_xyzq[0] = x;
+    pose_xyzq[1] = y;
+    pose_xyzq[2] = z;
+    pose_xyzq[3] = q.w();
+    pose_xyzq[4] = q.x();
+    pose_xyzq[5] = q.y();
+    pose_xyzq[6] = q.z();
+    mtx_pose_xyzq.unlock();
 
     // check safety
-    if ((x < _safe_zone[0]) || (x > _safe_zone[1]) || (y < _safe_zone[2]) ||
-        (y > _safe_zone[3]) || (z < _safe_zone[4]) || (z > _safe_zone[5])) {
-      ROS_ERROR_STREAM("[URSocket] Error: out of safety bound");
+    if ((x < config.safe_zone[0]) || (x > config.safe_zone[1]) || (y < config.safe_zone[2]) ||
+        (y > config.safe_zone[3]) || (z < config.safe_zone[4]) || (z > config.safe_zone[5])) {
+      std::cerr << "[URSocket] Error: out of safety bound" << std::endl;
       exit(1);
     }
 
-    if (!_isInitialized) {
-      RUT::copyArray(_pose, _pose_set, 7);
-      _isInitialized = true;
+    if (!is_initialized) {
+      RUT::copyArray(pose_xyzq, pose_xyzq_set, 7);
+      is_initialized = true;
     }
 
     /**
-     * Send pose command
+     * Send pose_xyzq command
      */
     // Quaternion to axis angle
     Vector3d ax_send;
-    _mtx_pose_set.lock();
-    angle = 2.0*acos(_pose_set[3]);
-    ax_send << _pose_set[4], _pose_set[5], _pose_set[6];
+    mtx_pose_xyzq_set.lock();
+    angle = 2.0*acos(pose_xyzq_set[3]);
+    ax_send << pose_xyzq_set[4], pose_xyzq_set[5], pose_xyzq_set[6];
     ax_send.normalize();
     ax_send *= angle;
-    sprintf (_send_buffer, "servoj(get_inverse_kin(p[ %f, %f, %f, %f, %f, %f]), t = %f, lookahead_time = %f, gain = %f)\n",
-        _pose_set[0]/1000.0, _pose_set[1]/1000.0, _pose_set[2]/1000.0,
-        ax_send[0], ax_send[1], ax_send[2], _move_para_t, _move_para_lookahead, _move_para_gain);
-    // sprintf (_send_buffer, "movel(p[ %f, %f, %f, %f, %f, %f], a = %f, v = %f, t = %f, r = %f)\n",
-    //     _pose_set[0]/1000.0, _pose_set[1]/1000.0, _pose_set[2]/1000.0,
-    //     ax_send[0], ax_send[1], ax_send[2], _move_para_a, _move_para_v, _move_para_t, _move_para_r);
-    _mtx_pose_set.unlock();
-    send(_sock, _send_buffer, strlen(_send_buffer), 0);
+    sprintf (send_buffer, "servoj(get_inverse_kin(p[ %f, %f, %f, %f, %f, %f]), t = %f, lookahead_time = %f, gain = %f)\n",
+        pose_xyzq_set[0]/1000.0, pose_xyzq_set[1]/1000.0, pose_xyzq_set[2]/1000.0,
+        ax_send[0], ax_send[1], ax_send[2], move_para_t, move_para_lookahead, move_para_gain);
+    // sprintf (send_buffer, "movel(p[ %f, %f, %f, %f, %f, %f], a = %f, v = %f, t = %f, r = %f)\n",
+    //     pose_xyzq_set[0]/1000.0, pose_xyzq_set[1]/1000.0, pose_xyzq_set[2]/1000.0,
+    //     ax_send[0], ax_send[1], ax_send[2], _move_para_a, _move_para_v, move_para_t, _move_para_r);
+    mtx_pose_xyzq_set.unlock();
+    send(sock, send_buffer, strlen(send_buffer), 0);
 
     // stop condition
-    if (_stop_monitoring) break;
+    if (stop_monitoring) break;
   }
 }
 
+bool URSocket::Implementation::getCartesian(double *pose_xyzq) {
+  if (!is_initialized) return false;
 
-bool URSocket::getCartesian(double *pose) {
-  if (!_isInitialized) return false;
-
-  _mtx_pose.lock();
-  RUT::copyArray(_pose, pose, 7);
-  _mtx_pose.unlock();
+  mtx_pose_xyzq.lock();
+  RUT::copyArray(pose_xyzq, pose_xyzq, 7);
+  mtx_pose_xyzq.unlock();
 
   // check safety
-  if ((_pose[0] < _safe_zone[0]) || (_pose[0] > _safe_zone[1]))
+  if ((pose_xyzq[0] < config.robot_interface_config.safe_zone[0]) || (pose_xyzq[0] > config.robot_interface_config.safe_zone[1]))
     return false;
-  if ((_pose[1] < _safe_zone[2]) || (_pose[1] > _safe_zone[3]))
+  if ((pose_xyzq[1] < config.robot_interface_config.safe_zone[2]) || (pose_xyzq[1] > config.robot_interface_config.safe_zone[3]))
     return false;
-  if ((_pose[2] < _safe_zone[4]) || (_pose[2] > _safe_zone[5]))
+  if ((pose_xyzq[2] < config.robot_interface_config.safe_zone[4]) || (pose_xyzq[2] > config.robot_interface_config.safe_zone[5]))
     return false;
 
   return true;
 }
 
-bool URSocket::setCartesian(const double *pose) {
-  assert(_operationMode == OPERATION_MODE_CARTESIAN);
+bool URSocket::Implementation::setCartesian(const double *pose_xyzq) {
+  if (!is_initialized) return false;
+  assert(config.robot_interface_config.operationMode == OPERATION_MODE_CARTESIAN);
 
-  _mtx_pose_set.lock();
-  RUT::copyArray(pose, _pose_set, 7);
-  _mtx_pose_set.unlock();
+  mtx_pose_xyzq_set.lock();
+  RUT::copyArray(pose_xyzq, pose_xyzq_set, 7);
+  mtx_pose_xyzq_set.unlock();
 
   return true;
+}
+
+URSocket::URSocket()
+    : m_impl{std::make_unique<Implementation>()} {}
+
+URSocket::~URSocket(){}
+
+URSocket* URSocket::Instance() {
+  if (pinstance == 0) {
+    pinstance = new URSocket();
+  }
+  return pinstance;
+}
+
+bool URSocket::init(Clock::time_point time0, const URSocketConfig &ur_socket_config) {
+  return m_impl->initialize(time0, ur_socket_config);
+}
+
+bool URSocket::getCartesian(double *pose_xyzq) {
+  return m_impl->getCartesian(pose_xyzq);
+}
+
+bool URSocket::setCartesian(const double *pose_xyzq) {
+  return m_impl->setCartesian(pose_xyzq);
 }
 
 bool URSocket::getJoints(double *joints) {
-  if (!_isInitialized)
-    return false;
-
-  RUT::copyArray(_joints, joints, 6);
-  return true;
+  std::cerr << "[URSocket] not implemented yet" << endl;
+  return false;
 }
 
 bool URSocket::setJoints(const double *joints) {
-  assert(_operationMode == OPERATION_MODE_JOINT);
-  cout << "not implemented yet" << endl;
-  return true;
+  std::cerr << "[URSocket] not implemented yet" << endl;
+  return false;
 }
