@@ -1,52 +1,47 @@
 #include "ur_socket/ur_socket.h"
 
-#include <thread>
-#include <memory>
-#include <mutex>
-#include <unistd.h>
-#include <sys/socket.h>
+#include <RobotUtilities/utilities.h>
 #include <arpa/inet.h>
+#include <sys/socket.h>
+#include <unistd.h>
 #include <yaml-cpp/yaml.h>
 
 #include <Eigen/Dense>
-#include <RobotUtilities/utilities.h>
-
+#include <memory>
+#include <mutex>
+#include <thread>
 
 using std::cout;
 using std::endl;
 
-using RUT::Vector3d;
 using RUT::Quaterniond;
+using RUT::Vector3d;
 
-URSocket* URSocket::pinstance = 0;
-
+URSocket *URSocket::pinstance = 0;
 
 typedef union {
   double d;
   unsigned char bytes[sizeof(double)];
 } DOUBLE_UNION;
 
-
-void ReadXBytes(int socket, unsigned int x, void* buffer) {
-    int bytesRead = 0;
-    int result;
-    while (bytesRead < x) {
-        result = recv(socket, buffer + bytesRead, x - bytesRead, 0);
-        if (result < 1 ){
-            // Throw your error.
-        }
-        bytesRead += result;
+void ReadXBytes(int socket, unsigned int x, void *buffer) {
+  int bytesRead = 0;
+  int result;
+  while (bytesRead < x) {
+    result = recv(socket, buffer + bytesRead, x - bytesRead, 0);
+    if (result < 1) {
+      // Throw your error.
     }
+    bytesRead += result;
+  }
 }
 
-int buffToInteger(unsigned char * buffer) {
-    int a = int((unsigned char)(buffer[0]) << 24 |
-                (unsigned char)(buffer[1]) << 16 |
-                (unsigned char)(buffer[2]) << 8 |
-                (unsigned char)(buffer[3]));
-    return a;
+int buffToInteger(unsigned char *buffer) {
+  int a =
+      int((unsigned char)(buffer[0]) << 24 | (unsigned char)(buffer[1]) << 16 |
+          (unsigned char)(buffer[2]) << 8 | (unsigned char)(buffer[3]));
+  return a;
 }
-
 
 /**
  * Use this to convert big endian (Network) to little endian (host). You can use
@@ -63,18 +58,18 @@ int buffToInteger(unsigned char * buffer) {
  *
  * @return     The reversed bytes as a double
  */
-double reverseDouble(const char *data){
-    double result;
-    char *dest = (char *)&result;
-    for(int i=0; i<sizeof(double); i++)
-        dest[i] = data[sizeof(double)-i-1];
-    return result;
+double reverseDouble(const char *data) {
+  double result;
+  char *dest = (char *)&result;
+  for (int i = 0; i < sizeof(double); i++)
+    dest[i] = data[sizeof(double) - i - 1];
+  return result;
 }
 
-double buffToDouble(uint8_t * buff) {
-    double value;
-    memcpy(&value,buff,sizeof(double));
-    return reverseDouble((char *)&value);
+double buffToDouble(uint8_t *buff) {
+  double value;
+  memcpy(&value, buff, sizeof(double));
+  return reverseDouble((char *)&value);
 }
 
 struct URSocket::Implementation {
@@ -105,17 +100,18 @@ struct URSocket::Implementation {
   Implementation();
   ~Implementation();
 
-  bool initialize(Clock::time_point time0, const URSocket::URSocketConfig &config);
+  bool initialize(Clock::time_point time0,
+                  const URSocket::URSocketConfig &config);
   void ur_state_monitor_call_back();
   bool getCartesian(double *pose_xyzq);
   bool setCartesian(const double *pose_xyzq);
 };
 
 URSocket::Implementation::Implementation() {
-  pose_xyzq       = new double[7];
-  pose_xyzq_set   = new double[7];
-  joints          = new double[6];
-  send_buffer     = new char[1000];
+  pose_xyzq = new double[7];
+  pose_xyzq_set = new double[7];
+  joints = new double[6];
+  send_buffer = new char[1000];
   stop_monitoring = false;
 }
 
@@ -125,19 +121,20 @@ URSocket::Implementation::~Implementation() {
   thread.join();
 
   delete pinstance;
-  delete [] pose_xyzq;
-  delete [] pose_xyzq_set;
-  delete [] joints;
-  delete [] send_buffer;
+  delete[] pose_xyzq;
+  delete[] pose_xyzq_set;
+  delete[] joints;
+  delete[] send_buffer;
 }
 
-bool URSocket::Implementation::initialize(Clock::time_point time0,
-    const URSocket::URSocketConfig &ur_socket_config) {
+bool URSocket::Implementation::initialize(
+    Clock::time_point time0, const URSocket::URSocketConfig &ur_socket_config) {
   time0 = time0;
   config = ur_socket_config;
 
   /* Establish connection with UR */
-  std::cout << "[URSocket] Connecting to robot at " << config.ur_ip << ":" << config.ur_portnum << endl;
+  std::cout << "[URSocket] Connecting to robot at " << config.ur_ip << ":"
+            << config.ur_portnum << endl;
   sock = 0;
   struct sockaddr_in serv_addr;
   if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -149,7 +146,7 @@ bool URSocket::Implementation::initialize(Clock::time_point time0,
   serv_addr.sin_port = htons(config.ur_portnum);
 
   // Convert IPv4 and IPv6 addresses from text to binary form
-  if(inet_pton(AF_INET, config.ur_ip.c_str(), &serv_addr.sin_addr)<=0) {
+  if (inet_pton(AF_INET, config.ur_ip.c_str(), &serv_addr.sin_addr) <= 0) {
     std::cout << "\n[URSocket] Invalid address/ Address not supported \n";
     return false;
   }
@@ -163,10 +160,10 @@ bool URSocket::Implementation::initialize(Clock::time_point time0,
 
   /* Create thread to listen to UR states */
   std::cout << "[URSocket] Trying to create thread.\n";
-  thread = std::thread(&URSocket::Implementation::ur_state_monitor_call_back, this);
+  thread =
+      std::thread(&URSocket::Implementation::ur_state_monitor_call_back, this);
 
-  while (!is_initialized)
-    usleep(200*1000);
+  while (!is_initialized) usleep(200 * 1000);
   std::cout << "[URSocket] UR thread is created and running.\n";
   return true;
 }
@@ -176,11 +173,11 @@ void URSocket::Implementation::ur_state_monitor_call_back() {
   unsigned char buffer[1116];
   unsigned int length = 0;
   assert(sizeof(length) == 4);
-  while(true) {
+  while (true) {
     /**
      * Read pose_xyzq feedback
      */
-    ReadXBytes(sock, 1116, (void*)(buffer));
+    ReadXBytes(sock, 1116, (void *)(buffer));
 
     // decode the message
     unsigned char *pointer = buffer;
@@ -199,7 +196,8 @@ void URSocket::Implementation::ur_state_monitor_call_back() {
     pointer += 8;
     double Rz = buffToDouble(pointer);
 
-    // printf("Length: %d, x: %.3f, y: %.3f, z: %.3f, rx: %.3f, ry: %.3f, rz: %.3f\n", length,
+    // printf("Length: %d, x: %.3f, y: %.3f, z: %.3f, rx: %.3f, ry: %.3f, rz:
+    // %.3f\n", length,
     //   x, y, z, Rx, Ry, Rz);
 
     // convert to pose_xyzq
@@ -219,8 +217,9 @@ void URSocket::Implementation::ur_state_monitor_call_back() {
     mtx_pose_xyzq.unlock();
 
     // check safety
-    if ((x < config.safe_zone[0]) || (x > config.safe_zone[1]) || (y < config.safe_zone[2]) ||
-        (y > config.safe_zone[3]) || (z < config.safe_zone[4]) || (z > config.safe_zone[5])) {
+    if ((x < config.safe_zone[0]) || (x > config.safe_zone[1]) ||
+        (y < config.safe_zone[2]) || (y > config.safe_zone[3]) ||
+        (z < config.safe_zone[4]) || (z > config.safe_zone[5])) {
       std::cerr << "[URSocket] Error: out of safety bound" << std::endl;
       exit(1);
     }
@@ -236,16 +235,21 @@ void URSocket::Implementation::ur_state_monitor_call_back() {
     // Quaternion to axis angle
     Vector3d ax_send;
     mtx_pose_xyzq_set.lock();
-    angle = 2.0*acos(pose_xyzq_set[3]);
+    angle = 2.0 * acos(pose_xyzq_set[3]);
     ax_send << pose_xyzq_set[4], pose_xyzq_set[5], pose_xyzq_set[6];
     ax_send.normalize();
     ax_send *= angle;
-    sprintf (send_buffer, "servoj(get_inverse_kin(p[ %f, %f, %f, %f, %f, %f]), t = %f, lookahead_time = %f, gain = %f)\n",
-        pose_xyzq_set[0]/1000.0, pose_xyzq_set[1]/1000.0, pose_xyzq_set[2]/1000.0,
-        ax_send[0], ax_send[1], ax_send[2], move_para_t, move_para_lookahead, move_para_gain);
-    // sprintf (send_buffer, "movel(p[ %f, %f, %f, %f, %f, %f], a = %f, v = %f, t = %f, r = %f)\n",
-    //     pose_xyzq_set[0]/1000.0, pose_xyzq_set[1]/1000.0, pose_xyzq_set[2]/1000.0,
-    //     ax_send[0], ax_send[1], ax_send[2], _move_para_a, _move_para_v, move_para_t, _move_para_r);
+    sprintf(send_buffer,
+            "servoj(get_inverse_kin(p[ %f, %f, %f, %f, %f, %f]), t = %f, "
+            "lookahead_time = %f, gain = %f)\n",
+            pose_xyzq_set[0] / 1000.0, pose_xyzq_set[1] / 1000.0,
+            pose_xyzq_set[2] / 1000.0, ax_send[0], ax_send[1], ax_send[2],
+            move_para_t, move_para_lookahead, move_para_gain);
+    // sprintf (send_buffer, "movel(p[ %f, %f, %f, %f, %f, %f], a = %f, v = %f,
+    // t = %f, r = %f)\n",
+    //     pose_xyzq_set[0]/1000.0, pose_xyzq_set[1]/1000.0,
+    //     pose_xyzq_set[2]/1000.0, ax_send[0], ax_send[1], ax_send[2],
+    //     _move_para_a, _move_para_v, move_para_t, _move_para_r);
     mtx_pose_xyzq_set.unlock();
     send(sock, send_buffer, strlen(send_buffer), 0);
 
@@ -262,11 +266,14 @@ bool URSocket::Implementation::getCartesian(double *pose_xyzq) {
   mtx_pose_xyzq.unlock();
 
   // check safety
-  if ((pose_xyzq[0] < config.robot_interface_config.safe_zone[0]) || (pose_xyzq[0] > config.robot_interface_config.safe_zone[1]))
+  if ((pose_xyzq[0] < config.robot_interface_config.safe_zone[0]) ||
+      (pose_xyzq[0] > config.robot_interface_config.safe_zone[1]))
     return false;
-  if ((pose_xyzq[1] < config.robot_interface_config.safe_zone[2]) || (pose_xyzq[1] > config.robot_interface_config.safe_zone[3]))
+  if ((pose_xyzq[1] < config.robot_interface_config.safe_zone[2]) ||
+      (pose_xyzq[1] > config.robot_interface_config.safe_zone[3]))
     return false;
-  if ((pose_xyzq[2] < config.robot_interface_config.safe_zone[4]) || (pose_xyzq[2] > config.robot_interface_config.safe_zone[5]))
+  if ((pose_xyzq[2] < config.robot_interface_config.safe_zone[4]) ||
+      (pose_xyzq[2] > config.robot_interface_config.safe_zone[5]))
     return false;
 
   return true;
@@ -274,7 +281,8 @@ bool URSocket::Implementation::getCartesian(double *pose_xyzq) {
 
 bool URSocket::Implementation::setCartesian(const double *pose_xyzq) {
   if (!is_initialized) return false;
-  assert(config.robot_interface_config.operationMode == OPERATION_MODE_CARTESIAN);
+  assert(config.robot_interface_config.operationMode ==
+         OPERATION_MODE_CARTESIAN);
 
   mtx_pose_xyzq_set.lock();
   RUT::copyArray(pose_xyzq, pose_xyzq_set, 7);
@@ -283,19 +291,19 @@ bool URSocket::Implementation::setCartesian(const double *pose_xyzq) {
   return true;
 }
 
-URSocket::URSocket()
-    : m_impl{std::make_unique<Implementation>()} {}
+URSocket::URSocket() : m_impl{std::make_unique<Implementation>()} {}
 
-URSocket::~URSocket(){}
+URSocket::~URSocket() {}
 
-URSocket* URSocket::Instance() {
+URSocket *URSocket::Instance() {
   if (pinstance == 0) {
     pinstance = new URSocket();
   }
   return pinstance;
 }
 
-bool URSocket::init(Clock::time_point time0, const URSocketConfig &ur_socket_config) {
+bool URSocket::init(Clock::time_point time0,
+                    const URSocketConfig &ur_socket_config) {
   return m_impl->initialize(time0, ur_socket_config);
 }
 

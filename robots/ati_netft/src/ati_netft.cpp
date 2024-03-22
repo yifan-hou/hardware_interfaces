@@ -10,20 +10,19 @@ void set_realtime_priority() {
   // We'll operate on the currently running thread.
   pthread_t this_thread = pthread_self();
 
-
   sched_param sch;
   int policy;
   pthread_getschedparam(this_thread, &policy, &sch);
   sch.sched_priority = 99;
   if (pthread_setschedparam(this_thread, SCHED_FIFO, &sch)) {
-      std::cout << "Failed to setschedparam: " << std::strerror(errno) << '\n';
+    std::cout << "Failed to setschedparam: " << std::strerror(errno) << '\n';
   }
 
   std::cout << "[Netft] Thread priority is " << sch.sched_priority << std::endl;
 }
 
-void* ATI_Monitor(void* pParam) {
-  ATINetft *netft_hardware = (ATINetft*)pParam;
+void *ATI_Monitor(void *pParam) {
+  ATINetft *netft_hardware = (ATINetft *)pParam;
 
   netft_rdt_driver::WrenchData data;
   RUT::Timer loop_timer;
@@ -38,9 +37,9 @@ void* ATI_Monitor(void* pParam) {
       netft_hardware->_netft->getData(data);
 
       // read data
-      netft_hardware->_force[0]  = data.fx;
-      netft_hardware->_force[1]  = data.fy;
-      netft_hardware->_force[2]  = data.fz;
+      netft_hardware->_force[0] = data.fx;
+      netft_hardware->_force[1] = data.fy;
+      netft_hardware->_force[2] = data.fz;
       netft_hardware->_torque[0] = data.tx;
       netft_hardware->_torque[1] = data.ty;
       netft_hardware->_torque[2] = data.tz;
@@ -61,8 +60,8 @@ void* ATI_Monitor(void* pParam) {
 }
 
 ATINetft::ATINetft() {
-  _force  = new double[3];
-  _force_old  = new double[3];
+  _force = new double[3];
+  _force_old = new double[3];
   _WrenchSafety = new double[6];
   _torque = new double[3];
   _torque_old = new double[3];
@@ -85,8 +84,7 @@ bool ATINetft::init(Clock::time_point time0, const ATINetftConfig &config) {
       new netft_rdt_driver::NetFTRDTDriver(config.ip_address));
 
   // open file
-  if (_print_flag)
-  {
+  if (_print_flag) {
     _file.open(config.fullpath);
     if (_file.is_open())
       std::cout << "[ATINetft] file opened successfully." << std::endl;
@@ -97,8 +95,10 @@ bool ATINetft::init(Clock::time_point time0, const ATINetftConfig &config) {
   std::cout << "[ATINetft] Creating thread for callback.." << std::endl;
   // create thread
   int rc = pthread_create(&_thread, NULL, ATI_Monitor, this);
-  if (rc){
-    std::cerr << "[ATINetft] ATI Netft Hardware initialization error: unable to create thread." << std::endl;
+  if (rc) {
+    std::cerr << "[ATINetft] ATI Netft Hardware initialization error: unable "
+                 "to create thread."
+              << std::endl;
     return false;
   }
 
@@ -106,8 +106,7 @@ bool ATINetft::init(Clock::time_point time0, const ATINetftConfig &config) {
   return true;
 }
 
-int ATINetft::getWrenchSensor(double *wrench)
-{
+int ATINetft::getWrenchSensor(double *wrench) {
   wrench[0] = _force[0];
   wrench[1] = _force[1];
   wrench[2] = _force[2];
@@ -115,16 +114,16 @@ int ATINetft::getWrenchSensor(double *wrench)
   wrench[4] = _torque[1];
   wrench[5] = _torque[2];
 
-  double data_change =  fabs(wrench[0] - _force_old[0]);
-  data_change        += fabs(wrench[1] - _force_old[1]);
-  data_change        += fabs(wrench[2] - _force_old[2]);
-  data_change        += 10*fabs(wrench[3] - _torque_old[0]);
-  data_change        += 10*fabs(wrench[4] - _torque_old[1]);
-  data_change        += 10*fabs(wrench[5] - _torque_old[2]);
+  double data_change = fabs(wrench[0] - _force_old[0]);
+  data_change += fabs(wrench[1] - _force_old[1]);
+  data_change += fabs(wrench[2] - _force_old[2]);
+  data_change += 10 * fabs(wrench[3] - _torque_old[0]);
+  data_change += 10 * fabs(wrench[4] - _torque_old[1]);
+  data_change += 10 * fabs(wrench[5] - _torque_old[2]);
 
-  _force_old[0]  = wrench[0];
-  _force_old[1]  = wrench[1];
-  _force_old[2]  = wrench[2];
+  _force_old[0] = wrench[0];
+  _force_old[1] = wrench[1];
+  _force_old[2] = wrench[2];
   _torque_old[0] = wrench[3];
   _torque_old[1] = wrench[4];
   _torque_old[2] = wrench[5];
@@ -133,7 +132,7 @@ int ATINetft::getWrenchSensor(double *wrench)
   if (data_change > 0.01) {
     _stall_counts = 0;
   } else {
-    _stall_counts ++;
+    _stall_counts++;
     if (_stall_counts >= 10) {
       std::cout << "\033[1;31m[ATINetft] Dead Stream\033[0m\n";
       return 2;
@@ -143,7 +142,7 @@ int ATINetft::getWrenchSensor(double *wrench)
   return 0;
 }
 
-int ATINetft::getWrenchTool(double *wrench){
+int ATINetft::getWrenchTool(double *wrench) {
   double wrench_sensor[6];
   int flag = getWrenchSensor(wrench_sensor);
 
@@ -156,7 +155,7 @@ int ATINetft::getWrenchTool(double *wrench){
   wrench_S[4] = wrench_sensor[4];
   wrench_S[5] = wrench_sensor[5];
 
-  wrench_T  = _adj_sensor_tool.transpose()*wrench_S;
+  wrench_T = _adj_sensor_tool.transpose() * wrench_S;
   wrench[0] = wrench_T[0];
   wrench[1] = wrench_T[1];
   wrench[2] = wrench_T[2];
@@ -172,7 +171,7 @@ int ATINetft::getWrenchNetTool(const double *pose, double *wrench_net_T) {
 
   // compensate for the weight of object
   Quaterniond q(pose[3], pose[4], pose[5], pose[6]);
-  Vector3d GinF = q.normalized().toRotationMatrix().transpose()*_Gravity;
+  Vector3d GinF = q.normalized().toRotationMatrix().transpose() * _Gravity;
   Vector3d GinT = _Pcom.cross(GinF);
   wrench_net_T[0] = wrench_T[0] + _Foffset[0] - GinF[0];
   wrench_net_T[1] = wrench_T[1] + _Foffset[1] - GinF[1];
@@ -184,18 +183,16 @@ int ATINetft::getWrenchNetTool(const double *pose, double *wrench_net_T) {
 
   // safety
   for (int i = 0; i < 6; ++i) {
-    if(abs(wrench_net_T[i]) >_WrenchSafety[i])
-      return 3;
+    if (abs(wrench_net_T[i]) > _WrenchSafety[i]) return 3;
   }
 
   return flag;
 }
 
-ATINetft::~ATINetft(){
-  delete [] _force;
-  delete [] _torque;
-  delete [] _WrenchSafety;
+ATINetft::~ATINetft() {
+  delete[] _force;
+  delete[] _torque;
+  delete[] _WrenchSafety;
   _netft.reset();
-  if (_print_flag)
-    _file.close();
+  if (_print_flag) _file.close();
 }

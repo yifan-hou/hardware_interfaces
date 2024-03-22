@@ -19,24 +19,22 @@
  * Safety mode. Determines what to do when the commanded pose is too far away
  * from the current pose.
  *  SAFETY_MODE_NONE: Do not perform safety checking.
- *  SAFETY_MODE_TRUNCATE: Truncate the commanded pose based on _max_dist_tran and _max_dist_rot
- *  SAFETY_MODE_STOP: Throw an error and stop.
+ *  SAFETY_MODE_TRUNCATE: Truncate the commanded pose based on _max_dist_tran
+ * and _max_dist_rot SAFETY_MODE_STOP: Throw an error and stop.
  */
-typedef enum
-{
+typedef enum {
   SAFETY_MODE_NONE,
   SAFETY_MODE_TRUNCATE,
   SAFETY_MODE_STOP
 } RobotSafetyMode;
 
-typedef enum
-{
+typedef enum {
   OPERATION_MODE_CARTESIAN,
   OPERATION_MODE_JOINT
 } RobotOperationMode;
 
 class RobotInterfaces {
-public:
+ public:
   // ----------------------------------------
   //  user interfaces
   // ----------------------------------------
@@ -79,7 +77,6 @@ public:
   // ----------------------------------------
 
   struct RobotInterfaceConfig {
-
     /**
      * Current safety mode. see RobotSafetyMode
      */

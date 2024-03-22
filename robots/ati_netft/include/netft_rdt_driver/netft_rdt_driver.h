@@ -35,20 +35,18 @@
 #ifndef NETFT_RDT_DRIVER
 #define NETFT_RDT_DRIVER
 
-#include <boost/asio.hpp>
-#include <boost/system/error_code.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/thread.hpp>
-#include <boost/thread/condition.hpp>
-#include <string>
-
 #include <RobotUtilities/TimerLinux.h>
 
-namespace netft_rdt_driver
-{
+#include <boost/asio.hpp>
+#include <boost/system/error_code.hpp>
+#include <boost/thread/condition.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/thread.hpp>
+#include <string>
 
-struct RDTRecord
-{
+namespace netft_rdt_driver {
+
+struct RDTRecord {
   uint32_t rdt_sequence_;
   uint32_t ft_sequence_;
   uint32_t status_;
@@ -61,11 +59,10 @@ struct RDTRecord
 
   // constexpr std::size_t RDT_RECORD_SIZE = 36;
 #define RDT_RECORD_SIZE 36
-// :-( but I don't want to force C++11...
+  // :-( but I don't want to force C++11...
 
   void unpack(const uint8_t *buffer);
   static uint32_t unpack32(const uint8_t *buffer);
-
 };
 
 struct WrenchData {
@@ -80,38 +77,33 @@ struct WrenchData {
 };
 
 class Writer {
-public:
-  Writer(boost::asio::ip::udp::socket & socket_);
+ public:
+  Writer(boost::asio::ip::udp::socket &socket_);
 
   template <class Buffer>
-  boost::system::error_code write(Buffer const & buffer) {
-    this->socket_.async_send(buffer, boost::bind(
-						  &Writer::write_handler, this,
-						  boost::asio::placeholders::error,
-						  boost::asio::placeholders::bytes_transferred
-						  ));
+  boost::system::error_code write(Buffer const &buffer) {
+    this->socket_.async_send(
+        buffer, boost::bind(&Writer::write_handler, this,
+                            boost::asio::placeholders::error,
+                            boost::asio::placeholders::bytes_transferred));
     boost::unique_lock<boost::mutex> lock(this->mutex);
     this->cond.wait(lock);
 
     return this->ec;
   }
 
-private:
+ private:
+  void write_handler(boost::system::error_code const &ec, std::size_t);
 
-  void write_handler(boost::system::error_code const & ec, std::size_t);
-
-  boost::asio::ip::udp::socket & socket_;
+  boost::asio::ip::udp::socket &socket_;
   boost::system::error_code ec;
 
   boost::condition_variable cond;
   boost::mutex mutex;
-
 };
 
-
-class NetFTRDTDriver
-{
-public:
+class NetFTRDTDriver {
+ public:
   // Start receiving data from NetFT device
   NetFTRDTDriver(const std::string &address);
 
@@ -128,19 +120,20 @@ public:
 
   boost::system::error_code setSoftwareBias();
 
-protected:
+ protected:
   // void recvThreadFunc(void);
 
-  void recvData(boost::system::error_code const & ec, std::size_t bytes_transferred);
-  
-  uint8_t buffer[RDT_RECORD_SIZE+1];
+  void recvData(boost::system::error_code const &ec,
+                std::size_t bytes_transferred);
+
+  uint8_t buffer[RDT_RECORD_SIZE + 1];
 
   //! Asks NetFT to start streaming data.
   void startStreaming(void);
 
   void run();
 
-  enum {RDT_PORT=49152};
+  enum { RDT_PORT = 49152 };
   std::string address_;
 
   boost::asio::io_service io_service_;
@@ -152,7 +145,7 @@ protected:
   //! True if recv loop is still running
   bool recv_thread_running_;
   //! Set if recv thread exited because of error
-  std::string recv_thread_error_msg_; 
+  std::string recv_thread_error_msg_;
 
   //! Newest data received from netft device
   WrenchData new_data_;
@@ -176,7 +169,6 @@ protected:
   uint32_t system_status_;
 };
 
-} // end namespace netft_rdt_driver
+}  // end namespace netft_rdt_driver
 
-
-#endif // NETFT_RDT_DRIVER
+#endif  // NETFT_RDT_DRIVER

@@ -13,7 +13,7 @@
 #include <Eigen/Dense>
 
 class FTInterfaces {
-public:
+ public:
   /**
    * Get the sensor reading.
    *
@@ -47,15 +47,15 @@ public:
   Eigen::Vector3d _Pcom;
   Eigen::Matrix<double, 6, 6> _adj_sensor_tool;
 
-protected:
+ protected:
   /**
    * for singleton implementation
    */
-  static FTInterfaces* pinstance;
-  FTInterfaces(){}
-  FTInterfaces(const FTInterfaces&){}
-  FTInterfaces& operator= (const FTInterfaces&){return *this;}
-  ~FTInterfaces(){}
+  static FTInterfaces *pinstance;
+  FTInterfaces() {}
+  FTInterfaces(const FTInterfaces &) {}
+  FTInterfaces &operator=(const FTInterfaces &) { return *this; }
+  ~FTInterfaces() {}
 };
 
 #endif
