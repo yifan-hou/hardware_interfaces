@@ -3,14 +3,15 @@ include_directories(
   /usr/include/eigen3
 )
 
-add_library(UR_SOCKET SHARED src/ur_socket.cpp)
-target_link_libraries(UR_SOCKET
-    ${catkin_LIBRARIES} ${RUT}
+find_package(ur_rtde REQUIRED)
+
+add_library(UR_RTDE SHARED src/ur_rtde.cpp)
+target_link_libraries(UR_RTDE ${RUT} ur_rtde::rtde
 )
 
 install(DIRECTORY include/
     DESTINATION ${CMAKE_INSTALL_PREFIX}/include/
 )
-install(TARGETS UR_SOCKET
+install(TARGETS UR_RTDE
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/
 )

@@ -6,6 +6,7 @@
 */
 #pragma once
 #include <RobotUtilities/utilities.h>
+#include <RobotUtilities/TimerLinux.h>
 #include <pthread.h>
 #include <unistd.h>
 
@@ -40,7 +41,7 @@ class ATINetft : public FTInterfaces {
 
   ATINetft();
   ~ATINetft();
-  bool init(Clock::time_point time0, const ATINetftConfig &ati_netft_config);
+  bool init(RUT::TimePoint time0, const ATINetftConfig &ati_netft_config);
   /**
    * Get the sensor reading.
    *
@@ -73,7 +74,7 @@ class ATINetft : public FTInterfaces {
   double *_torque, *_torque_old;
   double _publish_rate;
 
-  Clock::time_point _time0;  ///< high resolution timer.
+  RUT::TimePoint _time0;  ///< high resolution timer.
   std::ofstream _file;
   bool _print_flag;
 

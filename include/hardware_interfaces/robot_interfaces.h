@@ -9,7 +9,7 @@
         the safety zone.
 
     Author:
-        Yifan Hou <yifanh@cmu.edu>
+        Yifan Hou <yifanhou@stanford.edu>
 */
 
 #ifndef _ROBOT_INTERFACE_CLASS_HEADER_

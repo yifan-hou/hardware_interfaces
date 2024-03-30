@@ -2,7 +2,6 @@
 
 #include <sched.h>
 
-typedef std::chrono::high_resolution_clock Clock;
 using namespace RUT;
 
 void set_realtime_priority() {
@@ -73,7 +72,7 @@ ATINetft::ATINetft() {
   }
 }
 
-bool ATINetft::init(Clock::time_point time0, const ATINetftConfig &config) {
+bool ATINetft::init(RUT::TimePoint time0, const ATINetftConfig &config) {
   std::cout << "[ATINetft] initializing.." << std::endl;
   _time0 = time0;
 

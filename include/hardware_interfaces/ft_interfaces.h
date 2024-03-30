@@ -4,7 +4,7 @@
   force-torque.
 
   Author:
-      Yifan Hou <yifanh@cmu.edu>
+      Yifan Hou <yifanhou@stanford.edu>
 */
 
 #ifndef _FT_INTERFACE_CLASS_HEADER_
