@@ -15,6 +15,10 @@ yifanhou@stanford.edu
 ## Dependency
 This package depends on [cpplibrary](https://github.com/yifan-hou/cpplibrary).
 
+Additionally, the ur_rtde module is dependent on [UR rtde c++ library](https://gitlab.com/sdurobotics/ur_rtde)
+The arx_can module is dependent on the arx c++ sdk.
+
+
 ## Build
 Build and install with cmake.
 ``` sh
@@ -22,5 +26,5 @@ cd hardware_interfaces
 mkdir build && cd build
 cmake ..
 make -j
-sudo make install
+make install
 ```

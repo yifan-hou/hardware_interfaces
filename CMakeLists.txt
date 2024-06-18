@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.5)
 #######################
 project(hardware_interfaces)
 
@@ -12,15 +12,16 @@ find_package(Boost REQUIRED COMPONENTS
   program_options
 )
 
+find_package(Eigen3 REQUIRED)
+
 find_library(RUT Utilities HINTS ${CMAKE_INSTALL_PREFIX}/lib/RobotUtilities)
 
 include_directories(
   include/
-  robots/ati_netft/include
-  robots/ur_rtde/include
-  /usr/include/eigen3
+  ${EIGEN3_INCLUDE_DIRS}
 )
 
 # comment out / uncomment the library you need
 add_subdirectory(robots/ati_netft)
+add_subdirectory(robots/arx_can)
 add_subdirectory(robots/ur_rtde)
