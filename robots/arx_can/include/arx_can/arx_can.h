@@ -20,6 +20,10 @@ class ARXCAN : public RobotInterfaces {
     // controller configs
     std::string can_interface = "can0";
     std::string urdf_path = ""; // for gravity compensation
+    // send_receive_in_background determines whether the controller runs in synchonized mode.
+    // If true, the controller will run in background and the user does not need to call step().
+    // If false, the user needs to call update() every dt seconds.
+    bool send_receive_in_background = true;
     bool enable_gravity_compensation = true;
     bool reset_to_home_upon_start = true;
 
@@ -48,6 +52,8 @@ class ARXCAN : public RobotInterfaces {
 
   // interfaces unique to ARXCAN (no override)
   bool setGains(const double* kp, const double* kd);
+  double get_dt_s();
+  bool step();
 
  private:
   struct Implementation;
