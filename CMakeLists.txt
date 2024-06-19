@@ -24,4 +24,5 @@ include_directories(
 # comment out / uncomment the library you need
 add_subdirectory(robots/ati_netft)
 add_subdirectory(robots/arx_can)
+add_subdirectory(robots/realsense)
 add_subdirectory(robots/ur_rtde)
