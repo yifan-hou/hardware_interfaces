@@ -30,8 +30,8 @@ class ARXCAN : public RobotInterfaces {
     RobotInterfaceConfig robot_interface_config{};
   };
 
-  // for singleton implementation
-  static ARXCAN* Instance();
+  ARXCAN();
+  ~ARXCAN();
 
   /**
    * Initialize socket communication. Create a thread to run the 500Hz
@@ -52,21 +52,13 @@ class ARXCAN : public RobotInterfaces {
 
   // interfaces unique to ARXCAN (no override)
   bool setGains(const double* kp, const double* kd);
+  void getGains(double* kp, double* kd);
   double get_dt_s();
   bool step();
 
  private:
   struct Implementation;
   std::unique_ptr<Implementation> m_impl;
-
-  /**
-   * For singleton implementation
-   */
-  static ARXCAN* pinstance;
-  ARXCAN();
-  ARXCAN(const ARXCAN&) {}
-  ARXCAN& operator=(const ARXCAN&) { return *this; }
-  ~ARXCAN();
 };
 
 #endif

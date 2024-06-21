@@ -15,14 +15,49 @@ find_package(Boost REQUIRED COMPONENTS
 find_package(Eigen3 REQUIRED)
 
 find_library(RUT Utilities HINTS ${CMAKE_INSTALL_PREFIX}/lib/RobotUtilities)
+find_library(TIMER_LIB TimerLinux HINTS ${CMAKE_INSTALL_PREFIX}/lib/RobotUtilities)
 
 include_directories(
   include/
   ${EIGEN3_INCLUDE_DIRS}
+  ${CMAKE_INSTALL_PREFIX}/include/arx5-sdk/
+)
+
+# install common headers
+install(DIRECTORY include/
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/include/
 )
 
 # comment out / uncomment the library you need
 add_subdirectory(robots/ati_netft)
 add_subdirectory(robots/arx_can)
 add_subdirectory(robots/realsense)
-add_subdirectory(robots/ur_rtde)
+# add_subdirectory(robots/ur_rtde)
+
+
+# Test executable
+
+
+find_package(fmt REQUIRED)
+find_package(spdlog REQUIRED)
+add_executable(test_hardware_interfaces
+  test/main.cc
+)
+target_include_directories(test_hardware_interfaces PRIVATE
+  robots/ati_netft/include/
+  robots/arx_can/include/
+  robots/realsense/include/
+  robots/ur_rtde/include/
+)
+target_link_libraries(test_hardware_interfaces
+  ${Boost_LIBRARIES}
+  ${RUT}
+  ${TIMER_LIB}
+  ATI_NETFT_HW
+  NETFT_DRIVER
+  ARX_CAN
+  REALSENSE
+  spdlog::spdlog
+  ${CMAKE_INSTALL_PREFIX}/lib/arx5-sdk/libhardware.so 
+  ${CMAKE_INSTALL_PREFIX}/lib/arx5-sdk/libsolver.so
+)

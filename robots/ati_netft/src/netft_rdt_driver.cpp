@@ -114,6 +114,7 @@ NetFTRDTDriver::NetFTRDTDriver(const std::string &address)
       last_rdt_sequence_(0),
       system_status_(0) {
   // Construct UDP socket
+  std::cout << "[NetFTRDTDriver] Connecting to " << address << ", port " << RDT_PORT << std::endl;
   udp::endpoint netft_endpoint(
       boost::asio::ip::address_v4::from_string(address), RDT_PORT);
   socket_.open(udp::v4());

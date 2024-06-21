@@ -5,8 +5,8 @@
     2. read the public member _force and _torque, or call getWrench()
 */
 #pragma once
-#include <RobotUtilities/utilities.h>
 #include <RobotUtilities/TimerLinux.h>
+#include <RobotUtilities/utilities.h>
 #include <pthread.h>
 #include <unistd.h>
 
@@ -31,6 +31,10 @@ class ATINetft : public FTInterfaces {
     std::string fullpath{};
     bool print_flag{false};
     double publish_rate{100.0};
+    // If the force change is smaller than noise_level for more than stall_threshold frames,
+    // the stream is considered dead.
+    double noise_level{0.0};
+    int stall_threshold{50};
     RUT::Vector3d Foffset{};
     RUT::Vector3d Toffset{};
     RUT::Vector3d Gravity{};
@@ -41,7 +45,7 @@ class ATINetft : public FTInterfaces {
 
   ATINetft();
   ~ATINetft();
-  bool init(RUT::TimePoint time0, const ATINetftConfig &ati_netft_config);
+  bool init(RUT::TimePoint time0, const ATINetftConfig& ati_netft_config);
   /**
    * Get the sensor reading.
    *
@@ -50,7 +54,7 @@ class ATINetft : public FTInterfaces {
    * @return  0: no error.
    *   1: still waiting for new data. 2: dead stream.
    */
-  int getWrenchSensor(double *wrench) override;
+  int getWrenchSensor(double* wrench) override;
   /**
    * Get the wrench in tool frame.
    *
@@ -58,7 +62,7 @@ class ATINetft : public FTInterfaces {
    *
    * @return     0: no error. 1: still waiting for new data. 2: dead stream.
    */
-  int getWrenchTool(double *wrench_T) override;
+  int getWrenchTool(double* wrench_T) override;
   /**
    * Get the tool wrench after tool weight compensation.
    *
@@ -68,7 +72,7 @@ class ATINetft : public FTInterfaces {
    * @return     0: no error. 1: still waiting for new data. 2: dead stream.
    *             3: force is too big.
    */
-  int getWrenchNetTool(const double *pose, double *wrench_net_T) override;
+  int getWrenchNetTool(const double* pose, double* wrench_net_T) override;
 
   double *_force, *_force_old;
   double *_torque, *_torque_old;
@@ -77,7 +81,7 @@ class ATINetft : public FTInterfaces {
   RUT::TimePoint _time0;  ///< high resolution timer.
   std::ofstream _file;
   bool _print_flag;
-
+  ATINetftConfig _config;
   // netft
   std::shared_ptr<netft_rdt_driver::NetFTRDTDriver> _netft;
 

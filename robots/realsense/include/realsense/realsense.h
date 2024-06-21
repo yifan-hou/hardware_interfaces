@@ -10,16 +10,25 @@
 #define _REALSENSE_HEADER_
 
 #include <librealsense2/rs.hpp>
+#include <opencv2/opencv.hpp>
 
 #include <RobotUtilities/TimerLinux.h>
 
 class Realsense {
  public:
   struct RealsenseConfig {
+    // Not all sizes and frame rates are supported by the camera.
+    // Use realsense viewer to check what is supported.
+    int width{1920};
+    int height{1080};
+    int framerate{30};
+    bool enable_color{true};
+    bool enable_depth{true};
+    bool align_depth_to_color{false};
   };
 
-  // for singleton implementation
-  static Realsense* Instance();
+  Realsense();
+  ~Realsense();
 
   /**
    * Initialize socket communication. Create a thread to run the 500Hz
@@ -31,20 +40,11 @@ class Realsense {
    * @return     True if success.
    */
   bool init(RUT::TimePoint time0, const RealsenseConfig& config);
-  rs2::frameset wait_for_frames();
+  cv::mat next_rgb_frame_blocking();
 
  private:
   struct Implementation;
   std::unique_ptr<Implementation> m_impl;
-
-  /**
-   * For singleton implementation
-   */
-  static Realsense* pinstance;
-  Realsense();
-  Realsense(const Realsense&) {}
-  Realsense& operator=(const Realsense&) { return *this; }
-  ~Realsense();
 };
 
 #endif

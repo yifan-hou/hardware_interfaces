@@ -10,8 +10,6 @@
 
 using namespace arx;
 
-ARXCAN* ARXCAN::pinstance = 0;
-
 struct ARXCAN::Implementation {
   std::shared_ptr<Arx5JointController> arx_controller_ptr;
 
@@ -34,6 +32,8 @@ struct ARXCAN::Implementation {
   bool getJoints(double* joints);
   bool setJoints(const double* joints);
   bool setGains(const double* kp, const double* kd);
+  void getGains(double* kp, double* kd);
+
   bool step();
 };
 
@@ -41,7 +41,6 @@ ARXCAN::Implementation::Implementation() {}
 
 ARXCAN::Implementation::~Implementation() {
   std::cout << "[ARXCAN] finishing.." << std::endl;
-  delete pinstance;
 }
 
 bool ARXCAN::Implementation::initialize(
@@ -55,6 +54,8 @@ bool ARXCAN::Implementation::initialize(
   arx_controller_ptr = std::shared_ptr<Arx5JointController>(
       new Arx5JointController(config.can_interface));
 
+  arx_controller_ptr->set_no_gripper();
+
   std::cout << "[ARXCAN] CAN connection established.\n";
   arx_controller_ptr->set_log_level(spdlog::level::level_enum::debug);
   if (config.send_receive_in_background) {
@@ -63,9 +64,14 @@ bool ARXCAN::Implementation::initialize(
     arx_controller_ptr->disable_background_send_recv();
   }
 
+  if (config.reset_to_home_upon_start) {
+    arx_controller_ptr->reset_to_home();
+  }
+
   if (config.enable_gravity_compensation) {
     arx_controller_ptr->enable_gravity_compensation(config.urdf_path);
   }
+
 
   // setting default gains
   js_gain.kp = {100.0, 100.0, 100.0, 30.0, 30, 5.0};
@@ -73,10 +79,6 @@ bool ARXCAN::Implementation::initialize(
   js_gain.gripper_kp = 5.0;
   js_gain.gripper_kd = 0.1;
   arx_controller_ptr->set_gain(js_gain);
-
-  if (config.reset_to_home_upon_start) {
-    arx_controller_ptr->reset_to_home();
-  }
 
   js_state = arx_controller_ptr->get_state();
   dt_s = arx_controller_ptr->get_dt_s();
@@ -116,7 +118,12 @@ bool ARXCAN::Implementation::setJoints(const double* joints) {
   js_state_mutex.lock();
   for (int i = 0; i < 6; i++) {
     js_state.pos[i] = joints[i];
+    js_state.vel[i] = 0.0;
+    js_state.torque[i] = 0.0;
   }
+  js_state.gripper_pos = 0.0;
+  js_state.gripper_vel = 0.0;
+  js_state.gripper_torque = 0.0;
   arx_controller_ptr->set_joint_cmd(js_state);
   js_state_mutex.unlock();
   return true;
@@ -131,6 +138,14 @@ bool ARXCAN::Implementation::setGains(const double* kp, const double* kd) {
   return true;
 }
 
+void ARXCAN::Implementation::getGains(double* kp, double* kd) {
+  js_gain = arx_controller_ptr->get_gain();
+  for (int i = 0; i < 6; i++) {
+    kp[i] = js_gain.kp[i];
+    kd[i] = js_gain.kd[i];
+  }
+}
+
 bool ARXCAN::Implementation::step() {
   assert(config.send_receive_in_background == false);
   arx_controller_ptr->send_recv_once();
@@ -140,13 +155,6 @@ bool ARXCAN::Implementation::step() {
 ARXCAN::ARXCAN() : m_impl{std::make_unique<Implementation>()} {}
 
 ARXCAN::~ARXCAN() {}
-
-ARXCAN* ARXCAN::Instance() {
-  if (pinstance == 0) {
-    pinstance = new ARXCAN();
-  }
-  return pinstance;
-}
 
 bool ARXCAN::init(RUT::TimePoint time0, const ARXCANConfig& ur_rtde_config) {
   return m_impl->initialize(time0, ur_rtde_config);
@@ -170,6 +178,10 @@ bool ARXCAN::setJoints(const double* joints) {
 
 bool ARXCAN::setGains(const double* kp, const double* kd) {
   return m_impl->setGains(kp, kd);
+}
+
+void ARXCAN::getGains(double* kp, double* kd) {
+  m_impl->getGains(kp, kd);
 }
 
 double ARXCAN::get_dt_s() {
