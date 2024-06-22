@@ -49,11 +49,11 @@ class URRTDE : public RobotInterfaces {
    */
   bool init(RUT::TimePoint time0, const URRTDEConfig& config);
 
-  bool getCartesian(double* pose) override;
-  bool setCartesian(const double* pose) override;
+  bool getCartesian(RUT::Vector7d& pose) override;
+  bool setCartesian(const RUT::Vector7d& pose) override;
 
   // interfaces unique to URRTDE
-  bool streamCartesian(const double* pose);
+  bool streamCartesian(const RUT::Vector7& pose);
   RUT::TimePoint rtde_init_period();
   void rtde_wait_period(RUT::TimePoint time_point);
 
@@ -61,8 +61,8 @@ class URRTDE : public RobotInterfaces {
    * Not implemented yet. Keep empty implementation to not make an abstract
    * class
    */
-  bool getJoints(double* joints) override;
-  bool setJoints(const double* joints) override;
+  bool getJoints(RUT::VectorXd& joints) override;
+  bool setJoints(const RUT::VectorXd& joints) override;
 
  private:
   struct Implementation;

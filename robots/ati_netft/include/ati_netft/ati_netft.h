@@ -54,7 +54,7 @@ class ATINetft : public FTInterfaces {
    * @return  0: no error.
    *   1: still waiting for new data. 2: dead stream.
    */
-  int getWrenchSensor(double* wrench) override;
+  int getWrenchSensor(RUT::Vector6d& wrench) override;
   /**
    * Get the wrench in tool frame.
    *
@@ -62,7 +62,7 @@ class ATINetft : public FTInterfaces {
    *
    * @return     0: no error. 1: still waiting for new data. 2: dead stream.
    */
-  int getWrenchTool(double* wrench_T) override;
+  int getWrenchTool(RUT::Vector6d& wrench_T) override;
   /**
    * Get the tool wrench after tool weight compensation.
    *
@@ -72,10 +72,15 @@ class ATINetft : public FTInterfaces {
    * @return     0: no error. 1: still waiting for new data. 2: dead stream.
    *             3: force is too big.
    */
-  int getWrenchNetTool(const double* pose, double* wrench_net_T) override;
+  int getWrenchNetTool(const RUT::Vector7d& pose,
+                       RUT::Vector6d& wrench_net_T) override;
 
-  double *_force, *_force_old;
-  double *_torque, *_torque_old;
+  // pre-allocated internal variables
+  RUT::Vector3d _force, _force_old;
+  RUT::Vector3d _torque, _torque_old;
+  RUT::Vector6d _wrench_sensor_temp, _wrench_tool_temp;
+  RUT::Matrix3d _R_WT;
+  RUT::Vector3d _GinF, _GinT;
   double _publish_rate;
 
   RUT::TimePoint _time0;  ///< high resolution timer.

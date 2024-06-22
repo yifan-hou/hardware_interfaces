@@ -40,7 +40,7 @@ class Realsense {
    * @return     True if success.
    */
   bool init(RUT::TimePoint time0, const RealsenseConfig& config);
-  cv::mat next_rgb_frame_blocking();
+  cv::Mat next_rgb_frame_blocking();
 
  private:
   struct Implementation;

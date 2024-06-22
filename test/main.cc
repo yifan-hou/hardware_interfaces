@@ -8,7 +8,6 @@
 #include <ati_netft/ati_netft.h>
 #include <realsense/realsense.h>
 
-
 int main() {
   ATINetft ati;
   ARXCAN robot;
@@ -43,17 +42,12 @@ int main() {
   realsense.init(time0, realsense_config);
   robot.init(time0, arx_config);
 
-
   while (true) {
     // get data from sensors
-    double wrench[6];
+    RUT::Vector6d wrench;
     ati.getWrenchSensor(wrench);
-    RUT::Vector6d wrench_vec(wrench);
-    std::cout << "t = " << timer.toc_ms() << ", wrench: " << wrench_vec.transpose() << std::endl;    
-    // double joints[6];
-    // robot.getJoints(joints);
-    // rs2::frameset frames = realsense.wait_for_frames();
+    std::cout << "t = " << timer.toc_ms() << ", wrench: " << wrench.transpose()
+              << std::endl;
   }
   return 0;
 }
-

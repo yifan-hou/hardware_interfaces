@@ -8,7 +8,7 @@
 
 #include <RobotUtilities/utilities.h>
 
-URRTDE *URRTDE::pinstance = 0;
+URRTDE* URRTDE::pinstance = 0;
 
 struct URRTDE::Implementation {
   std::shared_ptr<ur_rtde::RTDEControlInterface> rtde_control_ptr;
@@ -28,10 +28,10 @@ struct URRTDE::Implementation {
   Implementation();
   ~Implementation();
 
-  bool initialize(RUT::TimePoint time0, const URRTDE::URRTDEConfig &config);
-  bool getCartesian(double *pose_xyzq);
-  bool setCartesian(const double *pose_xyzq);
-  bool streamCartesian(const double *pose_xyzq);
+  bool initialize(RUT::TimePoint time0, const URRTDE::URRTDEConfig& config);
+  bool getCartesian(RUT::Vector7d& pose_xyzq);
+  bool setCartesian(const RUT::Vector7d& pose_xyzq);
+  bool streamCartesian(const RUT::Vector7d& pose_xyzq);
   RUT::TimePoint rtde_init_period();
   void rtde_wait_period(RUT::TimePoint time_point);
 };
@@ -47,7 +47,7 @@ URRTDE::Implementation::~Implementation() {
 }
 
 bool URRTDE::Implementation::initialize(
-    RUT::TimePoint time0, const URRTDE::URRTDEConfig &ur_rtde_config) {
+    RUT::TimePoint time0, const URRTDE::URRTDEConfig& ur_rtde_config) {
   time0 = time0;
   config = ur_rtde_config;
   dt_s = 1. / config.rtde_frequency;
@@ -69,23 +69,20 @@ bool URRTDE::Implementation::initialize(
   return true;
 }
 
-bool URRTDE::Implementation::getCartesian(double *pose_xyzq) {
-  tcp_pose_feedback = rtde_receive_ptr->getActualTCPPose();
+bool URRTDE::Implementation::getCartesian(RUT::Vector7d& pose_xyzq) {
+  tcp_pose_feedback = rtde_receive_ptr->getActualTCPPose();  // std vector
+
+  pose_xyzq[0] = tcp_pose_feedback[0];
+  pose_xyzq[1] = tcp_pose_feedback[1];
+  pose_xyzq[2] = tcp_pose_feedback[2];
 
   // convert from Euler to quaternion
   v_axis_receive[0] = tcp_pose_feedback[3];  // rx
   v_axis_receive[1] = tcp_pose_feedback[4];  // ry
   v_axis_receive[2] = tcp_pose_feedback[5];  // rz
   double angle = v_axis_receive.norm();
-  Eigen::Quaterniond q(Eigen::AngleAxisd(angle, v_axis_receive.normalized()));
 
-  pose_xyzq[0] = tcp_pose_feedback[0];
-  pose_xyzq[1] = tcp_pose_feedback[1];
-  pose_xyzq[2] = tcp_pose_feedback[2];
-  pose_xyzq[3] = q.w();
-  pose_xyzq[4] = q.x();
-  pose_xyzq[5] = q.y();
-  pose_xyzq[6] = q.z();
+  RUT::aa2quat(angle, v_axis_receive, pose_xyzq.tail(4));
 
   // check safety
   if ((pose_xyzq[0] < config.robot_interface_config.safe_zone[0]) ||
@@ -101,14 +98,11 @@ bool URRTDE::Implementation::getCartesian(double *pose_xyzq) {
   return true;
 }
 
-bool URRTDE::Implementation::setCartesian(const double *pose_xyzq_set) {
+bool URRTDE::Implementation::setCartesian(const RUT::Vector7d& pose_xyzq_set) {
   assert(config.robot_interface_config.operationMode ==
          OPERATION_MODE_CARTESIAN);
   // convert quaternion to Euler
-  double angle = 2.0 * acos(pose_xyzq_set[3]);
-  v_axis_control << pose_xyzq_set[4], pose_xyzq_set[5], pose_xyzq_set[6];
-  v_axis_control.normalize();
-  v_axis_control *= angle;
+  RUT::quat2aa(pose_xyzq_set.tail(4), v_axis_control);
   tcp_pose_command[0] = pose_xyzq_set[0];
   tcp_pose_command[1] = pose_xyzq_set[1];
   tcp_pose_command[2] = pose_xyzq_set[2];
@@ -116,26 +110,24 @@ bool URRTDE::Implementation::setCartesian(const double *pose_xyzq_set) {
   tcp_pose_command[4] = v_axis_control[1];
   tcp_pose_command[5] = v_axis_control[2];
   return rtde_control_ptr->moveL(tcp_pose_command, config.linear_vel,
-                            config.linear_acc);
+                                 config.linear_acc);
 }
 
-bool URRTDE::Implementation::streamCartesian(const double *pose_xyzq_set) {
+bool URRTDE::Implementation::streamCartesian(
+    const RUT::Vector7d& pose_xyzq_set) {
   assert(config.robot_interface_config.operationMode ==
          OPERATION_MODE_CARTESIAN);
   // convert quaternion to Euler
-  double angle = 2.0 * acos(pose_xyzq_set[3]);
-  v_axis_control << pose_xyzq_set[4], pose_xyzq_set[5], pose_xyzq_set[6];
-  v_axis_control.normalize();
-  v_axis_control *= angle;
+  RUT::quat2aa(pose_xyzq_set.tail(4), v_axis_control);
   tcp_pose_command[0] = pose_xyzq_set[0];
   tcp_pose_command[1] = pose_xyzq_set[1];
   tcp_pose_command[2] = pose_xyzq_set[2];
   tcp_pose_command[3] = v_axis_control[0];
   tcp_pose_command[4] = v_axis_control[1];
   tcp_pose_command[5] = v_axis_control[2];
-  return rtde_control_ptr->servoL(tcp_pose_command, config.linear_vel,
-                             config.linear_acc, dt_s,
-                             config.servoL_lookahead_time, config.servoL_gain);
+  return rtde_control_ptr->servoL(
+      tcp_pose_command, config.linear_vel, config.linear_acc, dt_s,
+      config.servoL_lookahead_time, config.servoL_gain);
 }
 
 RUT::TimePoint URRTDE::Implementation::rtde_init_period() {
@@ -150,41 +142,43 @@ URRTDE::URRTDE() : m_impl{std::make_unique<Implementation>()} {}
 
 URRTDE::~URRTDE() {}
 
-URRTDE *URRTDE::Instance() {
+URRTDE* URRTDE::Instance() {
   if (pinstance == 0) {
     pinstance = new URRTDE();
   }
   return pinstance;
 }
 
-bool URRTDE::init(RUT::TimePoint time0, const URRTDEConfig &ur_rtde_config) {
+bool URRTDE::init(RUT::TimePoint time0, const URRTDEConfig& ur_rtde_config) {
   return m_impl->initialize(time0, ur_rtde_config);
 }
 
-bool URRTDE::getCartesian(double *pose_xyzq) {
+bool URRTDE::getCartesian(RUT::Vector7d& pose_xyzq) {
   return m_impl->getCartesian(pose_xyzq);
 }
 
-bool URRTDE::setCartesian(const double *pose_xyzq) {
+bool URRTDE::setCartesian(const RUT::Vector7d& pose_xyzq) {
   return m_impl->setCartesian(pose_xyzq);
 }
 
-bool URRTDE::streamCartesian(const double *pose_xyzq) {
+bool URRTDE::streamCartesian(const RUT::Vector7d& pose_xyzq) {
   return m_impl->streamCartesian(pose_xyzq);
 }
 
-RUT::TimePoint URRTDE::rtde_init_period() { return m_impl->rtde_init_period(); }
+RUT::TimePoint URRTDE::rtde_init_period() {
+  return m_impl->rtde_init_period();
+}
 
 void URRTDE::rtde_wait_period(RUT::TimePoint time_point) {
   m_impl->rtde_wait_period(time_point);
 }
 
-bool URRTDE::getJoints(double *joints) {
+bool URRTDE::getJoints(RUT::VectorXd& joints) {
   std::cerr << "[URRTDE] not implemented yet" << std::endl;
   return false;
 }
 
-bool URRTDE::setJoints(const double *joints) {
+bool URRTDE::setJoints(const RUT::VectorXd& joints) {
   std::cerr << "[URRTDE] not implemented yet" << std::endl;
   return false;
 }

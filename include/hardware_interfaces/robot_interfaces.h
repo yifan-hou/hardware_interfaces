@@ -15,6 +15,8 @@
 #ifndef _ROBOT_INTERFACE_CLASS_HEADER_
 #define _ROBOT_INTERFACE_CLASS_HEADER_
 
+#include <RobotUtilities/utilities.h>
+
 /**
  * Safety mode. Determines what to do when the commanded pose is too far away
  * from the current pose.
@@ -46,7 +48,7 @@ class RobotInterfaces {
    *
    * @return     True if success.
    */
-  virtual bool getCartesian(double *pose) = 0;
+  virtual bool getCartesian(RUT::Vector7d& pose) = 0;
   /**
    * Sets the Cartesian pose of the robot tool. Distances are in mm.
    *
@@ -54,7 +56,7 @@ class RobotInterfaces {
    *
    * @return     True if success.
    */
-  virtual bool setCartesian(const double *pose) = 0;
+  virtual bool setCartesian(const RUT::Vector7d& pose) = 0;
   /**
    * Gets the joint angles in rad.
    *
@@ -62,7 +64,7 @@ class RobotInterfaces {
    *
    * @return     True if success.
    */
-  virtual bool getJoints(double *joints) = 0;
+  virtual bool getJoints(Eigen::VectorXd& joints) = 0;
   /**
    * Sets the joint angles in rad.
    *
@@ -70,7 +72,7 @@ class RobotInterfaces {
    *
    * @return     True if success.
    */
-  virtual bool setJoints(const double *joints) = 0;
+  virtual bool setJoints(const Eigen::VectorXd& joints) = 0;
 
   // ----------------------------------------
   //  public state and parameters
@@ -96,7 +98,7 @@ class RobotInterfaces {
      * Safety zone. Robot will stop if the commanded pose is out of the zone.
      * [xmin,xmax,ymin,ymax,zmin,zmax]
      */
-    double *safe_zone;
+    double* safe_zone;
   };
 
   RobotInterfaceConfig robot_interface_config;

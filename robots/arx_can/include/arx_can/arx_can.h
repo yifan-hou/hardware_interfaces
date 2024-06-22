@@ -19,7 +19,7 @@ class ARXCAN : public RobotInterfaces {
   struct ARXCANConfig {
     // controller configs
     std::string can_interface = "can0";
-    std::string urdf_path = ""; // for gravity compensation
+    std::string urdf_path = "";  // for gravity compensation
     // send_receive_in_background determines whether the controller runs in synchonized mode.
     // If true, the controller will run in background and the user does not need to call step().
     // If false, the user needs to call update() every dt seconds.
@@ -44,15 +44,15 @@ class ARXCAN : public RobotInterfaces {
    */
   bool init(RUT::TimePoint time0, const ARXCANConfig& config);
 
-  bool getJoints(double* joints) override;
-  bool setJoints(const double* joints) override;
+  bool getJoints(RUT::VectorXd& joints) override;
+  bool setJoints(const RUT::VectorXd& joints) override;
 
-  bool getCartesian(double* pose) override;
-  bool setCartesian(const double* pose) override; // not implemented yet
+  bool getCartesian(RUT::Vector7d& pose) override;
+  bool setCartesian(const RUT::Vector7d& pose) override;  // not implemented yet
 
   // interfaces unique to ARXCAN (no override)
-  bool setGains(const double* kp, const double* kd);
-  void getGains(double* kp, double* kd);
+  bool setGains(const RUT::VectorXd& kp, const RUT::VectorXd& kd);
+  void getGains(RUT::VectorXd& kp, RUT::VectorXd& kd);
   double get_dt_s();
   bool step();
 

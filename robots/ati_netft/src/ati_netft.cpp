@@ -20,8 +20,8 @@ void set_realtime_priority() {
   std::cout << "[Netft] Thread priority is " << sch.sched_priority << std::endl;
 }
 
-void *ATI_Monitor(void *pParam) {
-  ATINetft *netft_hardware = (ATINetft *)pParam;
+void* ATI_Monitor(void* pParam) {
+  ATINetft* netft_hardware = (ATINetft*)pParam;
 
   netft_rdt_driver::WrenchData data;
   RUT::Timer loop_timer;
@@ -59,21 +59,17 @@ void *ATI_Monitor(void *pParam) {
 }
 
 ATINetft::ATINetft() {
-  _force = new double[3];
-  _force_old = new double[3];
-  _WrenchSafety = new double[6];
-  _torque = new double[3];
-  _torque_old = new double[3];
+  _force = RUT::Vector3d::Zero();
+  _force_old = RUT::Vector3d::Zero();
+  _WrenchSafety = RUT::Vector6d::Zero();
+  _torque = RUT::Vector3d::Zero();
+  _torque_old = RUT::Vector3d::Zero();
   _stall_counts = 0;
-
-  for (int i = 0; i < 3; ++i) {
-    _force_old[i] = 0;
-    _torque_old[i] = 0;
-  }
 }
 
-bool ATINetft::init(RUT::TimePoint time0, const ATINetftConfig &config) {
-  std::cout << "[ATINetft] initializing connection to " << config.ip_address << std::endl;
+bool ATINetft::init(RUT::TimePoint time0, const ATINetftConfig& config) {
+  std::cout << "[ATINetft] initializing connection to " << config.ip_address
+            << std::endl;
   _time0 = time0;
   _config = config;
 
@@ -106,28 +102,15 @@ bool ATINetft::init(RUT::TimePoint time0, const ATINetftConfig &config) {
   return true;
 }
 
-int ATINetft::getWrenchSensor(double *wrench) {
-  wrench[0] = _force[0];
-  wrench[1] = _force[1];
-  wrench[2] = _force[2];
-  wrench[3] = _torque[0];
-  wrench[4] = _torque[1];
-  wrench[5] = _torque[2];
+int ATINetft::getWrenchSensor(RUT::Vector6d& wrench) {
+  wrench.head(3) = _force;
+  wrench.tail(3) = _torque;
 
-  double data_change = fabs(wrench[0] - _force_old[0]);
-  data_change += fabs(wrench[1] - _force_old[1]);
-  data_change += fabs(wrench[2] - _force_old[2]);
-  data_change += 10 * fabs(wrench[3] - _torque_old[0]);
-  data_change += 10 * fabs(wrench[4] - _torque_old[1]);
-  data_change += 10 * fabs(wrench[5] - _torque_old[2]);
+  double data_change = (wrench.head(3) - _force_old).norm() +
+                       10 * (wrench.tail(3) - _torque_old).norm();
 
-  _force_old[0] = wrench[0];
-  _force_old[1] = wrench[1];
-  _force_old[2] = wrench[2];
-  _torque_old[0] = wrench[3];
-  _torque_old[1] = wrench[4];
-  _torque_old[2] = wrench[5];
-  // cout << "         data_change: " << data_change << endl;
+  _force_old = _force;
+  _torque_old = _torque;
 
   if (data_change > _config.noise_level) {
     _stall_counts = 0;
@@ -142,57 +125,34 @@ int ATINetft::getWrenchSensor(double *wrench) {
   return 0;
 }
 
-int ATINetft::getWrenchTool(double *wrench) {
-  double wrench_sensor[6];
-  int flag = getWrenchSensor(wrench_sensor);
-
-  // transform from sensor frame to tool frame
-  Eigen::Matrix<double, 6, 1> wrench_T, wrench_S;
-  wrench_S[0] = wrench_sensor[0];
-  wrench_S[1] = wrench_sensor[1];
-  wrench_S[2] = wrench_sensor[2];
-  wrench_S[3] = wrench_sensor[3];
-  wrench_S[4] = wrench_sensor[4];
-  wrench_S[5] = wrench_sensor[5];
-
-  wrench_T = _adj_sensor_tool.transpose() * wrench_S;
-  wrench[0] = wrench_T[0];
-  wrench[1] = wrench_T[1];
-  wrench[2] = wrench_T[2];
-  wrench[3] = wrench_T[3];
-  wrench[4] = wrench_T[4];
-  wrench[5] = wrench_T[5];
+int ATINetft::getWrenchTool(RUT::Vector6d& wrench_T) {
+  int flag = getWrenchSensor(_wrench_sensor_temp);
+  wrench_T = _adj_sensor_tool.transpose() * _wrench_sensor_temp;
   return flag;
 }
 
-int ATINetft::getWrenchNetTool(const double *pose, double *wrench_net_T) {
-  double wrench_T[6];
-  int flag = getWrenchTool(wrench_T);
+int ATINetft::getWrenchNetTool(const RUT::Vector7d& pose,
+                               RUT::Vector6d& wrench_net_T) {
+  int flag = getWrenchTool(_wrench_tool_temp);
 
   // compensate for the weight of object
-  Quaterniond q(pose[3], pose[4], pose[5], pose[6]);
-  Vector3d GinF = q.normalized().toRotationMatrix().transpose() * _Gravity;
-  Vector3d GinT = _Pcom.cross(GinF);
-  wrench_net_T[0] = wrench_T[0] + _Foffset[0] - GinF[0];
-  wrench_net_T[1] = wrench_T[1] + _Foffset[1] - GinF[1];
-  wrench_net_T[2] = wrench_T[2] + _Foffset[2] - GinF[2];
-
-  wrench_net_T[3] = wrench_T[3] + _Toffset[0] - GinT[0];
-  wrench_net_T[4] = wrench_T[4] + _Toffset[1] - GinT[1];
-  wrench_net_T[5] = wrench_T[5] + _Toffset[2] - GinT[2];
+  _R_WT = RUT::quat2SO3(pose[3], pose[4], pose[5], pose[6]);
+  _GinF = _R_WT.transpose() * _Gravity;
+  _GinT = _Pcom.cross(_GinF);
+  wrench_net_T.head(3) = _wrench_tool_temp.head(3) + _Foffset - _GinF;
+  wrench_net_T.tail(3) = _wrench_tool_temp.tail(3) + _Toffset - _GinT;
 
   // safety
   for (int i = 0; i < 6; ++i) {
-    if (abs(wrench_net_T[i]) > _WrenchSafety[i]) return 3;
+    if (abs(wrench_net_T[i]) > _WrenchSafety[i])
+      return 3;
   }
 
   return flag;
 }
 
 ATINetft::~ATINetft() {
-  delete[] _force;
-  delete[] _torque;
-  delete[] _WrenchSafety;
   _netft.reset();
-  if (_print_flag) _file.close();
+  if (_print_flag)
+    _file.close();
 }
