@@ -81,11 +81,9 @@ class ATINetft : public FTInterfaces {
   RUT::Vector6d _wrench_sensor_temp, _wrench_tool_temp;
   RUT::Matrix3d _R_WT;
   RUT::Vector3d _GinF, _GinT;
-  double _publish_rate;
 
   RUT::TimePoint _time0;  ///< high resolution timer.
   std::ofstream _file;
-  bool _print_flag;
   ATINetftConfig _config;
   // netft
   std::shared_ptr<netft_rdt_driver::NetFTRDTDriver> _netft;

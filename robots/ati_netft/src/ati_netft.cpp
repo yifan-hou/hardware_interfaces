@@ -25,7 +25,7 @@ void* ATI_Monitor(void* pParam) {
 
   netft_rdt_driver::WrenchData data;
   RUT::Timer loop_timer;
-  loop_timer.set_loop_rate_hz(netft_hardware->_publish_rate);
+  loop_timer.set_loop_rate_hz(netft_hardware->_config.publish_rate);
   loop_timer.start_timed_loop();
   loop_timer.tic();
 
@@ -47,7 +47,7 @@ void* ATI_Monitor(void* pParam) {
       status_ok = false;
     }
 
-    if (netft_hardware->_print_flag) {
+    if (netft_hardware->_config.print_flag) {
       netft_hardware->_file << loop_timer.toc_ms() << "\t";
       stream_array_in(netft_hardware->_file, netft_hardware->_force, 3);
       stream_array_in(netft_hardware->_file, netft_hardware->_torque, 3);
@@ -73,14 +73,13 @@ bool ATINetft::init(RUT::TimePoint time0, const ATINetftConfig& config) {
   _time0 = time0;
   _config = config;
 
-  _print_flag = config.print_flag;
   _adj_sensor_tool = SE32Adj(pose2SE3(config.PoseSensorTool));
 
   _netft = std::shared_ptr<netft_rdt_driver::NetFTRDTDriver>(
       new netft_rdt_driver::NetFTRDTDriver(config.ip_address));
 
   // open file
-  if (_print_flag) {
+  if (_config.print_flag) {
     _file.open(config.fullpath);
     if (_file.is_open())
       std::cout << "[ATINetft] file opened successfully." << std::endl;
@@ -153,6 +152,6 @@ int ATINetft::getWrenchNetTool(const RUT::Vector7d& pose,
 
 ATINetft::~ATINetft() {
   _netft.reset();
-  if (_print_flag)
+  if (_config.print_flag)
     _file.close();
 }
