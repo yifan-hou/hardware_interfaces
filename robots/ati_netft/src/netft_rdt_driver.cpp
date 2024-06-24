@@ -43,12 +43,12 @@ using boost::asio::ip::udp;
 
 namespace netft_rdt_driver {
 
-uint32_t RDTRecord::unpack32(const uint8_t *buffer) {
+uint32_t RDTRecord::unpack32(const uint8_t* buffer) {
   return (uint32_t(buffer[0]) << 24) | (uint32_t(buffer[1]) << 16) |
          (uint32_t(buffer[2]) << 8) | (uint32_t(buffer[3]) << 0);
 }
 
-void RDTRecord::unpack(const uint8_t *buffer) {
+void RDTRecord::unpack(const uint8_t* buffer) {
   rdt_sequence_ = unpack32(buffer + 0);
   ft_sequence_ = unpack32(buffer + 4);
   status_ = unpack32(buffer + 8);
@@ -87,10 +87,10 @@ struct RDTCommand {
 
   //! Packet structure into buffer for network transport
   //  Buffer should be RDT_COMMAND_SIZE
-  void pack(uint8_t *buffer) const;
+  void pack(uint8_t* buffer) const;
 };
 
-void RDTCommand::pack(uint8_t *buffer) const {
+void RDTCommand::pack(uint8_t* buffer) const {
   // Data is big-endian
   buffer[0] = (command_header_ >> 8) & 0xFF;
   buffer[1] = (command_header_ >> 0) & 0xFF;
@@ -102,7 +102,9 @@ void RDTCommand::pack(uint8_t *buffer) const {
   buffer[7] = (sample_count_ >> 0) & 0xFF;
 }
 
-NetFTRDTDriver::NetFTRDTDriver(const std::string &address)
+NetFTRDTDriver::NetFTRDTDriver(const std::string& address,
+                               double counts_per_force = 1000000,
+                               double counts_per_torque = 1000000)
     : address_(address),
       socket_(io_service_),
       stop_recv_thread_(false),
@@ -114,7 +116,8 @@ NetFTRDTDriver::NetFTRDTDriver(const std::string &address)
       last_rdt_sequence_(0),
       system_status_(0) {
   // Construct UDP socket
-  std::cout << "[NetFTRDTDriver] Connecting to " << address << ", port " << RDT_PORT << std::endl;
+  std::cout << "[NetFTRDTDriver] Connecting to " << address << ", port "
+            << RDT_PORT << std::endl;
   udp::endpoint netft_endpoint(
       boost::asio::ip::address_v4::from_string(address), RDT_PORT);
   socket_.open(udp::v4());
@@ -124,8 +127,6 @@ NetFTRDTDriver::NetFTRDTDriver(const std::string &address)
   // Force/Sclae is based on counts per force/torque value from device
   // these value are manually read from device webserver, but in future they
   // may be collected using http get requests
-  static const double counts_per_force = 1000000;
-  static const double counts_per_torque = 1000000;
   force_scale_ = 1.0 / counts_per_force;
   torque_scale_ = 1.0 / counts_per_torque;
 
@@ -141,7 +142,8 @@ NetFTRDTDriver::NetFTRDTDriver(const std::string &address)
   // the packet could be lost, retry startup 10 times before giving up
   for (int i = 0; i < 10; ++i) {
     startStreaming();
-    if (waitForNewData()) break;
+    if (waitForNewData())
+      break;
   }
   {
     boost::unique_lock<boost::mutex> lock(mutex_);
@@ -214,7 +216,7 @@ boost::system::error_code NetFTRDTDriver::setSoftwareBias() {
       boost::asio::buffer(buffer, RDTCommand::RDT_COMMAND_SIZE));
 }
 
-void NetFTRDTDriver::recvData(boost::system::error_code const &ec,
+void NetFTRDTDriver::recvData(boost::system::error_code const& ec,
                               std::size_t bytes_transferred) {
   if (ec) {
     recv_thread_running_ = false;
@@ -270,18 +272,20 @@ void NetFTRDTDriver::recvData(boost::system::error_code const &ec,
   }
 }
 
-void NetFTRDTDriver::run() { io_service_.run(); }
+void NetFTRDTDriver::run() {
+  io_service_.run();
+}
 
-Writer::Writer(boost::asio::ip::udp::socket &socket_) : socket_(socket_) {
+Writer::Writer(boost::asio::ip::udp::socket& socket_) : socket_(socket_) {
   // empty
 }
 
-void Writer::write_handler(boost::system::error_code const &ec, std::size_t) {
+void Writer::write_handler(boost::system::error_code const& ec, std::size_t) {
   this->ec = ec;
   this->cond.notify_all();
 }
 
-void NetFTRDTDriver::getData(WrenchData &data) {
+void NetFTRDTDriver::getData(WrenchData& data) {
   {
     boost::unique_lock<boost::mutex> lock(mutex_);
     data = new_data_;

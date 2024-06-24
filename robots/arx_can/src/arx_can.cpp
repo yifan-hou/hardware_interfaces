@@ -54,6 +54,7 @@ bool ARXCAN::Implementation::initialize(
   arx_controller_ptr = std::shared_ptr<Arx5JointController>(
       new Arx5JointController(config.can_interface));
 
+  arx_controller_ptr->set_log_level(spdlog::level::level_enum::info);
   arx_controller_ptr->set_no_gripper();
 
   std::cout << "[ARXCAN] CAN connection established.\n";

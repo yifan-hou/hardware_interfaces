@@ -29,6 +29,7 @@ Realsense::Implementation::~Implementation() {
 
 bool Realsense::Implementation::initialize(
     RUT::TimePoint time0, const Realsense::RealsenseConfig& realsense_config) {
+  std::cout << "[Realsense] Initializing realsense pipeline.." << std::endl;
   time0 = time0;
   config = realsense_config;
 

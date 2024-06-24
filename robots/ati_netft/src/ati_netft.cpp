@@ -76,7 +76,9 @@ bool ATINetft::init(RUT::TimePoint time0, const ATINetftConfig& config) {
   _adj_sensor_tool = SE32Adj(pose2SE3(config.PoseSensorTool));
 
   _netft = std::shared_ptr<netft_rdt_driver::NetFTRDTDriver>(
-      new netft_rdt_driver::NetFTRDTDriver(config.ip_address));
+      new netft_rdt_driver::NetFTRDTDriver(config.ip_address,
+                                           config.counts_per_force,
+                                           config.counts_per_torque));
 
   // open file
   if (_config.print_flag) {

@@ -61,8 +61,8 @@ struct RDTRecord {
 #define RDT_RECORD_SIZE 36
   // :-( but I don't want to force C++11...
 
-  void unpack(const uint8_t *buffer);
-  static uint32_t unpack32(const uint8_t *buffer);
+  void unpack(const uint8_t* buffer);
+  static uint32_t unpack32(const uint8_t* buffer);
 };
 
 struct WrenchData {
@@ -78,10 +78,10 @@ struct WrenchData {
 
 class Writer {
  public:
-  Writer(boost::asio::ip::udp::socket &socket_);
+  Writer(boost::asio::ip::udp::socket& socket_);
 
   template <class Buffer>
-  boost::system::error_code write(Buffer const &buffer) {
+  boost::system::error_code write(Buffer const& buffer) {
     this->socket_.async_send(
         buffer, boost::bind(&Writer::write_handler, this,
                             boost::asio::placeholders::error,
@@ -93,9 +93,9 @@ class Writer {
   }
 
  private:
-  void write_handler(boost::system::error_code const &ec, std::size_t);
+  void write_handler(boost::system::error_code const& ec, std::size_t);
 
-  boost::asio::ip::udp::socket &socket_;
+  boost::asio::ip::udp::socket& socket_;
   boost::system::error_code ec;
 
   boost::condition_variable cond;
@@ -105,12 +105,13 @@ class Writer {
 class NetFTRDTDriver {
  public:
   // Start receiving data from NetFT device
-  NetFTRDTDriver(const std::string &address);
+  NetFTRDTDriver(const std::string& address, double counts_per_force,
+                 double counts_per_torque);
 
   ~NetFTRDTDriver();
 
   //! Get newest RDT data from netFT device
-  void getData(WrenchData &data);
+  void getData(WrenchData& data);
 
   //! Wait for new NetFT data to arrive.
   // Returns true if new data has arrived, false it function times out
@@ -123,7 +124,7 @@ class NetFTRDTDriver {
  protected:
   // void recvThreadFunc(void);
 
-  void recvData(boost::system::error_code const &ec,
+  void recvData(boost::system::error_code const& ec,
                 std::size_t bytes_transferred);
 
   uint8_t buffer[RDT_RECORD_SIZE + 1];

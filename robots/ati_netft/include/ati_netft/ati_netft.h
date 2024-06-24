@@ -27,6 +27,9 @@ class ATINetft : public FTInterfaces {
  public:
   struct ATINetftConfig {
     std::string ip_address{"192.168.1.1"};
+    // counts per force and torque are found from 'configuration' tab in the ati web interface.
+    double counts_per_force{1000000.0};
+    double counts_per_torque{1000000.0};
     std::string sensor_name{"netft"};
     std::string fullpath{};
     bool print_flag{false};
