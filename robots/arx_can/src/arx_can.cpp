@@ -99,7 +99,7 @@ bool ARXCAN::Implementation::getCartesian(RUT::Vector7d& pose_xyzq) {
 }
 
 bool ARXCAN::Implementation::setCartesian(const RUT::Vector7d& pose_xyzq_set) {
-  assert(config.robot_interface_config.operationMode ==
+  assert(config.robot_interface_config.operation_mode ==
          OPERATION_MODE_CARTESIAN);
   throw std::runtime_error("[ARXCAN] setCartesian not implemented yet");
 }
@@ -117,7 +117,7 @@ bool ARXCAN::Implementation::getJoints(RUT::VectorXd& joints) {
 
 bool ARXCAN::Implementation::setJoints(const RUT::VectorXd& joints) {
   assert(joints.size() == 6);  // for now only 6 joints supported
-  assert(config.robot_interface_config.operationMode == OPERATION_MODE_JOINT);
+  assert(config.robot_interface_config.operation_mode == OPERATION_MODE_JOINT);
   js_state_mutex.lock();
   for (int i = 0; i < 6; i++) {
     js_state.pos[i] = joints[i];

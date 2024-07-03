@@ -16,10 +16,16 @@ struct URRTDE::Implementation {
 
   URRTDE::URRTDEConfig config{};
 
-  std::vector<double> tcp_pose_feedback{};
+  std::vector<double>
+      tcp_pose_feedback{};  // std vector to be compatible with ur_rtde lib
   std::vector<double> tcp_pose_command{};
+  RUT::Vector7d pose_xyzq_set_prev{};
+
+  // pre-allocated variables that are always assigned before use
   RUT::Vector3d v_axis_receive{};
   RUT::Vector3d v_axis_control{};
+  RUT::Vector7d pose_xyzq_set_truncated{};
+  RUT::Vector7d pose_xyzq_set_processed{};
 
   double dt_s{};
 
@@ -30,6 +36,8 @@ struct URRTDE::Implementation {
 
   bool initialize(RUT::TimePoint time0, const URRTDE::URRTDEConfig& config);
   bool getCartesian(RUT::Vector7d& pose_xyzq);
+  bool getWrenchTool(RUT::Vector6d& wrench);
+  bool checkCartesianTarget(RUT::Vector7d& pose_xyzq_set);
   bool setCartesian(const RUT::Vector7d& pose_xyzq);
   bool streamCartesian(const RUT::Vector7d& pose_xyzq);
   RUT::TimePoint rtde_init_period();
@@ -66,6 +74,11 @@ bool URRTDE::Implementation::initialize(
   // Set application realtime priority
   ur_rtde::RTDEUtility::setRealtimePriority(config.interface_priority);
   std::cout << "[URRTDE] UR socket connection established.\n";
+
+  // read current state
+  assert(getCartesian(pose_xyzq_set_prev));
+  tcp_pose_command = tcp_pose_feedback;
+
   return true;
 }
 
@@ -82,41 +95,97 @@ bool URRTDE::Implementation::getCartesian(RUT::Vector7d& pose_xyzq) {
   v_axis_receive[2] = tcp_pose_feedback[5];  // rz
   double angle = v_axis_receive.norm();
 
-  RUT::aa2quat(angle, v_axis_receive, pose_xyzq.tail(4));
-
-  // check safety
-  if ((pose_xyzq[0] < config.robot_interface_config.safe_zone[0]) ||
-      (pose_xyzq[0] > config.robot_interface_config.safe_zone[1]))
-    return false;
-  if ((pose_xyzq[1] < config.robot_interface_config.safe_zone[2]) ||
-      (pose_xyzq[1] > config.robot_interface_config.safe_zone[3]))
-    return false;
-  if ((pose_xyzq[2] < config.robot_interface_config.safe_zone[4]) ||
-      (pose_xyzq[2] > config.robot_interface_config.safe_zone[5]))
-    return false;
+  pose_xyzq.tail<4>() = RUT::aa2quat(angle, v_axis_receive);
 
   return true;
 }
 
+bool URRTDE::Implementation::getWrenchTool(RUT::Vector6d& wrench) {
+  std::vector<double> wrench_feedback = rtde_receive_ptr->getActualTCPForce();
+  for (int i = 0; i < 6; i++) {
+    wrench[i] = wrench_feedback[i];
+  }
+  return true;
+}
+
+bool URRTDE::Implementation::checkCartesianTarget(
+    RUT::Vector7d& pose_xyzq_set) {
+  if (config.robot_interface_config.incre_safety_mode != SAFETY_MODE_NONE) {
+    bool incre_safe =
+        incre_safety_check(pose_xyzq_set, pose_xyzq_set_prev,
+                           config.robot_interface_config.max_incre_m,
+                           config.robot_interface_config.max_incre_rad);
+    if (!incre_safe) {
+      if (config.robot_interface_config.incre_safety_mode == SAFETY_MODE_STOP) {
+        std::cerr
+            << "[URRTDE][checkCartesianTarget] Incremental safety check failed."
+            << std::endl;
+        return false;
+      } else if (config.robot_interface_config.incre_safety_mode ==
+                 SAFETY_MODE_TRUNCATE) {
+        std::cerr << "[URRTDE][checkCartesianTarget] Incremental safety check "
+                     "failed. "
+                     "Truncating is not implemented."
+                  << std::endl;
+        return false;
+      }
+    }
+  }
+
+  bool zone_safe =
+      zone_safety_check(pose_xyzq_set, config.robot_interface_config.safe_zone,
+                        pose_xyzq_set_truncated);
+  if (!zone_safe) {
+    if (config.robot_interface_config.zone_safety_mode == SAFETY_MODE_STOP) {
+      std::cerr << "[URRTDE][checkCartesianTarget] Zone safety check failed."
+                << std::endl;
+      return false;
+    } else if (config.robot_interface_config.zone_safety_mode ==
+               SAFETY_MODE_TRUNCATE) {
+      std::cerr << "[URRTDE][checkCartesianTarget] Zone safety check failed. "
+                   "Using truncated pose."
+                << std::endl;
+      pose_xyzq_set = pose_xyzq_set_truncated;
+    }
+  }
+  return true;
+}
+
 bool URRTDE::Implementation::setCartesian(const RUT::Vector7d& pose_xyzq_set) {
-  assert(config.robot_interface_config.operationMode ==
+  assert(config.robot_interface_config.operation_mode ==
          OPERATION_MODE_CARTESIAN);
+
+  // safety checks
+  pose_xyzq_set_processed = pose_xyzq_set;
+  if (!checkCartesianTarget(pose_xyzq_set_processed)) {
+    return false;
+  }
+  pose_xyzq_set_prev = pose_xyzq_set_processed;
+
   // convert quaternion to Euler
-  RUT::quat2aa(pose_xyzq_set.tail(4), v_axis_control);
-  tcp_pose_command[0] = pose_xyzq_set[0];
-  tcp_pose_command[1] = pose_xyzq_set[1];
-  tcp_pose_command[2] = pose_xyzq_set[2];
+  RUT::quat2aa(pose_xyzq_set_processed.tail(4), v_axis_control);
+  tcp_pose_command[0] = pose_xyzq_set_processed[0];
+  tcp_pose_command[1] = pose_xyzq_set_processed[1];
+  tcp_pose_command[2] = pose_xyzq_set_processed[2];
   tcp_pose_command[3] = v_axis_control[0];
   tcp_pose_command[4] = v_axis_control[1];
   tcp_pose_command[5] = v_axis_control[2];
+
   return rtde_control_ptr->moveL(tcp_pose_command, config.linear_vel,
                                  config.linear_acc);
 }
 
 bool URRTDE::Implementation::streamCartesian(
     const RUT::Vector7d& pose_xyzq_set) {
-  assert(config.robot_interface_config.operationMode ==
+  assert(config.robot_interface_config.operation_mode ==
          OPERATION_MODE_CARTESIAN);
+  // safety checks
+  pose_xyzq_set_processed = pose_xyzq_set;
+  if (!checkCartesianTarget(pose_xyzq_set_processed)) {
+    return false;
+  }
+  pose_xyzq_set_prev = pose_xyzq_set_processed;
+
   // convert quaternion to Euler
   RUT::quat2aa(pose_xyzq_set.tail(4), v_axis_control);
   tcp_pose_command[0] = pose_xyzq_set[0];
@@ -155,6 +224,10 @@ bool URRTDE::init(RUT::TimePoint time0, const URRTDEConfig& ur_rtde_config) {
 
 bool URRTDE::getCartesian(RUT::Vector7d& pose_xyzq) {
   return m_impl->getCartesian(pose_xyzq);
+}
+
+bool URRTDE::getWrenchTool(RUT::Vector6d& wrench) {
+  return m_impl->getWrenchTool(wrench);
 }
 
 bool URRTDE::setCartesian(const RUT::Vector7d& pose_xyzq) {

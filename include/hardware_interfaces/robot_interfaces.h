@@ -18,11 +18,10 @@
 #include <RobotUtilities/utilities.h>
 
 /**
- * Safety mode. Determines what to do when the commanded pose is too far away
- * from the current pose.
+ * Safety mode. Determines what to do when the commanded pose is out of the safety region.
  *  SAFETY_MODE_NONE: Do not perform safety checking.
- *  SAFETY_MODE_TRUNCATE: Truncate the commanded pose based on _max_dist_tran
- * and _max_dist_rot SAFETY_MODE_STOP: Throw an error and stop.
+ *  SAFETY_MODE_TRUNCATE: Truncate the commanded pose to be within safe range.
+ *  SAFETY_MODE_STOP: Throw an error and stop.
  */
 typedef enum {
   SAFETY_MODE_NONE,
@@ -34,6 +33,60 @@ typedef enum {
   OPERATION_MODE_CARTESIAN,
   OPERATION_MODE_JOINT
 } RobotOperationMode;
+
+/**
+ * Check if pose is within the safety zone, and truncate if not.
+ *
+ * @param[in]  pose       The commanded pose.
+ * @param[in]  safe_zone  The safety zone. [xmin,xmax,ymin,ymax,zmin,zmax]
+ * @param[out] safe_pose  The safe pose truncated to be within the safety zone.
+ *
+ * @return     True if the commanded pose is within the safety zone.
+ */
+bool zone_safety_check(const Eigen::VectorXd& pose,
+                       const Eigen::VectorXd& safe_zone,
+                       RUT::Vector7d& safe_pose) {
+  if (safe_zone.size() != 6) {
+    std::cerr
+        << "[robot_interface] Error: safe_zone must have dim = 6. Getting "
+        << safe_zone.size() << std::endl;
+    return false;
+  }
+  bool is_safe = true;
+  safe_pose = pose;
+  for (int i = 0; i < 3; i++) {
+    if (pose[i] < safe_zone[i * 2] || pose[i] > safe_zone[i * 2 + 1]) {
+      is_safe = false;
+      safe_pose[i] =
+          std::max(safe_zone[i * 2], std::min(safe_zone[i * 2 + 1], pose[i]));
+    }
+  }
+  return is_safe;
+}
+
+/**
+ * Check if the incremental change is within the safety limit.
+ *
+ * @param[in]  pose         The commanded pose.
+ * @param[in]  pose_prev    The previous pose.
+ * @param[in]  max_incre_m  The maximum incremental distance in meters.
+ * @param[in]  max_incre_rad  The maximum incremental angle in radians.
+ *
+ * @return     True if the incremental change is within the safety limit.
+ */
+bool incre_safety_check(const Eigen::VectorXd& pose,
+                        const Eigen::VectorXd& pose_prev, double max_incre_m,
+                        double max_incre_rad) {
+  for (int i = 0; i < 3; i++) {
+    if (std::abs(pose[i] - pose_prev[i]) > max_incre_m) {
+      return false;
+    }
+  }
+  if (RUT::angBTquat(pose.tail(4), pose_prev.tail(4)) > max_incre_rad) {
+    return false;
+  }
+  return true;
+}
 
 class RobotInterfaces {
  public:
@@ -80,28 +133,31 @@ class RobotInterfaces {
 
   struct RobotInterfaceConfig {
     /**
-     * Current safety mode. see RobotSafetyMode
-     */
-    RobotSafetyMode safetyMode;
-    /**
      * Joint mode or Cartesian mode.
      */
-    RobotOperationMode operationMode;
+    RobotOperationMode operation_mode;
     /**
-     * Safety increments. Maximum distance between current configuration
-     * and the goal.
+     * Safety mode for safety zone.
      */
-    double max_dist_tran;
-    double max_dist_rot;
-    double max_dist_joint;
+    RobotSafetyMode zone_safety_mode;
     /**
-     * Safety zone. Robot will stop if the commanded pose is out of the zone.
+     * Safety mode for incremental limit.
+     */
+    RobotSafetyMode incre_safety_mode;
+    /**
+     * Safe increments. Maximum distance between current configuration
+     * and the command. If the robot has multiple control interfaces,
+     * incremental safety is usually only applied to the highest frequency interface.
+     */
+    double max_incre_m;
+    double max_incre_rad;
+    double max_incre_joint_rad;
+    /**
+     * Safety zone.
      * [xmin,xmax,ymin,ymax,zmin,zmax]
      */
-    double* safe_zone;
+    Eigen::VectorXd safe_zone;
   };
-
-  RobotInterfaceConfig robot_interface_config;
 };
 
 #endif

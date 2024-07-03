@@ -31,7 +31,6 @@ class URRTDE : public RobotInterfaces {
     double linear_acc{0.5};
     double servoL_lookahead_time{0.1};
     double servoL_gain{600};
-    RUT::Vector6d safe_zone{};
     RobotInterfaceConfig robot_interface_config{};
   };
 
@@ -53,7 +52,16 @@ class URRTDE : public RobotInterfaces {
   bool setCartesian(const RUT::Vector7d& pose) override;
 
   // interfaces unique to URRTDE
-  bool streamCartesian(const RUT::Vector7& pose);
+
+  /**
+   * Get wrench measurement from UR robot, expressed in the tool frame
+   *
+   * @param[out] wrench 6D wrench data
+   *
+   * @return true if success
+   */
+  bool getWrenchTool(RUT::Vector6d& wrench);
+  bool streamCartesian(const RUT::Vector7d& pose);
   RUT::TimePoint rtde_init_period();
   void rtde_wait_period(RUT::TimePoint time_point);
 
