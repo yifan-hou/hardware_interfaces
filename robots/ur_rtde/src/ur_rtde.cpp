@@ -63,14 +63,22 @@ bool URRTDE::Implementation::initialize(
   /* Establish connection with UR */
   std::cout << "[URRTDE] Connecting to robot at " << config.robot_ip
             << std::endl;
+  std::cout << "[URRTDE] Creating control interface at: "
+            << config.rtde_frequency << " Hz\n";
   rtde_control_ptr = std::shared_ptr<ur_rtde::RTDEControlInterface>(
-      new ur_rtde::RTDEControlInterface(config.robot_ip, config.rtde_frequency,
-                                        {}, {}, config.rt_control_priority));
+      new ur_rtde::RTDEControlInterface(config.robot_ip));
+  // rtde_control_ptr = std::shared_ptr<ur_rtde::RTDEControlInterface>(
+  //     new ur_rtde::RTDEControlInterface(config.robot_ip, config.rtde_frequency,
+  //                                       {}, {}, config.rt_control_priority));
+  std::cout << "[URRTDE] Creating receive interface at: "
+            << config.rtde_frequency << " Hz\n";
   rtde_receive_ptr = std::shared_ptr<ur_rtde::RTDEReceiveInterface>(
-      new ur_rtde::RTDEReceiveInterface(config.robot_ip, config.rtde_frequency,
-                                        {}, {}, {},
-                                        config.rt_receive_priority));
-
+      new ur_rtde::RTDEReceiveInterface(config.robot_ip));
+  // rtde_receive_ptr = std::shared_ptr<ur_rtde::RTDEReceiveInterface>(
+  //     new ur_rtde::RTDEReceiveInterface(config.robot_ip, config.rtde_frequency,
+  //                                       {}, {}, {},
+  //                                       config.rt_receive_priority));
+  std::cout << "[URRTDE] RTDE interfaces created. Setting realtime priority:\n";
   // Set application realtime priority
   ur_rtde::RTDEUtility::setRealtimePriority(config.interface_priority);
   std::cout << "[URRTDE] UR socket connection established.\n";
@@ -116,17 +124,22 @@ bool URRTDE::Implementation::checkCartesianTarget(
                            config.robot_interface_config.max_incre_m,
                            config.robot_interface_config.max_incre_rad);
     if (!incre_safe) {
+      std::cerr
+          << "[URRTDE][checkCartesianTarget] Incremental safety check failed. "
+          << "set pose: " << pose_xyzq_set.transpose()
+          << ", prev pose: " << pose_xyzq_set_prev.transpose()
+          << ", max_incre_m: " << config.robot_interface_config.max_incre_m
+          << ", max_incre_rad: " << config.robot_interface_config.max_incre_rad
+          << std::endl;
       if (config.robot_interface_config.incre_safety_mode == SAFETY_MODE_STOP) {
-        std::cerr
-            << "[URRTDE][checkCartesianTarget] Incremental safety check failed."
-            << std::endl;
+        std::cerr << "[URRTDE][checkCartesianTarget] Returning false."
+                  << std::endl;
         return false;
       } else if (config.robot_interface_config.incre_safety_mode ==
                  SAFETY_MODE_TRUNCATE) {
-        std::cerr << "[URRTDE][checkCartesianTarget] Incremental safety check "
-                     "failed. "
-                     "Truncating is not implemented."
-                  << std::endl;
+        std::cerr
+            << "[URRTDE][checkCartesianTarget] Truncating is not implemented. "
+            << std::endl;
         return false;
       }
     }

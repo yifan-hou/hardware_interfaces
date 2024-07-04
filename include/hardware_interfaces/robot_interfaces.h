@@ -156,7 +156,7 @@ class RobotInterfaces {
      * Safety zone.
      * [xmin,xmax,ymin,ymax,zmin,zmax]
      */
-    Eigen::VectorXd safe_zone;
+    RUT::Vector6d safe_zone;
   };
 };
 

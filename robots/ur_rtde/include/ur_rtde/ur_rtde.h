@@ -62,6 +62,17 @@ class URRTDE : public RobotInterfaces {
    */
   bool getWrenchTool(RUT::Vector6d& wrench);
   bool streamCartesian(const RUT::Vector7d& pose);
+  /**
+   * rtde_init_period and rtde_wait_period are used together to maintain a timed loop.
+   * Example:
+   * for (unsigned int i=0; i<1000; i++) {
+   *    RUT::TimePoint t_start = ur_rtde->rtde_init_period();
+   *    ur_rtde->streamCartesian(pose);
+   *    pose[0] += 0.001;
+   *    pose[1] += 0.001;
+   *    ur_rtde->rtde_wait_period(t_start);
+   *  }
+   */
   RUT::TimePoint rtde_init_period();
   void rtde_wait_period(RUT::TimePoint time_point);
 
@@ -81,7 +92,7 @@ class URRTDE : public RobotInterfaces {
    */
   static URRTDE* pinstance;
   URRTDE();
-  URRTDE(const URRTDE&) {}
+  URRTDE(const URRTDE&);
   URRTDE& operator=(const URRTDE&) { return *this; }
   ~URRTDE();
 };
