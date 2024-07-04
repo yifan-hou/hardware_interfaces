@@ -6,8 +6,8 @@
  *      Yifan Hou <yifanhou@stanford.edu>
  */
 
-#ifndef _UR_SOCKET_HEADER_
-#define _UR_SOCKET_HEADER_
+#ifndef _UR_RTDE_HEADER_
+#define _UR_RTDE_HEADER_
 
 #include <RobotUtilities/TimerLinux.h>
 #include <RobotUtilities/utilities.h>
