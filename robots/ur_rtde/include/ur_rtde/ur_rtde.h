@@ -54,11 +54,20 @@ class URRTDE : public RobotInterfaces {
   // interfaces unique to URRTDE
 
   /**
-   * Get wrench measurement from UR robot, expressed in the tool frame
+   * Get wrench measurement from the UR internal FT sensor.
+   * The wrench is described in a frame located at TCP, but with
+   * axes aligned with the robot base frame.
    *
    * @param[out] wrench 6D wrench data
    *
    * @return true if success
+   */
+  bool getWrenchBaseOnTool(RUT::Vector6d& wrench);
+  /**
+   * Get wrench measurement from the UR internal FT sensor.
+   * The wrench is described in the tool frame.
+   * This function calls getWrenchBaseOnTool() internally and 
+   * transforms the result to the tool frame.
    */
   bool getWrenchTool(RUT::Vector6d& wrench);
   bool streamCartesian(const RUT::Vector7d& pose);

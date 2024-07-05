@@ -36,6 +36,7 @@ struct URRTDE::Implementation {
 
   bool initialize(RUT::TimePoint time0, const URRTDE::URRTDEConfig& config);
   bool getCartesian(RUT::Vector7d& pose_xyzq);
+  bool getWrenchBaseOnTool(RUT::Vector6d& wrench);
   bool getWrenchTool(RUT::Vector6d& wrench);
   bool checkCartesianTarget(RUT::Vector7d& pose_xyzq_set);
   bool setCartesian(const RUT::Vector7d& pose_xyzq);
@@ -108,11 +109,26 @@ bool URRTDE::Implementation::getCartesian(RUT::Vector7d& pose_xyzq) {
   return true;
 }
 
-bool URRTDE::Implementation::getWrenchTool(RUT::Vector6d& wrench) {
-  std::vector<double> wrench_feedback = rtde_receive_ptr->getActualTCPForce();
-  for (int i = 0; i < 6; i++) {
-    wrench[i] = wrench_feedback[i];
-  }
+bool URRTDE::Implementation::getWrenchBaseOnTool(RUT::Vector6d& wrench) {
+  std::vector<double> wrench_bot_vec = rtde_receive_ptr->getActualTCPForce();
+  wrench = RUT::Vector6d::Map(wrench_bot_vec.data(), 6);
+  return true;
+}
+
+bool URRTDE::Implementation::getWrenchTool(RUT::Vector6d& wrench_T) {
+  std::vector<double> wrench_bot_vec = rtde_receive_ptr->getActualTCPForce();
+  RUT::Vector6d wrench_bot = RUT::Vector6d::Map(wrench_bot_vec.data(), 6);
+
+  // get the current pose
+  RUT::Vector7d pose_WT;
+  getCartesian(pose_WT);
+  RUT::Matrix4d SE3_botT = RUT::Matrix4d::Identity();
+  SE3_botT.block<3, 3>(0, 0) =
+      RUT::quat2SO3(pose_WT.tail(4));  // bot orientation = world orientation
+  RUT::Matrix6d Adj_botT = RUT::SE32Adj(SE3_botT);
+
+  wrench_T = Adj_botT.transpose() * wrench_bot;
+
   return true;
 }
 
@@ -237,6 +253,10 @@ bool URRTDE::init(RUT::TimePoint time0, const URRTDEConfig& ur_rtde_config) {
 
 bool URRTDE::getCartesian(RUT::Vector7d& pose_xyzq) {
   return m_impl->getCartesian(pose_xyzq);
+}
+
+bool URRTDE::getWrenchBaseOnTool(RUT::Vector6d& wrench) {
+  return m_impl->getWrenchBaseOnTool(wrench);
 }
 
 bool URRTDE::getWrenchTool(RUT::Vector6d& wrench) {
