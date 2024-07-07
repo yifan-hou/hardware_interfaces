@@ -33,11 +33,10 @@ add_subdirectory(robots/ati_netft)
 add_subdirectory(robots/arx_can)
 add_subdirectory(robots/realsense)
 add_subdirectory(robots/ur_rtde)
+add_subdirectory(robots/robotiq_ft_modbus)
 
 
 # Test executable
-
-
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
 add_executable(test_hardware_interfaces
@@ -48,6 +47,7 @@ target_include_directories(test_hardware_interfaces PRIVATE
   robots/arx_can/include/
   robots/realsense/include/
   robots/ur_rtde/include/
+  robots/robotiq_ft_modbus/include/
 )
 target_link_libraries(test_hardware_interfaces
   ${Boost_LIBRARIES}
@@ -57,6 +57,7 @@ target_link_libraries(test_hardware_interfaces
   NETFT_DRIVER
   ARX_CAN
   REALSENSE
+  ROBOTIQ_FT_HW
   spdlog::spdlog
   ${CMAKE_INSTALL_PREFIX}/lib/arx5-sdk/libhardware.so 
   ${CMAKE_INSTALL_PREFIX}/lib/arx5-sdk/libsolver.so
