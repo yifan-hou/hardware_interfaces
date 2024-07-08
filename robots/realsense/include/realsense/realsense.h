@@ -9,6 +9,7 @@
 #ifndef _REALSENSE_HEADER_
 #define _REALSENSE_HEADER_
 
+#include <yaml-cpp/yaml.h>
 #include <librealsense2/rs.hpp>
 #include <opencv2/opencv.hpp>
 
@@ -25,6 +26,22 @@ class Realsense {
     bool enable_color{true};
     bool enable_depth{true};
     bool align_depth_to_color{false};
+
+    bool deserialize(const YAML::Node& node) {
+      try {
+        width = node["width"].as<int>();
+        height = node["height"].as<int>();
+        framerate = node["framerate"].as<int>();
+        enable_color = node["enable_color"].as<bool>();
+        enable_depth = node["enable_depth"].as<bool>();
+        align_depth_to_color = node["align_depth_to_color"].as<bool>();
+      } catch (const std::exception& e) {
+        std::cerr << "Failed to load the config file: " << e.what()
+                  << std::endl;
+        return false;
+      }
+      return true;
+    }
   };
 
   Realsense();

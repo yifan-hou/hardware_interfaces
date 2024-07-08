@@ -6,7 +6,7 @@ include_directories(
 find_package(ur_rtde REQUIRED)
 
 add_library(UR_RTDE SHARED src/ur_rtde.cpp)
-target_link_libraries(UR_RTDE ${RUT} ur_rtde::rtde
+target_link_libraries(UR_RTDE ${RUT} ${YAMLLib} ur_rtde::rtde
 )
 
 # test

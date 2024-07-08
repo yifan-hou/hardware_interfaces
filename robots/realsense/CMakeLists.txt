@@ -8,7 +8,7 @@ include_directories(
 
 add_library(REALSENSE SHARED src/realsense.cpp)
 target_include_directories(REALSENSE PUBLIC include/ /usr/include/librealsense2/)
-  target_link_libraries(REALSENSE ${RUT} ${realsense2_LIBRARY} ${OpenCV_LIBS}
+target_link_libraries(REALSENSE ${RUT} ${realsense2_LIBRARY} ${OpenCV_LIBS} ${YAMLLib}
 )
 
 install(DIRECTORY include/

@@ -28,6 +28,25 @@ class ARXCAN : public RobotInterfaces {
     bool reset_to_home_upon_start = true;
 
     RobotInterfaceConfig robot_interface_config{};
+
+    bool deserialize(const YAML::Node& node) {
+      try {
+        can_interface = node["can_interface"].as<std::string>();
+        urdf_path = node["urdf_path"].as<std::string>();
+        send_receive_in_background =
+            node["send_receive_in_background"].as<bool>();
+        enable_gravity_compensation =
+            node["enable_gravity_compensation"].as<bool>();
+        reset_to_home_upon_start = node["reset_to_home_upon_start"].as<bool>();
+
+        robot_interface_config.deserialize(node["robot_interface_config"]);
+      } catch (const std::exception& e) {
+        std::cerr << "Failed to load the config file: " << e.what()
+                  << std::endl;
+        return false;
+      }
+      return true;
+    }
   };
 
   ARXCAN();

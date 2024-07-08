@@ -9,7 +9,7 @@ include_directories(
 find_library(ARX ArxJointController HINTS ${CMAKE_INSTALL_PREFIX}/lib/arx5-sdk)
 
 add_library(ARX_CAN SHARED src/arx_can.cpp)
-target_link_libraries(ARX_CAN ${RUT} ${ARX}
+target_link_libraries(ARX_CAN ${RUT} ${ARX} ${YAMLLib}
 )
 
 install(DIRECTORY include/

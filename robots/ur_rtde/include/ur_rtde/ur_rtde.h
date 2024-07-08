@@ -32,6 +32,27 @@ class URRTDE : public RobotInterfaces {
     double servoL_lookahead_time{0.1};
     double servoL_gain{600};
     RobotInterfaceConfig robot_interface_config{};
+
+    bool deserialize(const YAML::Node& node) {
+      try {
+        robot_ip = node["robot_ip"].as<std::string>();
+        rtde_frequency = node["rtde_frequency"].as<double>();
+        rt_receive_priority = node["rt_receive_priority"].as<int>();
+        rt_control_priority = node["rt_control_priority"].as<int>();
+        interface_priority = node["interface_priority"].as<int>();
+        linear_vel = node["linear_vel"].as<double>();
+        linear_acc = node["linear_acc"].as<double>();
+        servoL_lookahead_time = node["servoL_lookahead_time"].as<double>();
+        servoL_gain = node["servoL_gain"].as<double>();
+
+        robot_interface_config.deserialize(node["robot_interface_config"]);
+      } catch (const std::exception& e) {
+        std::cerr << "Failed to load the config file: " << e.what()
+                  << std::endl;
+        return false;
+      }
+      return true;
+    }
   };
 
   // for singleton implementation

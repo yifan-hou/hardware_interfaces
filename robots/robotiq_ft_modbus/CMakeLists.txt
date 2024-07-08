@@ -23,6 +23,7 @@ target_link_libraries(test_rq
 add_library(ROBOTIQ_FT_HW SHARED src/robotiq_ft_modbus.cpp)
 target_link_libraries(ROBOTIQ_FT_HW
   ${RUT}
+  ${YAMLLib}
   RQ_THREAD
   RQ_SENSOR_SOCKET
   RQSensorLinux

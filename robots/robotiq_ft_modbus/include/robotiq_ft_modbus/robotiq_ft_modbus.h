@@ -13,6 +13,7 @@
 #include <pthread.h>
 #include <unistd.h>
 
+#include <yaml-cpp/yaml.h>
 #include <chrono>
 #include <cmath>
 #include <fstream>
@@ -40,6 +41,31 @@ class RobotiqFTModbus : public FTInterfaces {
     RUT::Vector3d Pcom{};
     RUT::Vector6d WrenchSafety{};
     RUT::Vector7d PoseSensorTool{};
+
+    bool deserialize(const YAML::Node& node) {
+      try {
+        sensor_name = node["sensor_name"].as<std::string>();
+        fullpath = node["fullpath"].as<std::string>();
+        print_flag = node["print_flag"].as<bool>();
+        publish_rate = node["publish_rate"].as<double>();
+        noise_level = node["noise_level"].as<double>();
+        stall_threshold = node["stall_threshold"].as<int>();
+
+        Foffset = RUT::deserialize_vector<RUT::Vector3d>(node["Foffset"]);
+        Toffset = RUT::deserialize_vector<RUT::Vector3d>(node["Toffset"]);
+        Gravity = RUT::deserialize_vector<RUT::Vector3d>(node["Gravity"]);
+        Pcom = RUT::deserialize_vector<RUT::Vector3d>(node["Pcom"]);
+        WrenchSafety =
+            RUT::deserialize_vector<RUT::Vector6d>(node["WrenchSafety"]);
+        PoseSensorTool =
+            RUT::deserialize_vector<RUT::Vector7d>(node["PoseSensorTool"]);
+      } catch (const std::exception& e) {
+        std::cerr << "Failed to load the config file: " << e.what()
+                  << std::endl;
+        return false;
+      }
+      return true;
+    }
   };
 
   RobotiqFTModbus();

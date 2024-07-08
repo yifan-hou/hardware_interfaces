@@ -13,9 +13,12 @@ int main() {
   config.linear_acc = 0.5;
   config.servoL_lookahead_time = 0.1;
   config.servoL_gain = 600;
-  config.robot_interface_config.zone_safety_mode = SAFETY_MODE_TRUNCATE;
-  config.robot_interface_config.incre_safety_mode = SAFETY_MODE_STOP;
-  config.robot_interface_config.operation_mode = OPERATION_MODE_CARTESIAN;
+  config.robot_interface_config.zone_safety_mode =
+      RobotSafetyMode::SAFETY_MODE_TRUNCATE;
+  config.robot_interface_config.incre_safety_mode =
+      RobotSafetyMode::SAFETY_MODE_STOP;
+  config.robot_interface_config.operation_mode =
+      RobotOperationMode::OPERATION_MODE_CARTESIAN;
   config.robot_interface_config.max_incre_m = 0.002;      // 1 m per second
   config.robot_interface_config.max_incre_rad = 0.00628;  // 3.14 per second
   config.robot_interface_config.safe_zone = {0.3, 0.65, -0.3, 0.4, 0.1, 0.4};

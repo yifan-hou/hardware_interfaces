@@ -134,7 +134,8 @@ bool URRTDE::Implementation::getWrenchTool(RUT::Vector6d& wrench_T) {
 
 bool URRTDE::Implementation::checkCartesianTarget(
     RUT::Vector7d& pose_xyzq_set) {
-  if (config.robot_interface_config.incre_safety_mode != SAFETY_MODE_NONE) {
+  if (config.robot_interface_config.incre_safety_mode !=
+      RobotSafetyMode::SAFETY_MODE_NONE) {
     bool incre_safe =
         incre_safety_check(pose_xyzq_set, pose_xyzq_set_prev,
                            config.robot_interface_config.max_incre_m,
@@ -147,12 +148,13 @@ bool URRTDE::Implementation::checkCartesianTarget(
           << ", max_incre_m: " << config.robot_interface_config.max_incre_m
           << ", max_incre_rad: " << config.robot_interface_config.max_incre_rad
           << std::endl;
-      if (config.robot_interface_config.incre_safety_mode == SAFETY_MODE_STOP) {
+      if (config.robot_interface_config.incre_safety_mode ==
+          RobotSafetyMode::SAFETY_MODE_STOP) {
         std::cerr << "[URRTDE][checkCartesianTarget] Returning false."
                   << std::endl;
         return false;
       } else if (config.robot_interface_config.incre_safety_mode ==
-                 SAFETY_MODE_TRUNCATE) {
+                 RobotSafetyMode::SAFETY_MODE_TRUNCATE) {
         std::cerr
             << "[URRTDE][checkCartesianTarget] Truncating is not implemented. "
             << std::endl;
@@ -165,12 +167,13 @@ bool URRTDE::Implementation::checkCartesianTarget(
       zone_safety_check(pose_xyzq_set, config.robot_interface_config.safe_zone,
                         pose_xyzq_set_truncated);
   if (!zone_safe) {
-    if (config.robot_interface_config.zone_safety_mode == SAFETY_MODE_STOP) {
+    if (config.robot_interface_config.zone_safety_mode ==
+        RobotSafetyMode::SAFETY_MODE_STOP) {
       std::cerr << "[URRTDE][checkCartesianTarget] Zone safety check failed."
                 << std::endl;
       return false;
     } else if (config.robot_interface_config.zone_safety_mode ==
-               SAFETY_MODE_TRUNCATE) {
+               RobotSafetyMode::SAFETY_MODE_TRUNCATE) {
       std::cerr << "[URRTDE][checkCartesianTarget] Zone safety check failed. "
                    "Using truncated pose."
                 << std::endl;
@@ -182,7 +185,7 @@ bool URRTDE::Implementation::checkCartesianTarget(
 
 bool URRTDE::Implementation::setCartesian(const RUT::Vector7d& pose_xyzq_set) {
   assert(config.robot_interface_config.operation_mode ==
-         OPERATION_MODE_CARTESIAN);
+         RobotOperationMode::OPERATION_MODE_CARTESIAN);
 
   // safety checks
   pose_xyzq_set_processed = pose_xyzq_set;
@@ -207,7 +210,7 @@ bool URRTDE::Implementation::setCartesian(const RUT::Vector7d& pose_xyzq_set) {
 bool URRTDE::Implementation::streamCartesian(
     const RUT::Vector7d& pose_xyzq_set) {
   assert(config.robot_interface_config.operation_mode ==
-         OPERATION_MODE_CARTESIAN);
+         RobotOperationMode::OPERATION_MODE_CARTESIAN);
   // safety checks
   pose_xyzq_set_processed = pose_xyzq_set;
   if (!checkCartesianTarget(pose_xyzq_set_processed)) {

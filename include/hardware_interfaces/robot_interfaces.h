@@ -16,23 +16,9 @@
 #define _ROBOT_INTERFACE_CLASS_HEADER_
 
 #include <RobotUtilities/utilities.h>
+#include <yaml-cpp/yaml.h>
 
-/**
- * Safety mode. Determines what to do when the commanded pose is out of the safety region.
- *  SAFETY_MODE_NONE: Do not perform safety checking.
- *  SAFETY_MODE_TRUNCATE: Truncate the commanded pose to be within safe range.
- *  SAFETY_MODE_STOP: Throw an error and stop.
- */
-typedef enum {
-  SAFETY_MODE_NONE,
-  SAFETY_MODE_TRUNCATE,
-  SAFETY_MODE_STOP
-} RobotSafetyMode;
-
-typedef enum {
-  OPERATION_MODE_CARTESIAN,
-  OPERATION_MODE_JOINT
-} RobotOperationMode;
+#include "hardware_interfaces/types.h"
 
 /**
  * Check if pose is within the safety zone, and truncate if not.
@@ -157,6 +143,26 @@ class RobotInterfaces {
      * [xmin,xmax,ymin,ymax,zmin,zmax]
      */
     RUT::Vector6d safe_zone;
+
+    bool deserialize(const YAML::Node& node) {
+      try {
+        operation_mode = string_to_enum<RobotOperationMode>(
+            node["operation_mode"].as<std::string>());
+        zone_safety_mode = string_to_enum<RobotSafetyMode>(
+            node["zone_safety_mode"].as<std::string>());
+        incre_safety_mode = string_to_enum<RobotSafetyMode>(
+            node["incre_safety_mode"].as<std::string>());
+        max_incre_m = node["max_incre_m"].as<double>();
+        max_incre_rad = node["max_incre_rad"].as<double>();
+        max_incre_joint_rad = node["max_incre_joint_rad"].as<double>();
+        safe_zone = RUT::deserialize_vector<RUT::Vector6d>(node["safe_zone"]);
+      } catch (const std::exception& e) {
+        std::cerr << "Failed to load the config file: " << e.what()
+                  << std::endl;
+        return false;
+      }
+      return true;
+    }
   };
 };
 

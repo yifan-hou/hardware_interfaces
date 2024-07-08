@@ -13,7 +13,7 @@ find_package(Boost REQUIRED COMPONENTS
 )
 
 find_package(Eigen3 REQUIRED)
-
+find_library(YAMLLib yaml-cpp HINTS /usr/local/lib)
 find_library(RUT Utilities HINTS ${CMAKE_INSTALL_PREFIX}/lib/RobotUtilities)
 find_library(TIMER_LIB TimerLinux HINTS ${CMAKE_INSTALL_PREFIX}/lib/RobotUtilities)
 
@@ -23,11 +23,6 @@ include_directories(
   ${CMAKE_INSTALL_PREFIX}/include/arx5-sdk/
 )
 
-# install common headers
-install(DIRECTORY include/
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/include/
-)
-
 # comment out / uncomment the library you need
 add_subdirectory(robots/ati_netft)
 add_subdirectory(robots/arx_can)
@@ -35,6 +30,17 @@ add_subdirectory(robots/realsense)
 add_subdirectory(robots/ur_rtde)
 add_subdirectory(robots/robotiq_ft_modbus)
 
+add_library(HI_COMMON
+  src/types.cpp
+)
+
+# install common
+install(DIRECTORY include/
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/include/
+)
+install(TARGETS HI_COMMON
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/
+)
 
 # Test executable
 find_package(fmt REQUIRED)
