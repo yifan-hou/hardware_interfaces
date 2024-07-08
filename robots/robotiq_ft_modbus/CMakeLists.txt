@@ -28,11 +28,9 @@ target_link_libraries(ROBOTIQ_FT_HW
   RQSensorLinux
 )
 
-
-
 install(DIRECTORY include/
     DESTINATION ${CMAKE_INSTALL_PREFIX}/include/
 )
-install(TARGETS ROBOTIQ_FT_HW
+install(TARGETS ROBOTIQ_FT_HW RQ_THREAD RQ_SENSOR_SOCKET RQSensorLinux
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/
 )
