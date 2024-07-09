@@ -171,6 +171,11 @@ bool URRTDE::Implementation::checkCartesianTarget(
         RobotSafetyMode::SAFETY_MODE_STOP) {
       std::cerr << "[URRTDE][checkCartesianTarget] Zone safety check failed."
                 << std::endl;
+      std::cerr << "[URRTDE][checkCartesianTarget] target pose: "
+                << pose_xyzq_set.transpose() << std::endl;
+      std::cerr << "[URRTDE][checkCartesianTarget] safe zone: "
+                << config.robot_interface_config.safe_zone.transpose()
+                << std::endl;
       return false;
     } else if (config.robot_interface_config.zone_safety_mode ==
                RobotSafetyMode::SAFETY_MODE_TRUNCATE) {
