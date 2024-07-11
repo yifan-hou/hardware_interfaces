@@ -42,10 +42,6 @@ class FTInterfaces {
                                RUT::Vector6d& wrench) = 0;
 
   RUT::Vector6d _WrenchSafety;
-  RUT::Vector3d _Foffset;
-  RUT::Vector3d _Toffset;
-  RUT::Vector3d _Gravity;
-  RUT::Vector3d _Pcom;
   RUT::Matrix6d _adj_sensor_tool;
 
  protected:

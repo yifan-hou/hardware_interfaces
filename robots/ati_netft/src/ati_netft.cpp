@@ -138,10 +138,10 @@ int ATINetft::getWrenchNetTool(const RUT::Vector7d& pose,
 
   // compensate for the weight of object
   _R_WT = RUT::quat2SO3(pose[3], pose[4], pose[5], pose[6]);
-  _GinF = _R_WT.transpose() * _Gravity;
-  _GinT = _Pcom.cross(_GinF);
-  wrench_net_T.head(3) = _wrench_tool_temp.head(3) + _Foffset - _GinF;
-  wrench_net_T.tail(3) = _wrench_tool_temp.tail(3) + _Toffset - _GinT;
+  _GinF = _R_WT.transpose() * _config.Gravity;
+  _GinT = _config.Pcom.cross(_GinF);
+  wrench_net_T.head(3) = _wrench_tool_temp.head(3) + _config.Foffset - _GinF;
+  wrench_net_T.tail(3) = _wrench_tool_temp.tail(3) + _config.Toffset - _GinT;
 
   // safety
   for (int i = 0; i < 6; ++i) {
