@@ -66,8 +66,18 @@ bool URRTDE::Implementation::initialize(
             << std::endl;
   std::cout << "[URRTDE] Creating control interface at: "
             << config.rtde_frequency << " Hz\n";
-  rtde_control_ptr = std::shared_ptr<ur_rtde::RTDEControlInterface>(
-      new ur_rtde::RTDEControlInterface(config.robot_ip));
+  while (true) {
+    try {
+      rtde_control_ptr = std::shared_ptr<ur_rtde::RTDEControlInterface>(
+          new ur_rtde::RTDEControlInterface(config.robot_ip));
+      break;
+    } catch (const std::exception& e) {
+      std::cerr << "[URRTDE] Failed to create control interface. Retrying.."
+                << std::endl;
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+  }
+
   // rtde_control_ptr = std::shared_ptr<ur_rtde::RTDEControlInterface>(
   //     new ur_rtde::RTDEControlInterface(config.robot_ip, config.rtde_frequency,
   //                                       {}, {}, config.rt_control_priority));
