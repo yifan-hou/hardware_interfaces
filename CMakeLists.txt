@@ -27,6 +27,7 @@ include_directories(
 add_subdirectory(robots/ati_netft)
 add_subdirectory(robots/arx_can)
 add_subdirectory(robots/realsense)
+add_subdirectory(robots/gopro)
 add_subdirectory(robots/ur_rtde)
 add_subdirectory(robots/robotiq_ft_modbus)
 

@@ -22,6 +22,7 @@ Additionally, each hardware interface has there own dependencies. You can disabl
 * The ur_rtde module is dependent on [UR rtde c++ library](https://gitlab.com/sdurobotics/ur_rtde)
 * The arx_can module is dependent on the [arx c++ sdk](https://github.com/yihuai-gao/arx5-sdk).
 * The realsense module is dependent on the [official lib realsense package](https://github.com/IntelRealSense/librealsense/blob/master/examples/readme.md)
+* The GoPro module is dependent on opencv.
 * The ati_netft and robotiq_ft_modbus module contains a copy of the respective drivers and thus do not have additional dependencies. 
 
 

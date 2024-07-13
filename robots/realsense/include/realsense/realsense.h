@@ -15,7 +15,9 @@
 
 #include <RobotUtilities/TimerLinux.h>
 
-class Realsense {
+#include "hardware_interfaces/camera_interfaces.h"
+
+class Realsense : public CameraInterfaces {
  public:
   struct RealsenseConfig {
     // Not all sizes and frame rates are supported by the camera.
@@ -57,7 +59,7 @@ class Realsense {
    * @return     True if success.
    */
   bool init(RUT::TimePoint time0, const RealsenseConfig& config);
-  cv::Mat next_rgb_frame_blocking();
+  cv::Mat next_rgb_frame_blocking() override;
 
  private:
   struct Implementation;
