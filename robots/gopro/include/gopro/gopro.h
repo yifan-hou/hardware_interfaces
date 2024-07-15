@@ -19,10 +19,16 @@ class GoPro : public CameraInterfaces {
  public:
   struct GoProConfig {
     std::string device_name;
+    double frame_width{1280};
+    double frame_height{720};
+    int fps{30};
 
     bool deserialize(const YAML::Node& node) {
       try {
         device_name = node["device_name"].as<std::string>();
+        frame_width = node["frame_width"].as<double>();
+        frame_height = node["frame_height"].as<double>();
+        fps = node["fps"].as<int>();
       } catch (const std::exception& e) {
         std::cerr << "Failed to load the config file: " << e.what()
                   << std::endl;

@@ -40,6 +40,10 @@ bool GoPro::Implementation::initialize(RUT::TimePoint time0,
               << config.device_name << std::endl;
     return false;
   }
+  // config the video capture
+  cap->set(cv::CAP_PROP_FRAME_WIDTH, config.frame_width);
+  cap->set(cv::CAP_PROP_FRAME_HEIGHT, config.frame_height);
+  cap->set(cv::CAP_PROP_FPS, config.fps);
 
   // try reading one frame
   std::cout << "Test reading a frame" << std::endl;
