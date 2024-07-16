@@ -9,7 +9,7 @@ struct GoPro::Implementation {
   GoPro::GoProConfig config{};
   RUT::TimePoint time0;
 
-  cv::Mat image;
+  cv::Mat image, image_cropped;
   std::shared_ptr<cv::VideoCapture> cap;
 
   Implementation();
@@ -63,7 +63,14 @@ cv::Mat GoPro::Implementation::next_rgb_frame_blocking() {
     std::cerr << "[GoPro] Empty frame. Terminate" << std::endl;
     return cv::Mat();
   }
-  return image;
+  if (config.crop_rows[0] >= 0 && config.crop_cols[0] >= 0) {
+
+    image_cropped = image(cv::Range(config.crop_rows[0], config.crop_rows[1]),
+                          cv::Range(config.crop_cols[0], config.crop_cols[1]));
+    return image_cropped;
+  } else {
+    return image;
+  }
 }
 
 GoPro::GoPro() : m_impl{std::make_unique<Implementation>()} {}

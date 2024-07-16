@@ -21,6 +21,8 @@ class GoPro : public CameraInterfaces {
     std::string device_name;
     double frame_width{1280};
     double frame_height{720};
+    std::vector<int> crop_rows{-1, -1};
+    std::vector<int> crop_cols{-1, -1};
     int fps{30};
 
     bool deserialize(const YAML::Node& node) {
@@ -28,6 +30,8 @@ class GoPro : public CameraInterfaces {
         device_name = node["device_name"].as<std::string>();
         frame_width = node["frame_width"].as<double>();
         frame_height = node["frame_height"].as<double>();
+        crop_rows = node["crop_rows"].as<std::vector<int>>();
+        crop_cols = node["crop_cols"].as<std::vector<int>>();
         fps = node["fps"].as<int>();
       } catch (const std::exception& e) {
         std::cerr << "Failed to load the config file: " << e.what()
