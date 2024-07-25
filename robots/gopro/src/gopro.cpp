@@ -49,8 +49,16 @@ bool GoPro::Implementation::initialize(RUT::TimePoint time0,
   std::cout << "Test reading a frame" << std::endl;
   *cap >> image;
   if (image.empty()) {  //Breaking the loop if no video frame is detected//
-    std::cout << "Test reading failed. Please reset USB device." << std::endl;
-    return false;
+    std::cout << "Test reading failed. " << std::endl;
+    std::cout << "  Possibility one: GoPro is not connected. " << std::endl;
+    std::cout << "  Possibility two: Need to reset USB device. " << std::endl;
+    std::cout << "    To do so, run 'lsusb | grep Elgato', which should give "
+                 "something like\n";
+    std::cout << "      Bus 010 Device 005: ID 0fd9:008a Elgato Systems GmbH "
+                 "Elgato HD60 X\n";
+    std::cout
+        << "    Then run 'sudo hardware_interfaces/build/robots/gopro/USBRESET "
+           "/dev/bus/usb/010/005'.\n";
   }
 
   std::cout << "[GoPro] Pipeline started.\n";

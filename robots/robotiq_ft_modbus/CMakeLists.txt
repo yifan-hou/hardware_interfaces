@@ -29,9 +29,28 @@ target_link_libraries(ROBOTIQ_FT_HW
   RQSensorLinux
 )
 
+pybind11_add_module(robotiq_ft_modbus_pybind 
+  src/robotiq_ft_modbus_pybind.cpp
+)
+target_link_libraries(robotiq_ft_modbus_pybind PRIVATE
+  ROBOTIQ_FT_HW
+  ${RUT}
+  ${TIMER_LIB}
+  ${YAMLLib}
+  RQ_THREAD
+  RQ_SENSOR_SOCKET
+  RQSensorLinux
+)
+
+
 install(DIRECTORY include/
     DESTINATION ${CMAKE_INSTALL_PREFIX}/include/
 )
 install(TARGETS ROBOTIQ_FT_HW RQ_THREAD RQ_SENSOR_SOCKET RQSensorLinux
     DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/
 )
+
+# set the output directory for the built module
+set_target_properties(robotiq_ft_modbus_pybind PROPERTIES LIBRARY_OUTPUT_DIRECTORY python/)
+set_target_properties(robotiq_ft_modbus_pybind PROPERTIES PREFIX "")
+set_target_properties(robotiq_ft_modbus_pybind PROPERTIES OUTPUT_NAME "robotiq_ft_modbus_pybind")

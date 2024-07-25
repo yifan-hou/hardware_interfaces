@@ -13,6 +13,7 @@ find_package(Boost REQUIRED COMPONENTS
 )
 
 find_package(Eigen3 REQUIRED)
+find_package(pybind11 REQUIRED)
 find_library(YAMLLib yaml-cpp HINTS /usr/local/lib)
 find_library(RUT Utilities HINTS ${CMAKE_INSTALL_PREFIX}/lib/RobotUtilities)
 find_library(TIMER_LIB TimerLinux HINTS ${CMAKE_INSTALL_PREFIX}/lib/RobotUtilities)
