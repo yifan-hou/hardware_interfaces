@@ -35,11 +35,12 @@ bool GoPro::Implementation::initialize(RUT::TimePoint time0,
   strcpy(device_name_char, config.device_name.c_str());
   cap = std::make_shared<cv::VideoCapture>(device_name_char);
   if (!cap->isOpened()) {  //This section prompt an error message if no video stream is found//
-    std::cout << "No video stream detected. Check your device name config. "
-                 "Current device name:"
-              << config.device_name << std::endl;
+    std::cerr << "\033[1;31mNo video stream detected. Check your device name "
+                 "config\033[0m\n";
+    std::cerr << "Current device name:" << config.device_name << std::endl;
     return false;
   }
+
   // config the video capture
   cap->set(cv::CAP_PROP_FRAME_WIDTH, config.frame_width);
   cap->set(cv::CAP_PROP_FRAME_HEIGHT, config.frame_height);
@@ -48,8 +49,8 @@ bool GoPro::Implementation::initialize(RUT::TimePoint time0,
   // try reading one frame
   std::cout << "Test reading a frame" << std::endl;
   *cap >> image;
-  if (image.empty()) {  //Breaking the loop if no video frame is detected//
-    std::cout << "Test reading failed. " << std::endl;
+  if (image.empty()) {
+    std::cout << "\033[1;31mTest reading failed\033[0m\n";
     std::cout << "  Possibility one: GoPro is not connected. " << std::endl;
     std::cout << "  Possibility two: Need to reset USB device. " << std::endl;
     std::cout << "    To do so, run 'lsusb | grep Elgato', which should give "
@@ -59,6 +60,7 @@ bool GoPro::Implementation::initialize(RUT::TimePoint time0,
     std::cout
         << "    Then run 'sudo hardware_interfaces/build/robots/gopro/USBRESET "
            "/dev/bus/usb/010/005'.\n";
+    return false;
   }
 
   std::cout << "[GoPro] Pipeline started.\n";

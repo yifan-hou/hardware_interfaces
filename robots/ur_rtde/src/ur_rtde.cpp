@@ -72,8 +72,8 @@ bool URRTDE::Implementation::initialize(
           new ur_rtde::RTDEControlInterface(config.robot_ip));
       break;
     } catch (const std::exception& e) {
-      std::cerr << "[URRTDE] Failed to create control interface. Retrying.."
-                << std::endl;
+      std::cerr << "\033[1;31m[URRTDE] Failed to create control interface. "
+                   "Retrying..\033[0m\n";
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
   }
@@ -151,13 +151,14 @@ bool URRTDE::Implementation::checkCartesianTarget(
                            config.robot_interface_config.max_incre_m,
                            config.robot_interface_config.max_incre_rad);
     if (!incre_safe) {
-      std::cerr
-          << "[URRTDE][checkCartesianTarget] Incremental safety check failed. "
-          << "set pose: " << pose_xyzq_set.transpose()
-          << ", prev pose: " << pose_xyzq_set_prev.transpose()
-          << ", max_incre_m: " << config.robot_interface_config.max_incre_m
-          << ", max_incre_rad: " << config.robot_interface_config.max_incre_rad
-          << std::endl;
+      std::cerr << "\033[1;33m[URRTDE][checkCartesianTarget] Incremental "
+                   "safety check failed.\033[0m\n";
+      std::cerr << "set pose: " << pose_xyzq_set.transpose()
+                << ", prev pose: " << pose_xyzq_set_prev.transpose()
+                << ", max_incre_m: "
+                << config.robot_interface_config.max_incre_m
+                << ", max_incre_rad: "
+                << config.robot_interface_config.max_incre_rad << std::endl;
       if (config.robot_interface_config.incre_safety_mode ==
           RobotSafetyMode::SAFETY_MODE_STOP) {
         std::cerr << "[URRTDE][checkCartesianTarget] Returning false."
@@ -179,8 +180,8 @@ bool URRTDE::Implementation::checkCartesianTarget(
   if (!zone_safe) {
     if (config.robot_interface_config.zone_safety_mode ==
         RobotSafetyMode::SAFETY_MODE_STOP) {
-      std::cerr << "[URRTDE][checkCartesianTarget] Zone safety check failed."
-                << std::endl;
+      std::cerr << "\033[1;33m[URRTDE][checkCartesianTarget] Zone safety check "
+                   "failed.\033[0m\n";
       std::cerr << "[URRTDE][checkCartesianTarget] target pose: "
                 << pose_xyzq_set.transpose() << std::endl;
       std::cerr << "[URRTDE][checkCartesianTarget] safe zone: "

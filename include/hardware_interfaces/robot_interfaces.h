@@ -29,9 +29,9 @@
  *
  * @return     True if the commanded pose is within the safety zone.
  */
-bool zone_safety_check(const Eigen::VectorXd& pose,
-                       const Eigen::VectorXd& safe_zone,
-                       RUT::Vector7d& safe_pose) {
+inline bool zone_safety_check(const Eigen::VectorXd& pose,
+                              const Eigen::VectorXd& safe_zone,
+                              RUT::Vector7d& safe_pose) {
   if (safe_zone.size() != 6) {
     std::cerr
         << "[robot_interface] Error: safe_zone must have dim = 6. Getting "
@@ -60,9 +60,9 @@ bool zone_safety_check(const Eigen::VectorXd& pose,
  *
  * @return     True if the incremental change is within the safety limit.
  */
-bool incre_safety_check(const Eigen::VectorXd& pose,
-                        const Eigen::VectorXd& pose_prev, double max_incre_m,
-                        double max_incre_rad) {
+inline bool incre_safety_check(const Eigen::VectorXd& pose,
+                               const Eigen::VectorXd& pose_prev,
+                               double max_incre_m, double max_incre_rad) {
   for (int i = 0; i < 3; i++) {
     if (std::abs(pose[i] - pose_prev[i]) > max_incre_m) {
       return false;
