@@ -10,7 +10,7 @@
 #ifndef _FT_INTERFACE_CLASS_HEADER_
 #define _FT_INTERFACE_CLASS_HEADER_
 
-#include <RobotUtilities/utilities.h>
+#include <RobotUtilities/spatial_utilities.h>
 
 class FTInterfaces {
  public:

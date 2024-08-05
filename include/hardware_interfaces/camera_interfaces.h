@@ -8,7 +8,7 @@
 #ifndef _CAMERA_INTERFACE_CLASS_HEADER_
 #define _CAMERA_INTERFACE_CLASS_HEADER_
 
-#include <RobotUtilities/utilities.h>
+#include <RobotUtilities/spatial_utilities.h>
 #include <opencv2/opencv.hpp>
 
 class CameraInterfaces {

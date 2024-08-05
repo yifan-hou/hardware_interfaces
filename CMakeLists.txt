@@ -16,25 +16,29 @@ find_package(Eigen3 REQUIRED)
 find_package(pybind11 REQUIRED)
 find_library(YAMLLib yaml-cpp HINTS /usr/local/lib)
 find_library(RUT Utilities HINTS ${CMAKE_INSTALL_PREFIX}/lib/RobotUtilities)
-find_library(TIMER_LIB TimerLinux HINTS ${CMAKE_INSTALL_PREFIX}/lib/RobotUtilities)
 
 include_directories(
   include/
   ${EIGEN3_INCLUDE_DIRS}
   ${CMAKE_INSTALL_PREFIX}/include/arx5-sdk/
 )
-
-# comment out / uncomment the library you need
-add_subdirectory(robots/ati_netft)
-add_subdirectory(robots/arx_can)
-add_subdirectory(robots/realsense)
-add_subdirectory(robots/gopro)
-add_subdirectory(robots/ur_rtde)
-add_subdirectory(robots/robotiq_ft_modbus)
-
-add_library(HI_COMMON
+add_library(HI_COMMON SHARED
   src/types.cpp
 )
+
+# hardware to build
+add_subdirectory(hardware/ati_netft)
+# add_subdirectory(hardware/arx_can)
+add_subdirectory(hardware/realsense)
+add_subdirectory(hardware/gopro)
+add_subdirectory(hardware/ur_rtde)
+add_subdirectory(hardware/robotiq_ft_modbus)
+
+# workcell to build
+# include every "include" directory under /hardware/*
+file(GLOB HARDWARE_INCLUDE_DIRS "hardware/*/include")
+include_directories(${HARDWARE_INCLUDE_DIRS})
+add_subdirectory(workcell/table_top_manip)
 
 # install common
 install(DIRECTORY include/
@@ -51,22 +55,20 @@ add_executable(test_hardware_interfaces
   test/main.cc
 )
 target_include_directories(test_hardware_interfaces PRIVATE
-  robots/ati_netft/include/
-  robots/arx_can/include/
-  robots/realsense/include/
-  robots/ur_rtde/include/
-  robots/robotiq_ft_modbus/include/
+  hardware/ati_netft/include/
+  hardware/arx_can/include/
+  hardware/realsense/include/
+  hardware/ur_rtde/include/
+  hardware/robotiq_ft_modbus/include/
 )
 target_link_libraries(test_hardware_interfaces
   ${Boost_LIBRARIES}
   ${RUT}
-  ${TIMER_LIB}
-  ATI_NETFT_HW
-  NETFT_DRIVER
-  ARX_CAN
+  ATI_NETFT
   REALSENSE
   ROBOTIQ_FT_HW
   spdlog::spdlog
-  ${CMAKE_INSTALL_PREFIX}/lib/arx5-sdk/libhardware.so 
-  ${CMAKE_INSTALL_PREFIX}/lib/arx5-sdk/libsolver.so
+  # ARX_CAN
+  # ${CMAKE_INSTALL_PREFIX}/lib/arx5-sdk/libhardware.so 
+  # ${CMAKE_INSTALL_PREFIX}/lib/arx5-sdk/libsolver.so
 )

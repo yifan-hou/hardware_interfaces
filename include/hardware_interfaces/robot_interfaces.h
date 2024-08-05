@@ -15,7 +15,7 @@
 #ifndef _ROBOT_INTERFACE_CLASS_HEADER_
 #define _ROBOT_INTERFACE_CLASS_HEADER_
 
-#include <RobotUtilities/utilities.h>
+#include <RobotUtilities/spatial_utilities.h>
 #include <yaml-cpp/yaml.h>
 
 #include "hardware_interfaces/types.h"
