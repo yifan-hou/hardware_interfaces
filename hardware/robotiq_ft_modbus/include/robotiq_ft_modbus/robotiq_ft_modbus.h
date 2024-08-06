@@ -72,6 +72,7 @@ class RobotiqFTModbus : public FTInterfaces {
   ~RobotiqFTModbus();
   bool init(RUT::TimePoint time0,
             const RobotiqFTModbusConfig& ati_netft_config);
+
   /**
    * Get the sensor reading.
    *
@@ -101,8 +102,6 @@ class RobotiqFTModbus : public FTInterfaces {
   int getWrenchNetTool(const RUT::Vector7d& pose,
                        RUT::Vector6d& wrench_net_T) override;
 
-  bool is_data_ready() { return _flag_started; }
-
   // store the results
   RUT::Vector3d _force, _torque;
   std::mutex _mutex;
@@ -113,8 +112,7 @@ class RobotiqFTModbus : public FTInterfaces {
   RUT::Matrix3d _R_WT;
   RUT::Vector3d _GinF, _GinT;
 
-  bool _flag_started{false};  // Whether readings are available.
-  RUT::TimePoint _time0;      ///< high resolution timer.
+  RUT::TimePoint _time0;  ///< high resolution timer.
   std::ofstream _file;
   RobotiqFTModbusConfig _config;
 

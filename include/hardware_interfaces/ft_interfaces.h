@@ -15,6 +15,13 @@
 class FTInterfaces {
  public:
   /**
+   * Check if initialization is finished and data is ready to read.
+   *
+   * @return  True if data is ready.
+   */
+  bool is_data_ready() { return _flag_started; }
+
+  /**
    * Get the sensor reading.
    *
    * @param  wrench  The wrench
@@ -43,16 +50,7 @@ class FTInterfaces {
 
   RUT::Vector6d _WrenchSafety;
   RUT::Matrix6d _adj_sensor_tool;
-
- protected:
-  /**
-   * for singleton implementation
-   */
-  static FTInterfaces* pinstance;
-  FTInterfaces() {}
-  FTInterfaces(const FTInterfaces&) {}
-  FTInterfaces& operator=(const FTInterfaces&) { return *this; }
-  ~FTInterfaces() {}
+  bool _flag_started{false};  // Whether readings are available.
 };
 
 #endif

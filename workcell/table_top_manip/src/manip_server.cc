@@ -18,6 +18,7 @@ bool ManipServer::initialize(const std::string& config_path) {
   std::cout << "[ManipServer] Reading config files.\n";
 
   URRTDE::URRTDEConfig robot_config;
+  ATINetft::ATINetftConfig ati_config;
   RobotiqFTModbus::RobotiqFTModbusConfig robotiq_config;
   Realsense::RealsenseConfig realsense_config;
   GoPro::GoProConfig gopro_config;
@@ -28,6 +29,7 @@ bool ManipServer::initialize(const std::string& config_path) {
   _config.deserialize(config);
 
   robot_config.deserialize(config["ur_rtde"]);
+  ati_config.deserialize(config["ati_netft"]);
   robotiq_config.deserialize(config["robotiq_ft_modbus"]);
   realsense_config.deserialize(config["realsense"]);
   gopro_config.deserialize(config["gopro"]);
@@ -43,15 +45,13 @@ bool ManipServer::initialize(const std::string& config_path) {
   _bgr = new cv::Mat[3];
 
   if (!_config.mock_hardware) {
-    if (!robotiq.init(time0, robotiq_config)) {
-      std::cerr << "Failed to initialize robotiq. Exiting." << std::endl;
-      return false;
-    }
+    // robot
     if (!robot_ptr->init(time0, robot_config)) {
       std::cerr << "Failed to initialize UR RTDE. Exiting." << std::endl;
       return false;
     }
 
+    // camera
     if (_config.camera_selection == std::string("gopro")) {
       camera_ptr = std::shared_ptr<GoPro>(new GoPro);
       GoPro* gopro_ptr = static_cast<GoPro*>(camera_ptr.get());
@@ -70,6 +70,29 @@ bool ManipServer::initialize(const std::string& config_path) {
       std::cerr << "Invalid camera selection. Exiting." << std::endl;
       return false;
     }
+
+    // force sensor
+    if (_config.force_sensing_mode == ForceSensingMode::FORCE_MODE_ATI) {
+      force_sensor_ptr = std::shared_ptr<ATINetft>(new ATINetft);
+      ATINetft* ati_ptr = static_cast<ATINetft*>(force_sensor_ptr.get());
+      if (!ati_ptr->init(time0, ati_config)) {
+        std::cerr << "Failed to initialize ATI Netft. Exiting." << std::endl;
+        return false;
+      }
+    } else if (_config.force_sensing_mode ==
+               ForceSensingMode::FORCE_MODE_ROBOTIQ) {
+      force_sensor_ptr = std::shared_ptr<RobotiqFTModbus>(new RobotiqFTModbus);
+      RobotiqFTModbus* robotiq_ptr =
+          static_cast<RobotiqFTModbus*>(force_sensor_ptr.get());
+      if (!robotiq_ptr->init(time0, robotiq_config)) {
+        std::cerr << "Failed to initialize Robotiq FT Modbus. Exiting."
+                  << std::endl;
+        return false;
+      }
+    } else {
+      std::cerr << "Invalid force sensing mode. Exiting." << std::endl;
+      return false;
+    }
   }
 
   // initialize admittance controller
@@ -85,6 +108,8 @@ bool ManipServer::initialize(const std::string& config_path) {
     return false;
   }
   RUT::Matrix6d Tr = RUT::Matrix6d::Identity();
+  // The robot should not behave with any compliance during initialization.
+  // The user needs to set the desired compliance afterwards.
   int n_af = 0;
   controller.setForceControlledAxis(Tr, n_af);
 

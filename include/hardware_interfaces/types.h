@@ -22,6 +22,8 @@ enum class RobotOperationMode {
   OPERATION_MODE_JOINT
 };
 
+enum class ForceSensingMode { NONE, FORCE_MODE_ATI, FORCE_MODE_ROBOTIQ };
+
 template <class Enum>
 const char* to_string(const Enum e);
 

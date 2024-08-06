@@ -28,7 +28,7 @@ void ManipServer::low_dim_loop(const RUT::TimePoint& time0) {
     // wait for FT300 to be ready
     std::cout << "[ManipServer][low dim thread] Waiting for FT300 to start "
                  "streaming.\n";
-    while (!robotiq.is_data_ready()) {
+    while (!force_sensor_ptr->is_data_ready()) {
       usleep(100000);
     }
   }
@@ -63,7 +63,7 @@ void ManipServer::low_dim_loop(const RUT::TimePoint& time0) {
         _pose_buffer.put(pose_fb);
         _pose_timestamp_ms_buffer.put(time_now_ms);
       }
-      robotiq.getWrenchNetTool(pose_fb, wrench_fb);
+      force_sensor_ptr->getWrenchNetTool(pose_fb, wrench_fb);
       time_now_ms = timer.toc_ms();
       {
         std::lock_guard<std::mutex> lock(_wrench_buffer_mtx);

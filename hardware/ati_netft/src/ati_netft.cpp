@@ -42,6 +42,8 @@ void* ATI_Monitor(void* pParam) {
       netft_hardware->_torque[0] = data.tx;
       netft_hardware->_torque[1] = data.ty;
       netft_hardware->_torque[2] = data.tz;
+
+      netft_hardware->_flag_started = true;
     } else {
       std::cout << "\033[1;31m[ATINetft] Time out\033[0m\n";
       status_ok = false;
@@ -72,6 +74,7 @@ bool ATINetft::init(RUT::TimePoint time0, const ATINetftConfig& config) {
             << std::endl;
   _time0 = time0;
   _config = config;
+  _flag_started = false;
 
   _adj_sensor_tool = SE32Adj(pose2SE3(config.PoseSensorTool));
 

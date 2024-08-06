@@ -17,6 +17,7 @@
 #include <force_control/admittance_controller.h>
 #include <force_control/config_deserialize.h>
 #include <hardware_interfaces/robot_interfaces.h>
+#include <hardware_interfaces/types.h>
 // hardware used in this app
 #include <ati_netft/ati_netft.h>
 #include <gopro/gopro.h>
@@ -37,6 +38,7 @@ struct ManipServerConfig {
   int pose_buffer_size{100};
   int wrench_buffer_size{100};
   bool mock_hardware{false};
+  ForceSensingMode force_sensing_mode{ForceSensingMode::NONE};
 
   bool deserialize(const YAML::Node& node) {
     try {
@@ -48,6 +50,8 @@ struct ManipServerConfig {
       pose_buffer_size = node["pose_buffer_size"].as<int>();
       wrench_buffer_size = node["wrench_buffer_size"].as<int>();
       mock_hardware = node["mock_hardware"].as<bool>();
+      force_sensing_mode = string_to_enum<ForceSensingMode>(
+          node["force_sensing_mode"].as<std::string>());
     } catch (const std::exception& e) {
       std::cerr << "Failed to load the config file: " << e.what() << std::endl;
       return false;
@@ -149,7 +153,7 @@ class ManipServer {
 
   //  hardware interfaces
   std::shared_ptr<CameraInterfaces> camera_ptr;
-  RobotiqFTModbus robotiq;
+  std::shared_ptr<FTInterfaces> force_sensor_ptr;
   URRTDE* robot_ptr;
   AdmittanceController controller;
 

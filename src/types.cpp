@@ -16,6 +16,13 @@ const std::vector<RobotOperationMode>& all_operation_modes() {
   return modes;
 }
 
+const std::vector<ForceSensingMode>& all_force_sensing_modes() {
+  static const std::vector<ForceSensingMode> modes = {
+      ForceSensingMode::NONE, ForceSensingMode::FORCE_MODE_ATI,
+      ForceSensingMode::FORCE_MODE_ROBOTIQ};
+  return modes;
+}
+
 template <>
 const char* to_string(const RobotSafetyMode e) {
   switch (e) {
@@ -47,6 +54,20 @@ const char* to_string(const RobotOperationMode e) {
 }
 
 template <>
+const char* to_string(const ForceSensingMode e) {
+  switch (e) {
+    case ForceSensingMode::NONE:
+      return "NONE";
+    case ForceSensingMode::FORCE_MODE_ATI:
+      return "FORCE_MODE_ATI";
+    case ForceSensingMode::FORCE_MODE_ROBOTIQ:
+      return "FORCE_MODE_ROBOTIQ";
+    default:
+      return "INVALID_FORCE_SENSING_MODE";
+  }
+}
+
+template <>
 RobotSafetyMode string_to_enum(const std::string& string) {
   for (const auto& mode : all_safety_modes()) {
     if (string == to_string(mode)) {
@@ -54,7 +75,7 @@ RobotSafetyMode string_to_enum(const std::string& string) {
     }
   }
 
-  return RobotSafetyMode::SAFETY_MODE_NONE;
+  return RobotSafetyMode::NONE;
 }
 
 template <>
@@ -65,5 +86,16 @@ RobotOperationMode string_to_enum(const std::string& string) {
     }
   }
 
-  return RobotOperationMode::OPERATION_MODE_CARTESIAN;
+  return RobotOperationMode::NONE;
+}
+
+template <>
+ForceSensingMode string_to_enum(const std::string& string) {
+  for (const auto& mode : all_force_sensing_modes()) {
+    if (string == to_string(mode)) {
+      return mode;
+    }
+  }
+
+  return ForceSensingMode::NONE;
 }
