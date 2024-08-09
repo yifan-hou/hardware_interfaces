@@ -38,6 +38,14 @@ target_link_libraries(ManipServer
   ${YAMLLib}
 )
 
+# c++ library install
+install(DIRECTORY include/
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/include/
+)
+install(TARGETS ManipServer
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/
+)
+
 pybind11_add_module(manip_server_pybind 
   src/manip_server_pybind.cc
 )

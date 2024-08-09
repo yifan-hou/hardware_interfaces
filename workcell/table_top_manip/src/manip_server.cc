@@ -1,4 +1,5 @@
-#include "manip_server.h"
+#include "table_top_manip/manip_server.h"
+#include "helpers.hpp"
 
 ManipServer::ManipServer(const std::string& config_path) {
   initialize(config_path);
@@ -24,16 +25,23 @@ bool ManipServer::initialize(const std::string& config_path) {
   GoPro::GoProConfig gopro_config;
   AdmittanceController::AdmittanceControllerConfig admittance_config;
 
-  YAML::Node config = YAML::LoadFile(config_path);
+  YAML::Node config;
 
-  _config.deserialize(config);
+  try {
+    config = YAML::LoadFile(config_path);
 
-  robot_config.deserialize(config["ur_rtde"]);
-  ati_config.deserialize(config["ati_netft"]);
-  robotiq_config.deserialize(config["robotiq_ft_modbus"]);
-  realsense_config.deserialize(config["realsense"]);
-  gopro_config.deserialize(config["gopro"]);
-  deserialize(config["admittance_controller"], admittance_config);
+    _config.deserialize(config);
+    robot_config.deserialize(config["ur_rtde"]);
+    ati_config.deserialize(config["ati_netft"]);
+    robotiq_config.deserialize(config["robotiq_ft_modbus"]);
+    realsense_config.deserialize(config["realsense"]);
+    gopro_config.deserialize(config["gopro"]);
+    deserialize(config["admittance_controller"], admittance_config);
+  } catch (const std::exception& e) {
+    std::cerr << "Failed to load the config file: " << e.what() << std::endl;
+    return false;
+  }
+
   _stiffness_high = admittance_config.compliance6d.stiffness;
   _stiffness_low = RUT::Matrix6d::Zero();
 
@@ -52,14 +60,14 @@ bool ManipServer::initialize(const std::string& config_path) {
     }
 
     // camera
-    if (_config.camera_selection == std::string("gopro")) {
+    if (_config.camera_selection == CameraSelection::GOPRO) {
       camera_ptr = std::shared_ptr<GoPro>(new GoPro);
       GoPro* gopro_ptr = static_cast<GoPro*>(camera_ptr.get());
       if (!gopro_ptr->init(time0, gopro_config)) {
         std::cerr << "Failed to initialize GoPro. Exiting." << std::endl;
         return false;
       }
-    } else if (_config.camera_selection == std::string("realsense")) {
+    } else if (_config.camera_selection == CameraSelection::REALSENSE) {
       camera_ptr = std::shared_ptr<Realsense>(new Realsense);
       Realsense* realsense_ptr = static_cast<Realsense*>(camera_ptr.get());
       if (!realsense_ptr->init(time0, realsense_config)) {
@@ -249,14 +257,23 @@ double ManipServer::get_timestamp_now_ms() {
 }
 
 void ManipServer::set_high_level_maintain_position() {
+  // clear existing targets
+  clear_cmd_buffer();
+
+  // get the current pose as the only new target
   RUT::Vector7d pose_fb;
   if (!_config.mock_hardware) {
     robot_ptr->getCartesian(pose_fb);  // use the current pose as the reference
   }
+  set_target_pose(pose_fb, 200);
   set_target_pose(pose_fb, 1000);
+
+  // wait for > 100ms before turn on high stiffness
+  // So that the internal target in the interpolation controller gets refreshed
+  std::this_thread::sleep_for(std::chrono::milliseconds(300));
   {
     std::lock_guard<std::mutex> lock(_controller_mtx);
-    // set the robot to be stiff
+    // set the robot to have high stiffness, but still compliant
     controller.setStiffnessMatrix(_stiffness_high);
   }
 }
@@ -285,6 +302,19 @@ void ManipServer::set_force_controlled_axis(const RUT::Matrix6d& Tr, int n_af) {
 void ManipServer::set_stiffness_matrix(const RUT::Matrix6d& stiffness) {
   std::lock_guard<std::mutex> lock(_controller_mtx);
   controller.setStiffnessMatrix(stiffness);
+}
+
+void ManipServer::clear_cmd_buffer() {
+  {
+    std::lock_guard<std::mutex> lock(_waypoints_buffer_mtx);
+    _waypoints_buffer.clear();
+    _waypoints_timestamp_ms_buffer.clear();
+  }
+  {
+    std::lock_guard<std::mutex> lock(_stiffness_buffer_mtx);
+    _stiffness_buffer.clear();
+    _stiffness_timestamp_ms_buffer.clear();
+  }
 }
 
 /*
@@ -464,3 +494,29 @@ void ManipServer::schedule_stiffness(const Eigen::MatrixXd& stiffnesses,
     }
   }
 }  // end function schedule_stiffness
+
+void ManipServer::start_saving_data_for_a_new_episode() {
+  // create episode folders
+  auto [rgb_folder_name, json_file_name] =
+      create_folder_for_new_episode(_config.data_folder);
+  std::cout << "[main] New episode. rgb_folder_name: " << rgb_folder_name
+            << std::endl;
+
+  // get rgb folder and low dim json file for saving data
+  _ctrl_rgb_folder = rgb_folder_name;
+  _ctrl_low_dim_data_stream.open(json_file_name);
+
+  {
+    std::lock_guard<std::mutex> lock(_ctrl_mtx);
+    _ctrl_flag_saving = true;
+  }
+}
+
+void ManipServer::stop_saving_data() {
+  std::lock_guard<std::mutex> lock(_ctrl_mtx);
+  _ctrl_flag_saving = false;
+}
+
+bool ManipServer::is_saving_data() {
+  return _state_low_dim_thread_saving || _state_rgb_thread_saving;
+}

@@ -1,4 +1,4 @@
-#include "manip_server.h"
+#include "table_top_manip/manip_server.h"
 
 #include <RobotUtilities/interpolation_controller.h>
 #include <opencv2/core/eigen.hpp>
@@ -36,7 +36,7 @@ void ManipServer::low_dim_loop(const RUT::TimePoint& time0) {
   pose_force_control_ref = pose_fb;
   wrench_WTr.setZero();
 
-  bool ctrl_flag_saving = false;
+  bool ctrl_flag_saving = false;  // local copy
 
   RUT::InterpolationController intp_controller;
   intp_controller.initialize(pose_fb, timer.toc_ms());
@@ -228,7 +228,6 @@ void ManipServer::rgb_loop(const RUT::TimePoint& time0) {
   RUT::Timer timer;
   timer.tic(time0);
   double time_start = timer.toc_ms();
-  cv::Mat color_mat;
 
   {
     std::lock_guard<std::mutex> lock(_ctrl_mtx);
@@ -236,19 +235,24 @@ void ManipServer::rgb_loop(const RUT::TimePoint& time0) {
   }
 
   while (true) {
-    if (!_config.mock_hardware) {
-      color_mat = camera_ptr->next_rgb_frame_blocking();
-    } else {
-      // mock hardware
-      color_mat = cv::Mat::zeros(1080, 1080, CV_8UC3);
-      usleep(20 * 1000);  // 20ms, 50hz
+    double time_now_ms = 0;
+    {
+      std::lock_guard<std::mutex> lock(_color_mat_mtx);
+      if (!_config.mock_hardware) {
+        _color_mat = camera_ptr->next_rgb_frame_blocking();
+      } else {
+        // mock hardware
+        _color_mat = cv::Mat::zeros(1080, 1080, CV_8UC3);
+        usleep(20 * 1000);  // 20ms, 50hz
+      }
+      time_now_ms = timer.toc_ms();
+      cv::split(_color_mat, _bgr);  //split source
     }
-    double time_now_ms = timer.toc_ms();
-    cv::split(color_mat, _bgr);  //split source
+
     cv::cv2eigen(_bgr[0], _bm);
     cv::cv2eigen(_bgr[1], _gm);
     cv::cv2eigen(_bgr[2], _rm);
-    _rgb_row_combined.resize(color_mat.rows * 3, color_mat.cols);
+    _rgb_row_combined.resize(_color_mat.rows * 3, _color_mat.cols);
     _rgb_row_combined << _rm, _gm, _bm;
     {
       std::lock_guard<std::mutex> lock(_camera_rgb_buffer_mtx);
@@ -258,8 +262,11 @@ void ManipServer::rgb_loop(const RUT::TimePoint& time0) {
 
     if (_ctrl_flag_saving) {
       _state_rgb_thread_saving = true;
-      save_rgb_data(_ctrl_rgb_folder, _state_rgb_seq_id, timer.toc_ms(),
-                    color_mat);
+      {
+        std::lock_guard<std::mutex> lock(_color_mat_mtx);
+        save_rgb_data(_ctrl_rgb_folder, _state_rgb_seq_id, timer.toc_ms(),
+                      _color_mat);
+      }
       _state_rgb_seq_id++;
     } else {
       _state_rgb_thread_saving = false;
@@ -287,20 +294,13 @@ void ManipServer::rgb_loop(const RUT::TimePoint& time0) {
 void ManipServer::rgb_plot_loop() {
   std::cout << "[ManipServer][plot thread] starting thread.\n";
   cv::namedWindow("RGB", cv::WINDOW_AUTOSIZE);
-  Eigen::MatrixXd rgb_separate_eigen;
+  cv::Mat color_mat_copy;
   while (true) {
     {
-      std::lock_guard<std::mutex> lock(_camera_rgb_buffer_mtx);
-      rgb_separate_eigen = _camera_rgb_buffer.get_last_k(1);
+      std::lock_guard<std::mutex> lock(_color_mat_mtx);
+      color_mat_copy = _color_mat.clone();
     }
-    // convert eigen matrix to cv::Mat
-    cv::Mat color_mat;
-    // TODO: finish this conversion
-    std::cerr << "[rgb plot thread] Conversion from Eigen to cv::Mat is not "
-                 "implemented yet."
-              << std::endl;
-    // cv::eigen2cv(rgb_separate_eigen, color_mat);
-    cv::imshow("RGB", color_mat);
+    cv::imshow("RGB", color_mat_copy);
 
     {
       std::lock_guard<std::mutex> lock(_ctrl_mtx);

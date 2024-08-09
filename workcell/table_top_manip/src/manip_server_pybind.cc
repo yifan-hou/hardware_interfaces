@@ -5,7 +5,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/eigen.h>
 // #include <pybind11/eigen/tensor.h>
-#include "manip_server.h"
+#include "table_top_manip/manip_server.h"
 
 namespace py = pybind11;
 using namespace RUT;

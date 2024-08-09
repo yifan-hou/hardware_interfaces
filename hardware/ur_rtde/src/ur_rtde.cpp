@@ -64,6 +64,23 @@ bool URRTDE::Implementation::initialize(
   /* Establish connection with UR */
   std::cout << "[URRTDE] Connecting to robot at " << config.robot_ip
             << std::endl;
+
+  std::cout << "[URRTDE] Creating receive interface at: "
+            << config.rtde_frequency << " Hz\n";
+  while (true) {
+    try {
+      rtde_receive_ptr = std::shared_ptr<ur_rtde::RTDEReceiveInterface>(
+          new ur_rtde::RTDEReceiveInterface(config.robot_ip));
+      break;
+    } catch (const std::exception& e) {
+      std::cerr
+          << "\033[1;31m[URRTDE] Failed to create receive interface: \033[0m\n";
+      std::cerr << e.what() << std::endl;
+      std::cerr << "[URRTDE] Retrying in 1 second.\n";
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+  }
+
   std::cout << "[URRTDE] Creating control interface at: "
             << config.rtde_frequency << " Hz\n";
   while (true) {
@@ -72,23 +89,24 @@ bool URRTDE::Implementation::initialize(
           new ur_rtde::RTDEControlInterface(config.robot_ip));
       break;
     } catch (const std::exception& e) {
-      std::cerr << "\033[1;31m[URRTDE] Failed to create control interface. "
-                   "Retrying..\033[0m\n";
+      std::cerr
+          << "\033[1;31m[URRTDE] Failed to create control interface: \033[0m\n";
+      std::cerr << e.what() << std::endl;
+      std::cerr << "[URRTDE] Retrying in 1 second.\n";
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
   }
 
+  // TODO: enable thread priority setting for RT supported kernels
+  // Currently, the following code throws errors when running on non-RT kernels
   // rtde_control_ptr = std::shared_ptr<ur_rtde::RTDEControlInterface>(
   //     new ur_rtde::RTDEControlInterface(config.robot_ip, config.rtde_frequency,
   //                                       {}, {}, config.rt_control_priority));
-  std::cout << "[URRTDE] Creating receive interface at: "
-            << config.rtde_frequency << " Hz\n";
-  rtde_receive_ptr = std::shared_ptr<ur_rtde::RTDEReceiveInterface>(
-      new ur_rtde::RTDEReceiveInterface(config.robot_ip));
   // rtde_receive_ptr = std::shared_ptr<ur_rtde::RTDEReceiveInterface>(
   //     new ur_rtde::RTDEReceiveInterface(config.robot_ip, config.rtde_frequency,
   //                                       {}, {}, {},
   //                                       config.rt_receive_priority));
+
   std::cout << "[URRTDE] RTDE interfaces created. Setting realtime priority:\n";
   // Set application realtime priority
   ur_rtde::RTDEUtility::setRealtimePriority(config.interface_priority);

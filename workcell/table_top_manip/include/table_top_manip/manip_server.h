@@ -31,25 +31,26 @@
 
 struct ManipServerConfig {
   std::string data_folder{""};
-  std::string camera_selection{""};
   bool plot_rgb{false};
   bool run_low_dim_thread{false};
   int rgb_buffer_size{5};
   int pose_buffer_size{100};
   int wrench_buffer_size{100};
   bool mock_hardware{false};
+  CameraSelection camera_selection{CameraSelection::NONE};
   ForceSensingMode force_sensing_mode{ForceSensingMode::NONE};
 
   bool deserialize(const YAML::Node& node) {
     try {
       data_folder = node["data_folder"].as<std::string>();
-      camera_selection = node["camera_selection"].as<std::string>();
       plot_rgb = node["plot_rgb"].as<bool>();
       run_low_dim_thread = node["run_low_dim_thread"].as<bool>();
       rgb_buffer_size = node["rgb_buffer_size"].as<int>();
       pose_buffer_size = node["pose_buffer_size"].as<int>();
       wrench_buffer_size = node["wrench_buffer_size"].as<int>();
       mock_hardware = node["mock_hardware"].as<bool>();
+      camera_selection = string_to_enum<CameraSelection>(
+          node["camera_selection"].as<std::string>());
       force_sensing_mode = string_to_enum<ForceSensingMode>(
           node["force_sensing_mode"].as<std::string>());
     } catch (const std::exception& e) {
@@ -120,6 +121,13 @@ class ManipServer {
   void schedule_stiffness(const Eigen::MatrixXd& stiffness,
                           const Eigen::VectorXd& timepoints_ms);
 
+  void clear_cmd_buffer();
+
+  // data logging
+  void start_saving_data_for_a_new_episode();
+  void stop_saving_data();
+  bool is_saving_data();
+
  private:
   // config
   ManipServerConfig _config;
@@ -181,6 +189,8 @@ class ManipServer {
   int _state_rgb_seq_id = 0;
 
   // pre-allocated variables for camera feedback
+  cv::Mat _color_mat;  // also used for plot loop, so need a lock
+  std::mutex _color_mat_mtx;
   cv::Mat* _bgr;  //destination array
   Eigen::MatrixXd _bm, _gm, _rm;
   Eigen::MatrixXd _rgb_row_combined;

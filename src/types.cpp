@@ -23,6 +23,13 @@ const std::vector<ForceSensingMode>& all_force_sensing_modes() {
   return modes;
 }
 
+const std::vector<CameraSelection>& all_camera_selections() {
+  static const std::vector<CameraSelection> modes = {
+      CameraSelection::NONE, CameraSelection::GOPRO,
+      CameraSelection::REALSENSE};
+  return modes;
+}
+
 template <>
 const char* to_string(const RobotSafetyMode e) {
   switch (e) {
@@ -68,6 +75,20 @@ const char* to_string(const ForceSensingMode e) {
 }
 
 template <>
+const char* to_string(const CameraSelection e) {
+  switch (e) {
+    case CameraSelection::NONE:
+      return "NONE";
+    case CameraSelection::GOPRO:
+      return "GOPRO";
+    case CameraSelection::REALSENSE:
+      return "REALSENSE";
+    default:
+      return "INVALID_CAMERA_SELECTION";
+  }
+}
+
+template <>
 RobotSafetyMode string_to_enum(const std::string& string) {
   for (const auto& mode : all_safety_modes()) {
     if (string == to_string(mode)) {
@@ -98,4 +119,15 @@ ForceSensingMode string_to_enum(const std::string& string) {
   }
 
   return ForceSensingMode::NONE;
+}
+
+template <>
+CameraSelection string_to_enum(const std::string& string) {
+  for (const auto& mode : all_camera_selections()) {
+    if (string == to_string(mode)) {
+      return mode;
+    }
+  }
+
+  return CameraSelection::NONE;
 }

@@ -1,4 +1,5 @@
 #pragma once
+
 #include <Eigen/Dense>
 #include <filesystem>
 
@@ -6,10 +7,7 @@
 
 namespace fs = std::filesystem;
 
-Eigen::IOFormat good_looking_fmt(Eigen::StreamPrecision, Eigen::DontAlignCols,
-                                 ", ", ", ", "", "", "", "");
-
-std::string makeFixedLength(const int i, const int length) {
+inline std::string makeFixedLength(const int i, const int length) {
   std::ostringstream ostr;
   if (i < 0)
     ostr << '-';
@@ -17,7 +15,7 @@ std::string makeFixedLength(const int i, const int length) {
   return ostr.str();
 }
 
-std::tuple<std::string, std::string> create_folder_for_new_episode(
+inline std::tuple<std::string, std::string> create_folder_for_new_episode(
     const std::string& data_folder) {
   std::cout << "[create_folder_for_new_episode] Creating folder for new episode"
             << std::endl;
@@ -38,9 +36,12 @@ std::tuple<std::string, std::string> create_folder_for_new_episode(
   return {rgb_folder, data_filename};
 }
 
-bool save_low_dim_data_json(std::ostream& os, int seq_id, double timestamp_ms,
-                            const RUT::Vector7d& pose,
-                            const RUT::Vector6d& wrench) {
+inline bool save_low_dim_data_json(std::ostream& os, int seq_id,
+                                   double timestamp_ms,
+                                   const RUT::Vector7d& pose,
+                                   const RUT::Vector6d& wrench) {
+  Eigen::IOFormat good_looking_fmt(Eigen::StreamPrecision, Eigen::DontAlignCols,
+                                   ", ", ", ", "", "", "", "");
   os << "\t{\n";
   os << "\t\t\"seq_id\": " << seq_id << ",\n";
   os << "\t\t\"low_dim_time_stamps\": " << std::fixed << std::setprecision(2)
@@ -51,30 +52,23 @@ bool save_low_dim_data_json(std::ostream& os, int seq_id, double timestamp_ms,
   return true;
 }
 
-bool save_rgb_data(const std::string& foldername, int seq_id, double time_ms,
-                   const cv::Mat& color_mat) {
+inline bool save_rgb_data(const std::string& foldername, int seq_id,
+                          double time_ms, const cv::Mat& color_mat) {
   std::string file_name = foldername + "/img_" + makeFixedLength(seq_id, 6) +
                           "_" + std::to_string(time_ms) + "_ms.jpg";
   cv::imwrite(file_name, color_mat);
   return true;
 }
 
-void json_file_start(std::ostream& os) {
+inline void json_file_start(std::ostream& os) {
   os << "[\n";
 }
 
-void json_frame_ending(std::ostream& os) {
+inline void json_frame_ending(std::ostream& os) {
   os << "\t},\n";
 }
 
-void json_file_ending(std::ostream& os) {
+inline void json_file_ending(std::ostream& os) {
   os << "\t}\n";
   os << "]\n";
-}
-
-void main_print(const std::string& msg) {
-  std::cout << "================================================" << std::endl;
-  std::cout << "== Main Stage" << std::endl;
-  std::cout << "== " << msg << std::endl;
-  std::cout << "================================================" << std::endl;
 }
