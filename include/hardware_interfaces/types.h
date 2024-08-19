@@ -25,6 +25,13 @@ enum class RobotOperationMode {
 enum class ForceSensingMode { NONE, FORCE_MODE_ATI, FORCE_MODE_ROBOTIQ };
 enum class CameraSelection { NONE, GOPRO, REALSENSE };
 
+enum class RandomType {
+  NONE,
+  CONSTANT,
+  UNIFORM,
+  GAUSSIAN,
+};
+
 template <class Enum>
 const char* to_string(const Enum e);
 

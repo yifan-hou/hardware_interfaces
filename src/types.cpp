@@ -30,6 +30,13 @@ const std::vector<CameraSelection>& all_camera_selections() {
   return modes;
 }
 
+const std::vector<RandomType>& all_random_types() {
+  static const std::vector<RandomType> modes = {
+      RandomType::NONE, RandomType::CONSTANT, RandomType::UNIFORM,
+      RandomType::GAUSSIAN};
+  return modes;
+}
+
 template <>
 const char* to_string(const RobotSafetyMode e) {
   switch (e) {
@@ -89,6 +96,22 @@ const char* to_string(const CameraSelection e) {
 }
 
 template <>
+const char* to_string(const RandomType e) {
+  switch (e) {
+    case RandomType::NONE:
+      return "NONE";
+    case RandomType::CONSTANT:
+      return "CONSTANT";
+    case RandomType::UNIFORM:
+      return "UNIFORM";
+    case RandomType::GAUSSIAN:
+      return "GAUSSIAN";
+    default:
+      return "INVALID_RANDOM_TYPE";
+  }
+}
+
+template <>
 RobotSafetyMode string_to_enum(const std::string& string) {
   for (const auto& mode : all_safety_modes()) {
     if (string == to_string(mode)) {
@@ -123,11 +146,22 @@ ForceSensingMode string_to_enum(const std::string& string) {
 
 template <>
 CameraSelection string_to_enum(const std::string& string) {
-  for (const auto& mode : all_camera_selections()) {
-    if (string == to_string(mode)) {
-      return mode;
+  for (const auto& e : all_camera_selections()) {
+    if (string == to_string(e)) {
+      return e;
     }
   }
 
   return CameraSelection::NONE;
+}
+
+template <>
+RandomType string_to_enum(const std::string& string) {
+  for (const auto& type : all_random_types()) {
+    if (string == to_string(type)) {
+      return type;
+    }
+  }
+
+  return RandomType::NONE;
 }

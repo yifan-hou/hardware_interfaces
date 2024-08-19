@@ -8,6 +8,11 @@ set(CMAKE_CXX_EXTENSIONS Off)
 
 find_package(Eigen3 REQUIRED)
 find_package(pybind11 REQUIRED)
+find_package(Boost REQUIRED COMPONENTS
+  system
+  thread
+  program_options
+)
 find_library(YAMLLib yaml-cpp HINTS /usr/local/lib)
 find_library(RUT Utilities HINTS ${CMAKE_INSTALL_PREFIX}/lib/RobotUtilities)
 

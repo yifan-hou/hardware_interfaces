@@ -24,18 +24,19 @@ bool ManipServer::initialize(const std::string& config_path) {
   Realsense::RealsenseConfig realsense_config;
   GoPro::GoProConfig gopro_config;
   AdmittanceController::AdmittanceControllerConfig admittance_config;
+  PerturbationGenerator::PerturbationGeneratorConfig perturbation_config;
 
   YAML::Node config;
 
   try {
     config = YAML::LoadFile(config_path);
-
     _config.deserialize(config);
     robot_config.deserialize(config["ur_rtde"]);
     ati_config.deserialize(config["ati_netft"]);
     robotiq_config.deserialize(config["robotiq_ft_modbus"]);
     realsense_config.deserialize(config["realsense"]);
     gopro_config.deserialize(config["gopro"]);
+    perturbation_config.deserialize(config["perturbation_generator"]);
     deserialize(config["admittance_controller"], admittance_config);
   } catch (const std::exception& e) {
     std::cerr << "Failed to load the config file: " << e.what() << std::endl;
@@ -120,6 +121,9 @@ bool ManipServer::initialize(const std::string& config_path) {
   // The user needs to set the desired compliance afterwards.
   int n_af = 0;
   controller.setForceControlledAxis(Tr, n_af);
+
+  // perturbation generator
+  perturbation_generator.init(perturbation_config);
 
   // create the data buffers
   std::cout << "[ManipServer] Creating data buffers.\n";

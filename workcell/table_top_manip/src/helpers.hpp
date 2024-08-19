@@ -39,11 +39,12 @@ inline std::tuple<std::string, std::string> create_folder_for_new_episode(
 inline bool save_low_dim_data_json(std::ostream& os, int seq_id,
                                    double timestamp_ms,
                                    const RUT::Vector7d& pose,
-                                   const RUT::Vector6d& wrench) {
+                                   const RUT::Vector6d& wrench, bool mask) {
   Eigen::IOFormat good_looking_fmt(Eigen::StreamPrecision, Eigen::DontAlignCols,
                                    ", ", ", ", "", "", "", "");
   os << "\t{\n";
   os << "\t\t\"seq_id\": " << seq_id << ",\n";
+  os << "\t\t\"mask\": " << mask << ",\n";
   os << "\t\t\"low_dim_time_stamps\": " << std::fixed << std::setprecision(2)
      << timestamp_ms << ",\n";
   os << std::fixed << std::setprecision(4);

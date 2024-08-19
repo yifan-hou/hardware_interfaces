@@ -38,6 +38,9 @@ void ManipServer::low_dim_loop(const RUT::TimePoint& time0) {
 
   bool ctrl_flag_saving = false;  // local copy
 
+  bool perturbation_is_applied = false;
+  RUT::Vector6d perturbation;
+
   RUT::InterpolationController intp_controller;
   intp_controller.initialize(pose_fb, timer.toc_ms());
 
@@ -143,11 +146,21 @@ void ManipServer::low_dim_loop(const RUT::TimePoint& time0) {
       }
     }
 
+    // apply perturbation
+    wrench_WTr.setZero();
+    perturbation.setZero();
+    if (_config.use_perturbation_generator) {
+      perturbation_is_applied =
+          perturbation_generator.generate_perturbation(perturbation);
+      wrench_WTr += perturbation;
+    }
+
     // Update the controller
     {
       std::lock_guard<std::mutex> lock(_controller_mtx);
       controller.setRobotStatus(pose_fb, wrench_fb_ur);
       // Update robot reference
+      // std::cout << "debug: wrench_WTr: " << wrench_WTr.transpose() << std::endl;
       controller.setRobotReference(pose_force_control_ref, wrench_WTr);
 
       // Update stiffness matrix
@@ -168,6 +181,7 @@ void ManipServer::low_dim_loop(const RUT::TimePoint& time0) {
     // std::cout << "t = " << timer.toc_ms()
     //           << ", wrench: " << wrench_fb.transpose() << std::endl;
 
+    // logging
     _ctrl_mtx.lock();
     if (_ctrl_flag_saving) {
       _ctrl_mtx.unlock();
@@ -180,7 +194,8 @@ void ManipServer::low_dim_loop(const RUT::TimePoint& time0) {
 
       _state_low_dim_thread_saving = true;
       save_low_dim_data_json(_ctrl_low_dim_data_stream, _state_low_dim_seq_id,
-                             timer.toc_ms(), pose_fb, wrench_fb);
+                             timer.toc_ms(), pose_fb, wrench_fb,
+                             perturbation_is_applied);
       json_frame_ending(_ctrl_low_dim_data_stream);
       _state_low_dim_seq_id++;
     } else {
@@ -190,7 +205,8 @@ void ManipServer::low_dim_loop(const RUT::TimePoint& time0) {
         std::cout << "[low dim thread] Stop saving low dim data." << std::endl;
         // save one last frame, so we can do the correct different frame ending
         save_low_dim_data_json(_ctrl_low_dim_data_stream, _state_low_dim_seq_id,
-                               timer.toc_ms(), pose_fb, wrench_fb);
+                               timer.toc_ms(), pose_fb, wrench_fb,
+                               perturbation_is_applied);
         json_file_ending(_ctrl_low_dim_data_stream);
         _ctrl_low_dim_data_stream.close();
         ctrl_flag_saving = false;
