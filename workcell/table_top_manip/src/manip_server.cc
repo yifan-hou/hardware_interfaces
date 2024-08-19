@@ -49,13 +49,14 @@ bool ManipServer::initialize(const std::string& config_path) {
   // initialize hardwares
   std::cout << "[ManipServer] Initialize each hardware interface.\n";
 
-  robot_ptr = URRTDE::Instance();
-
   _bgr = new cv::Mat[3];
 
   if (!_config.mock_hardware) {
     // robot
-    if (!robot_ptr->init(time0, robot_config)) {
+    // TODO: support other robots
+    robot_ptr = std::shared_ptr<URRTDE>(new URRTDE);
+    URRTDE* urrtde_ptr = static_cast<URRTDE*>(robot_ptr.get());
+    if (!urrtde_ptr->init(time0, robot_config)) {
       std::cerr << "Failed to initialize UR RTDE. Exiting." << std::endl;
       return false;
     }

@@ -8,8 +8,6 @@
 
 #include <RobotUtilities/spatial_utilities.h>
 
-URRTDE* URRTDE::pinstance = 0;
-
 struct URRTDE::Implementation {
   std::shared_ptr<ur_rtde::RTDEControlInterface> rtde_control_ptr;
   std::shared_ptr<ur_rtde::RTDEReceiveInterface> rtde_receive_ptr;
@@ -52,7 +50,6 @@ URRTDE::Implementation::Implementation() {
 
 URRTDE::Implementation::~Implementation() {
   std::cout << "[URRTDE] finishing.." << std::endl;
-  delete pinstance;
 }
 
 bool URRTDE::Implementation::initialize(
@@ -276,13 +273,6 @@ void URRTDE::Implementation::rtde_wait_period(RUT::TimePoint time_point) {
 URRTDE::URRTDE() : m_impl{std::make_unique<Implementation>()} {}
 
 URRTDE::~URRTDE() {}
-
-URRTDE* URRTDE::Instance() {
-  if (pinstance == 0) {
-    pinstance = new URRTDE();
-  }
-  return pinstance;
-}
 
 bool URRTDE::init(RUT::TimePoint time0, const URRTDEConfig& ur_rtde_config) {
   return m_impl->initialize(time0, ur_rtde_config);

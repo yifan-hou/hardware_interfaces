@@ -23,17 +23,17 @@ int main() {
   config.robot_interface_config.max_incre_rad = 0.00628;  // 3.14 per second
   config.robot_interface_config.safe_zone = {0.3, 0.65, -0.3, 0.4, 0.1, 0.4};
 
-  URRTDE* ur_rtde = URRTDE::Instance();
+  URRTDE ur_rtde;
   RUT::Timer timer;
-  ur_rtde->init(timer.tic(), config);
+  ur_rtde.init(timer.tic(), config);
 
   RUT::Vector7d pose0;
-  ur_rtde->getCartesian(pose0);
+  ur_rtde.getCartesian(pose0);
   RUT::Vector7d pose_ref = pose0;
 
   timer.tic();
   while (true) {
-    RUT::TimePoint t_start = ur_rtde->rtde_init_period();
+    RUT::TimePoint t_start = ur_rtde.rtde_init_period();
 
     double dt = timer.toc_ms();
     printf("t = %f, pose: %f %f %f %f %f %f %f\n", dt, pose_ref[0], pose_ref[1],
@@ -43,7 +43,7 @@ int main() {
     double dy = 0.05 * sin(1.2 * dt / 1000.0);
     pose_ref[0] = pose0[0] + dx;
     pose_ref[1] = pose0[1] + dy;
-    if (!ur_rtde->streamCartesian(pose_ref)) {
+    if (!ur_rtde.streamCartesian(pose_ref)) {
       printf("streamCartesian failed\n");
 
       break;
@@ -52,7 +52,7 @@ int main() {
     if (dt > 30000)
       break;
 
-    ur_rtde->rtde_wait_period(t_start);
+    ur_rtde.rtde_wait_period(t_start);
   }
 
   return 0;

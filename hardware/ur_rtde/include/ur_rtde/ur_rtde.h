@@ -55,9 +55,8 @@ class URRTDE : public RobotInterfaces {
     }
   };
 
-  // for singleton implementation
-  static URRTDE* Instance();
-
+  URRTDE();
+  ~URRTDE();
   /**
    * Initialize socket communication. Create a thread to run the 500Hz
    * communication with URe.
@@ -116,15 +115,6 @@ class URRTDE : public RobotInterfaces {
  private:
   struct Implementation;
   std::unique_ptr<Implementation> m_impl;
-
-  /**
-   * For singleton implementation
-   */
-  static URRTDE* pinstance;
-  URRTDE();
-  URRTDE(const URRTDE&);
-  URRTDE& operator=(const URRTDE&) { return *this; }
-  ~URRTDE();
 };
 
 #endif

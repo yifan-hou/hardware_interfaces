@@ -166,7 +166,7 @@ class ManipServer {
   //  hardware interfaces
   std::shared_ptr<CameraInterfaces> camera_ptr;
   std::shared_ptr<FTInterfaces> force_sensor_ptr;
-  URRTDE* robot_ptr;
+  std::shared_ptr<RobotInterfaces> robot_ptr;
   AdmittanceController controller;
   PerturbationGenerator perturbation_generator;
 

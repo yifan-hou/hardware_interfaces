@@ -23,8 +23,12 @@ void ManipServer::low_dim_loop(const RUT::TimePoint& time0) {
   RUT::Vector6d wrench_fb_ur, wrench_WTr;
   RUT::Matrix6d stiffness;
 
+  // TODO: use base pointer robot_ptr instead of URRTDE
+  //       Need to create interfaces for all used functions here in RobotInterfaces
+  URRTDE* urrtde_ptr = static_cast<URRTDE*>(robot_ptr.get());
+
   if (!_config.mock_hardware) {
-    robot_ptr->getCartesian(pose_fb);
+    urrtde_ptr->getCartesian(pose_fb);
     // wait for FT300 to be ready
     std::cout << "[ManipServer][low dim thread] Waiting for FT300 to start "
                  "streaming.\n";
@@ -58,8 +62,8 @@ void ManipServer::low_dim_loop(const RUT::TimePoint& time0) {
     double time_now_ms;
     if (!_config.mock_hardware) {
       // real hardware
-      t_start = robot_ptr->rtde_init_period();
-      robot_ptr->getCartesian(pose_fb);
+      t_start = urrtde_ptr->rtde_init_period();
+      urrtde_ptr->getCartesian(pose_fb);
       time_now_ms = timer.toc_ms();
       {
         std::lock_guard<std::mutex> lock(_pose_buffer_mtx);
@@ -73,7 +77,7 @@ void ManipServer::low_dim_loop(const RUT::TimePoint& time0) {
         _wrench_buffer.put(wrench_fb);
         _wrench_timestamp_ms_buffer.put(time_now_ms);
       }
-      robot_ptr->getWrenchTool(
+      urrtde_ptr->getWrenchTool(
           wrench_fb_ur);  // not used outside this loop, so no need to lock
     } else {
       // mock hardware
@@ -172,7 +176,7 @@ void ManipServer::low_dim_loop(const RUT::TimePoint& time0) {
     }
 
     if ((!_config.mock_hardware) &&
-        (!robot_ptr->streamCartesian(pose_rdte_cmd))) {
+        (!urrtde_ptr->streamCartesian(pose_rdte_cmd))) {
       std::cout << "[low dim thread] streamCartesian failed. Ending thread."
                 << std::endl;
       break;
@@ -227,7 +231,7 @@ void ManipServer::low_dim_loop(const RUT::TimePoint& time0) {
     if (_config.mock_hardware) {
       mock_loop_timer.sleep_till_next();
     } else {
-      robot_ptr->rtde_wait_period(t_start);
+      urrtde_ptr->rtde_wait_period(t_start);
     }
   }  // end of while loop
 
