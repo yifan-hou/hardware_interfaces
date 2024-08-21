@@ -15,40 +15,65 @@ inline std::string makeFixedLength(const int i, const int length) {
   return ostr.str();
 }
 
-inline std::tuple<std::string, std::string> create_folder_for_new_episode(
-    const std::string& data_folder) {
+inline void create_folder_for_new_episode(
+    const std::string& data_folder, std::vector<int> id_list,
+    std::vector<std::string>& rgb_folders,
+    std::vector<std::string>& robot_json_files,
+    std::vector<std::string>& wrench_json_files) {
   std::cout << "[create_folder_for_new_episode] Creating folder for new episode"
             << std::endl;
   int timestamp = std::chrono::seconds(std::time(NULL)).count();
   const auto timestamp_string = std::to_string(timestamp);
   std::string episode_folder = data_folder + "/episode_" + timestamp_string;
-  std::string rgb_folder = episode_folder + "/rgb";
 
   if (!fs::exists(episode_folder)) {
     fs::create_directory(episode_folder);
-    fs::create_directory(rgb_folder);
   } else {
     std::cerr << "Episode folder " << episode_folder
               << " already exists. Exiting." << std::endl;
     exit(1);
   }
-  std::string data_filename = episode_folder + "/low_dim_data.json";
-  return {rgb_folder, data_filename};
+  rgb_folders.clear();
+  robot_json_files.clear();
+  wrench_json_files.clear();
+  for (int id : id_list) {
+    std::string rgb_folder = episode_folder + "/rgb_" + std::to_string(id);
+    fs::create_directory(rgb_folder);
+    std::string robot_json_file =
+        episode_folder + "/robot_data_" + std::to_string(id) + ".json";
+    std::string wrench_json_file =
+        episode_folder + "/wrench_data_" + std::to_string(id) + ".json";
+    rgb_folders.push_back(rgb_folder);
+    robot_json_files.push_back(robot_json_file);
+    wrench_json_files.push_back(wrench_json_file);
+  }
 }
 
-inline bool save_low_dim_data_json(std::ostream& os, int seq_id,
-                                   double timestamp_ms,
-                                   const RUT::Vector7d& pose,
-                                   const RUT::Vector6d& wrench, bool mask) {
+inline bool save_robot_data_json(std::ostream& os, int seq_id,
+                                 double timestamp_ms, const RUT::Vector7d& pose,
+                                 bool mask) {
   Eigen::IOFormat good_looking_fmt(Eigen::StreamPrecision, Eigen::DontAlignCols,
                                    ", ", ", ", "", "", "", "");
   os << "\t{\n";
   os << "\t\t\"seq_id\": " << seq_id << ",\n";
   os << "\t\t\"mask\": " << mask << ",\n";
-  os << "\t\t\"low_dim_time_stamps\": " << std::fixed << std::setprecision(2)
+  os << "\t\t\"robot_time_stamps\": " << std::fixed << std::setprecision(2)
      << timestamp_ms << ",\n";
   os << std::fixed << std::setprecision(4);
   os << "\t\t\"ts_pose_fb\": [" << pose.format(good_looking_fmt) << "],\n";
+  return true;
+}
+
+inline bool save_wrench_data_json(std::ostream& os, int seq_id,
+                                  double timestamp_ms,
+                                  const RUT::Vector6d& wrench) {
+  Eigen::IOFormat good_looking_fmt(Eigen::StreamPrecision, Eigen::DontAlignCols,
+                                   ", ", ", ", "", "", "", "");
+  os << "\t{\n";
+  os << "\t\t\"seq_id\": " << seq_id << ",\n";
+  os << "\t\t\"wrench_time_stamps\": " << std::fixed << std::setprecision(2)
+     << timestamp_ms << ",\n";
+  os << std::fixed << std::setprecision(4);
   os << "\t\t\"wrench\": [" << wrench.format(good_looking_fmt) << "],\n";
   return true;
 }
