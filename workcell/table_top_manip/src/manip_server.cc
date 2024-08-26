@@ -29,6 +29,8 @@ bool ManipServer::initialize(const std::string& config_path) {
     _id_list = {0};
   }
 
+  std::cout << "_id_list: " << _id_list.size() << std::endl;
+
   // parameters to be obtained from config
   std::vector<int> image_heights;
   std::vector<int> image_widths;
@@ -75,7 +77,6 @@ bool ManipServer::initialize(const std::string& config_path) {
                     << ". Exiting." << std::endl;
           return false;
         }
-
         image_heights.push_back(gopro_config.crop_rows[1] -
                                 gopro_config.crop_rows[0]);
         image_widths.push_back(gopro_config.crop_cols[1] -
@@ -148,6 +149,13 @@ bool ManipServer::initialize(const std::string& config_path) {
         return false;
       }
     }
+  } else {
+    // mock hardware
+    for (int id : _id_list) {
+      image_heights.push_back(1080);
+      image_widths.push_back(1080);
+      wrench_publish_rate.push_back(100);
+    }
   }
 
   // initialize Admittance controller and perturbation generator
@@ -214,10 +222,12 @@ bool ManipServer::initialize(const std::string& config_path) {
     _camera_rgb_buffers[id].initialize(_config.rgb_buffer_size,
                                        3 * image_heights[id], image_widths[id],
                                        "camera_rgb" + std::to_string(id));
+
     _pose_buffers[id].initialize(_config.pose_buffer_size, 7, 1,
                                  "pose" + std::to_string(id));
     _wrench_buffers[id].initialize(_config.wrench_buffer_size, 6, 1,
                                    "wrench" + std::to_string(id));
+
     _waypoints_buffers[id].initialize(-1, 7, 1,
                                       "waypoints" + std::to_string(id));
     _stiffness_buffers[id].initialize(-1, 6, 6,
@@ -264,6 +274,7 @@ bool ManipServer::initialize(const std::string& config_path) {
   for (int id : _id_list) {
     _ctrl_rgb_folders.push_back("");
     _ctrl_robot_data_streams.push_back(std::ofstream());
+    _ctrl_wrench_data_streams.push_back(std::ofstream());
     _color_mats.push_back(cv::Mat());
     _color_mat_mtxs.emplace_back();
     _poses_fb.push_back(Eigen::VectorXd());
@@ -277,30 +288,45 @@ bool ManipServer::initialize(const std::string& config_path) {
   _ctrl_flag_running = true;
   std::cout << "[ManipServer] Starting the threads.\n";
   for (int id : _id_list) {
-    _rgb_threads.emplace_back(&ManipServer::rgb_loop, this, std::ref(time0),
-                              id);
-    _wrench_threads.emplace_back(&ManipServer::wrench_loop, this,
-                                 std::ref(time0), wrench_publish_rate[id], id);
+    if (_config.run_rgb_thread) {
+      _rgb_threads.emplace_back(&ManipServer::rgb_loop, this, std::ref(time0),
+                                id);
+    }
+    if (_config.run_wrench_thread) {
+      _wrench_threads.emplace_back(&ManipServer::wrench_loop, this,
+                                   std::ref(time0), wrench_publish_rate[id],
+                                   id);
+    }
     if (_config.run_robot_thread) {
       _robot_threads.emplace_back(&ManipServer::robot_loop, this,
                                   std::ref(time0), id);
     }
-
-    if (_config.plot_rgb) {
-      // pause 1s, then start the rgb plot thread
-      std::this_thread::sleep_for(std::chrono::seconds(1));
-      _rgb_plot_threads.emplace_back(&ManipServer::rgb_plot_loop, this, id);
-    }
+  }
+  if (_config.plot_rgb) {
+    // pause 1s, then start the rgb plot thread
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    _rgb_plot_thread = std::thread(&ManipServer::rgb_plot_loop, this);
   }
 
   // wait for threads to be ready
+  std::cout << "[ManipServer] Waiting for threads to be ready.\n";
   while (true) {
     bool all_ready = true;
     {
       std::lock_guard<std::mutex> lock(_ctrl_mtx);
       for (int id : _id_list) {
-        all_ready = all_ready && _states_robot_thread_ready[id] &&
-                    _states_rgb_thread_ready[id];
+        if (_config.run_rgb_thread) {
+          all_ready = all_ready && _states_rgb_thread_ready[id];
+        }
+        if (_config.run_wrench_thread) {
+          all_ready = all_ready && _states_wrench_thread_ready[id];
+        }
+        if (_config.run_robot_thread) {
+          all_ready = all_ready && _states_robot_thread_ready[id];
+        }
+      }
+      if (_config.plot_rgb) {
+        all_ready = all_ready && _state_plot_thread_ready;
       }
     }
     if (all_ready) {
@@ -321,25 +347,30 @@ void ManipServer::join_threads() {
   }
 
   // join the threads
-  std::cout << "[ManipServer]: Waiting for rgb threads to join." << std::endl;
-  for (auto& _rgb_thread : _rgb_threads) {
-    _rgb_thread.join();
+  if (_config.run_rgb_thread) {
+    std::cout << "[ManipServer]: Waiting for rgb threads to join." << std::endl;
+    for (auto& rgb_thread : _rgb_threads) {
+      rgb_thread.join();
+    }
   }
-  std::cout << "[ManipServer]: Waiting for wrench threads to join."
-            << std::endl;
-  for (auto& _wrench_thread : _wrench_threads) {
-    _wrench_thread.join();
+  if (_config.run_wrench_thread) {
+    std::cout << "[ManipServer]: Waiting for wrench threads to join."
+              << std::endl;
+    for (auto& wrench_thread : _wrench_threads) {
+      wrench_thread.join();
+    }
   }
-  std::cout << "[ManipServer]: Waiting for robot threads to join." << std::endl;
-  for (auto& _robot_thread : _robot_threads) {
-    _robot_thread.join();
+  if (_config.run_robot_thread) {
+    std::cout << "[ManipServer]: Waiting for robot threads to join."
+              << std::endl;
+    for (auto& robot_thread : _robot_threads) {
+      robot_thread.join();
+    }
   }
   if (_config.plot_rgb) {
-    std::cout << "[ManipServer]: Waiting for plotting threads to join."
+    std::cout << "[ManipServer]: Waiting for plotting thread to join."
               << std::endl;
-    for (auto& _rgb_plot_thread : _rgb_plot_threads) {
-      _rgb_plot_thread.join();
-    }
+    _rgb_plot_thread.join();
   }
 
   std::cout << "[ManipServer]: Threads have joined. Exiting." << std::endl;
@@ -347,21 +378,21 @@ void ManipServer::join_threads() {
 
 bool ManipServer::is_ready() {
   for (int id : _id_list) {
-    {
+    if (_config.run_rgb_thread) {
       std::lock_guard<std::mutex> lock(_camera_rgb_buffer_mtxs[id]);
       if (!_camera_rgb_buffers[id].is_full()) {
         return false;
       }
     }
 
-    {
+    if (_config.run_robot_thread) {
       std::lock_guard<std::mutex> lock(_pose_buffer_mtxs[id]);
       if (!_pose_buffers[id].is_full()) {
         return false;
       }
     }
 
-    {
+    if (_config.run_wrench_thread) {
       std::lock_guard<std::mutex> lock(_wrench_buffer_mtxs[id]);
       if (!_wrench_buffers[id].is_full()) {
         return false;
@@ -410,6 +441,9 @@ double ManipServer::get_timestamp_now_ms() {
 }
 
 void ManipServer::set_high_level_maintain_position() {
+  if (!_config.run_robot_thread) {
+    return;
+  }
   // clear existing targets
   clear_cmd_buffer();
 
@@ -434,6 +468,9 @@ void ManipServer::set_high_level_maintain_position() {
 }
 
 void ManipServer::set_high_level_free_jogging() {
+  if (!_config.run_robot_thread) {
+    return;
+  }
   for (int id : _id_list) {
     std::lock_guard<std::mutex> lock(_controller_mtxs[id]);
     // set the robot to be compliant
@@ -443,12 +480,10 @@ void ManipServer::set_high_level_free_jogging() {
 
 void ManipServer::set_target_pose(const Eigen::Ref<RUT::Vector7d> pose,
                                   double dt_in_future_ms, int robot_id) {
-  for (int id : _id_list) {
-    std::lock_guard<std::mutex> lock(_waypoints_buffer_mtxs[id]);
-    _waypoints_buffers[id].put(pose);
-    _waypoints_timestamp_ms_buffers[id].put(
-        _timer.toc_ms() + dt_in_future_ms);  // 1s in the future
-  }
+  std::lock_guard<std::mutex> lock(_waypoints_buffer_mtxs[robot_id]);
+  _waypoints_buffers[robot_id].put(pose);
+  _waypoints_timestamp_ms_buffers[robot_id].put(
+      _timer.toc_ms() + dt_in_future_ms);  // 1s in the future
 }
 
 void ManipServer::set_force_controlled_axis(const RUT::Matrix6d& Tr, int n_af,

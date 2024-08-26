@@ -33,8 +33,10 @@
 
 struct ManipServerConfig {
   std::string data_folder{""};
-  bool plot_rgb{false};
   bool run_robot_thread{false};
+  bool run_wrench_thread{false};
+  bool run_rgb_thread{false};
+  bool plot_rgb{false};
   int rgb_buffer_size{5};
   int pose_buffer_size{100};
   int wrench_buffer_size{100};
@@ -47,8 +49,10 @@ struct ManipServerConfig {
   bool deserialize(const YAML::Node& node) {
     try {
       data_folder = node["data_folder"].as<std::string>();
-      plot_rgb = node["plot_rgb"].as<bool>();
       run_robot_thread = node["run_robot_thread"].as<bool>();
+      run_wrench_thread = node["run_wrench_thread"].as<bool>();
+      run_rgb_thread = node["run_rgb_thread"].as<bool>();
+      plot_rgb = node["plot_rgb"].as<bool>();
       rgb_buffer_size = node["rgb_buffer_size"].as<int>();
       pose_buffer_size = node["pose_buffer_size"].as<int>();
       wrench_buffer_size = node["wrench_buffer_size"].as<int>();
@@ -138,6 +142,8 @@ class ManipServer {
   void stop_saving_data();
   bool is_saving_data();
 
+  bool is_bimanual() { return _config.bimanual; }
+
  private:
   // config
   ManipServerConfig _config;
@@ -185,7 +191,7 @@ class ManipServer {
   std::vector<std::thread> _robot_threads;
   std::vector<std::thread> _wrench_threads;
   std::vector<std::thread> _rgb_threads;
-  std::vector<std::thread> _rgb_plot_threads;
+  std::thread _rgb_plot_thread;
 
   // control variables to control the threads
   std::vector<std::string> _ctrl_rgb_folders;
@@ -199,6 +205,7 @@ class ManipServer {
   std::vector<bool> _states_robot_thread_ready{};
   std::vector<bool> _states_rgb_thread_ready{};
   std::vector<bool> _states_wrench_thread_ready{};
+  bool _state_plot_thread_ready{false};
 
   std::vector<bool> _states_robot_thread_saving{};
   std::vector<bool> _states_rgb_thread_saving{};
@@ -225,5 +232,5 @@ class ManipServer {
   void rgb_loop(const RUT::TimePoint& time0, int camera_id);
   void wrench_loop(const RUT::TimePoint& time0, int publish_rate,
                    int sensor_id);
-  void rgb_plot_loop(int camera_id);
+  void rgb_plot_loop();  // opencv plotting does not support multi-threading
 };

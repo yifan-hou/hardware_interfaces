@@ -6,8 +6,9 @@
 #include "helpers.hpp"
 
 void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
-  std::cout << "[ManipServer][Robot thread] starting thread for id " << id
-            << ".\n";
+  std::string header =
+      "[ManipServer][Robot thread] " + std::to_string(id) + ": ";
+  std::cout << header + "starting thread.\n";
 
   RUT::Timer timer;
   timer.tic(time0);  // so this timer is synced with the main timer
@@ -17,7 +18,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
   RUT::Vector7d force_control_ref_pose;
   RUT::Vector7d pose_rdte_cmd;
   // The following two initial values are used in mock hardware mode
-  pose_fb << 0, 0, 0, 1, 0, 0, 0;
+  pose_fb << id, 0, 0, 1, 0, 0, 0;
   pose_rdte_cmd = pose_fb;
 
   RUT::Vector6d wrench_fb_ur, wrench_WTr;
@@ -25,13 +26,11 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
 
   // TODO: use base pointer robot_ptr instead of URRTDE
   //       Need to create interfaces for all used functions here in RobotInterfaces
-  URRTDE* urrtde_ptr = static_cast<URRTDE*>(robot_ptrs[id].get());
+  URRTDE* urrtde_ptr;
 
   if (!_config.mock_hardware) {
+    urrtde_ptr = static_cast<URRTDE*>(robot_ptrs[id].get());
     urrtde_ptr->getCartesian(pose_fb);
-    // wait for FT300 to be ready
-    std::cout << "[ManipServer][robot thread] Waiting for FT300 to start "
-                 "streaming.\n";
   }
 
   force_control_ref_pose = pose_fb;
@@ -44,17 +43,23 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
 
   RUT::InterpolationController intp_controller;
   intp_controller.initialize(pose_fb, timer.toc_ms());
+  std::cout << header << "intp_controller initialized with pose_fb: "
+            << pose_fb.transpose() << std::endl;
 
   {
     std::lock_guard<std::mutex> lock(_ctrl_mtx);
     _states_robot_thread_ready[id] = true;
   }
 
+  RUT::Profiler loop_profiler;
+  std::cout << header << "Loop started." << std::endl;
+
   RUT::Timer mock_loop_timer;
   mock_loop_timer.set_loop_rate_hz(500);
   mock_loop_timer.start_timed_loop();
   while (true) {
     // Update robot status
+    loop_profiler.start();
     RUT::TimePoint t_start;
     double time_now_ms;
     if (!_config.mock_hardware) {
@@ -62,10 +67,14 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       t_start = urrtde_ptr->rtde_init_period();
       urrtde_ptr->getCartesian(pose_fb);
       time_now_ms = timer.toc_ms();
+      loop_profiler.stop("compute");
+      loop_profiler.start();
       {
         std::lock_guard<std::mutex> lock(_poses_fb_mtxs[id]);
         _poses_fb[id] = pose_fb;
       }
+      loop_profiler.stop("lock");
+      loop_profiler.start();
       urrtde_ptr->getWrenchTool(
           wrench_fb_ur);  // not used outside this loop, so no need to lock
     } else {
@@ -75,11 +84,15 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       wrench_fb_ur.setZero();
     }
     // buffer robot pose
+    loop_profiler.stop("compute");
+    loop_profiler.start();
     {
       std::lock_guard<std::mutex> lock(_pose_buffer_mtxs[id]);
       _pose_buffers[id].put(pose_fb);
       _pose_timestamp_ms_buffers[id].put(time_now_ms);
     }
+    loop_profiler.stop("lock");
+    loop_profiler.start();
 
     // update control target from interpolation controller
     if (!intp_controller.get_control(time_now_ms, force_control_ref_pose)) {
@@ -109,8 +122,9 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       }
       intp_controller.get_control(time_now_ms, force_control_ref_pose);
     }
-    // std::cout << "[debug] time: " << time_now_ms << ", force_control_ref_pose: "
-    //           << force_control_ref_pose.transpose() << std::endl;
+
+    loop_profiler.stop("intp_controller");
+    loop_profiler.start();
 
     // update stiffness matrix from buffer
 
@@ -132,6 +146,8 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
         }
       }
     }
+    loop_profiler.stop("stiffness");
+    loop_profiler.start();
 
     // apply perturbation
     wrench_WTr.setZero();
@@ -142,31 +158,51 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       wrench_WTr += perturbation;
     }
 
+    loop_profiler.stop("perturbation");
+    loop_profiler.start();
+
+    // std::cout << "[debug] time: " << time_now_ms
+    //           << ", wrench_fb_ur: " << wrench_fb_ur.transpose()
+    //           << ", wrench_WTr: " << wrench_WTr.transpose() << std::endl;
+
     // Update the controller
     {
       std::lock_guard<std::mutex> lock(_controller_mtxs[id]);
+      loop_profiler.stop("controller_lock");
+      loop_profiler.start();
       _controllers[id].setRobotStatus(pose_fb, wrench_fb_ur);
       // Update robot reference
-      // std::cout << "debug: wrench_WTr: " << wrench_WTr.transpose() << std::endl;
       _controllers[id].setRobotReference(force_control_ref_pose, wrench_WTr);
 
       // Update stiffness matrix
       if (new_stiffness_found) {
         _controllers[id].setStiffnessMatrix(stiffness);
       }
+      loop_profiler.stop("controller_set");
+      loop_profiler.start();
       // Compute the control output
       _controllers[id].step(pose_rdte_cmd);
+      loop_profiler.stop("controller_step");
+      loop_profiler.start();
     }
 
     if ((!_config.mock_hardware) &&
         (!urrtde_ptr->streamCartesian(pose_rdte_cmd))) {
-      std::cout << "[robot thread] streamCartesian failed. Ending thread."
+      std::cout << header << "streamCartesian failed. Ending thread."
+                << std::endl;
+      std::cout << header << "last pose_fb: " << pose_fb.transpose()
+                << std::endl;
+      std::cout << header << "last wrench_fb_ur: " << wrench_fb_ur.transpose()
+                << std::endl;
+      std::cout << header << "last force_control_ref_pose: "
+                << force_control_ref_pose.transpose() << std::endl;
+      std::cout << header << "last pose_rdte_cmd: " << pose_rdte_cmd.transpose()
                 << std::endl;
       break;
     }
 
     // std::cout << "t = " << timer.toc_ms()
-    //           << ", wrench: " << wrench_fb.transpose() << std::endl;
+    //           << ", pose_rdte_cmd: " << pose_rdte_cmd.transpose() << std::endl;
 
     // logging
     _ctrl_mtx.lock();
@@ -201,6 +237,9 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       }
     }
 
+    loop_profiler.stop("logging");
+    loop_profiler.start();
+
     {
       std::lock_guard<std::mutex> lock(_ctrl_mtx);
       if (!_ctrl_flag_running) {
@@ -211,11 +250,23 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       }
     }
 
+    loop_profiler.stop("lock");
+
     if (_config.mock_hardware) {
       mock_loop_timer.sleep_till_next();
     } else {
+      double overrun_ms = mock_loop_timer.check_for_overrun_ms(false);
+      if (overrun_ms > 0) {
+        std::cout << "\033[33m";  // set color to bold yellow
+        std::cout << header << "Overrun: " << overrun_ms << "ms" << std::endl;
+        std::cout << "\033[0m";  // reset color to default
+        loop_profiler.show();
+      }
       urrtde_ptr->rtde_wait_period(t_start);
+      mock_loop_timer.check_for_overrun_ms(
+          false);  // just call it to reset the timer
     }
+    loop_profiler.clear();
   }  // end of while loop
 
   {
@@ -227,8 +278,9 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
 
 void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
                               int id) {
-  std::cout << "[ManipServer][wrench thread] starting thread for id " << id
-            << std::endl;
+  std::string header =
+      "[ManipServer][Wrench thread] " + std::to_string(id) + ": ";
+  std::cout << header << "thread starting." << std::endl;
   RUT::Timer timer;
   timer.tic(time0);  // so this timer is synced with the main timer
 
@@ -236,14 +288,34 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
 
   if (!_config.mock_hardware) {
     // wait for force sensor to be ready
-    std::cout
-        << "[ManipServer][wrench thread] Waiting for force sensor to start "
-           "streaming.\n";
+    std::cout << header
+              << "Waiting for force sensor to start "
+                 "streaming.\n";
     while (!force_sensor_ptrs[id]->is_data_ready()) {
       usleep(100000);
     }
   }
 
+  // wait for pose_fb to be ready
+  std::cout << header
+            << "Waiting for robot thread to "
+               "populate pose_fb. \n";
+  while (true) {
+    {
+      std::lock_guard<std::mutex> lock(_pose_buffer_mtxs[id]);
+      if (_pose_buffers[id].size() > 0) {
+        break;
+      }
+    }
+    usleep(300 * 1000);  // 300ms
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(_ctrl_mtx);
+    _states_wrench_thread_ready[id] = true;
+  }
+
+  std::cout << header << "Loop started." << std::endl;
   bool ctrl_flag_saving = false;  // local copy
 
   RUT::Vector7d pose_fb;
@@ -332,16 +404,17 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
 }
 
 void ManipServer::rgb_loop(const RUT::TimePoint& time0, int id) {
-  std::cout << "[ManipServer][rgb thread] starting thread.\n";
+  std::string header = "[ManipServer][rgb thread] " + std::to_string(id) + ": ";
+  std::cout << header << "starting thread" << std::endl;
 
   RUT::Timer timer;
   timer.tic(time0);
   double time_start = timer.toc_ms();
-
   {
     std::lock_guard<std::mutex> lock(_ctrl_mtx);
     _states_rgb_thread_ready[id] = true;
   }
+  std::cout << header << "Loop started." << std::endl;
 
   cv::Mat bgr[3];  //destination array
   Eigen::MatrixXd bm, gm, rm;
@@ -384,6 +457,7 @@ void ManipServer::rgb_loop(const RUT::TimePoint& time0, int id) {
     } else {
       _states_rgb_thread_saving[id] = false;
     }
+
     // std::cout << "t = " << timer.toc_ms() << ", get new rgb frame."
     //           << std::endl;
     {
@@ -404,22 +478,40 @@ void ManipServer::rgb_loop(const RUT::TimePoint& time0, int id) {
   std::cout << "[rgb thread] Joined." << std::endl;
 }
 
-void ManipServer::rgb_plot_loop(int id) {
-  std::cout << "[ManipServer][plot thread] starting thread.\n";
+void ManipServer::rgb_plot_loop() {
+  std::string header = "[ManipServer][plot thread]: ";
+  std::cout << header << "starting thread." << std::endl;
   cv::namedWindow("RGB", cv::WINDOW_AUTOSIZE);
-  cv::Mat color_mat_copy;
+  std::vector<cv::Mat> color_mat_copy;
+  cv::Mat canvas;
+
+  for (int id : _id_list) {
+    color_mat_copy.push_back(cv::Mat());
+  }
+
+  {
+    std::lock_guard<std::mutex> lock(_ctrl_mtx);
+    _state_plot_thread_ready = true;
+  }
+
+  std::cout << header << "Loop started." << std::endl;
+
   while (true) {
-    {
+    for (int id : _id_list) {
       std::lock_guard<std::mutex> lock(_color_mat_mtxs[id]);
-      color_mat_copy = _color_mats[id].clone();
+      color_mat_copy[id] = _color_mats[id].clone();
     }
-    cv::imshow("RGB", color_mat_copy);
+
+    cv::vconcat(color_mat_copy, canvas);
+
+    cv::imshow("RGB", canvas);
 
     {
       std::lock_guard<std::mutex> lock(_ctrl_mtx);
       if (!_ctrl_flag_running) {
-        std::cout << "[rgb plot thread] _ctrl_flag_running is false. Shuting "
-                     "down this thread."
+        std::cout << header
+                  << "[rgb plot thread] _ctrl_flag_running is false. Shuting "
+                     "down this thread"
                   << std::endl;
         break;
       }

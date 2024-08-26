@@ -46,6 +46,12 @@ inline void create_folder_for_new_episode(
     rgb_folders.push_back(rgb_folder);
     robot_json_files.push_back(robot_json_file);
     wrench_json_files.push_back(wrench_json_file);
+    std::cout << "[create_folder_for_new_episode] Created rgb folder: "
+              << rgb_folder << std::endl;
+    std::cout << "[create_folder_for_new_episode] generated robot file: "
+              << robot_json_file << std::endl;
+    std::cout << "[create_folder_for_new_episode] generated wrench file: "
+              << wrench_json_file << std::endl;
   }
 }
 

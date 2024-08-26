@@ -8,10 +8,11 @@ import matplotlib.pyplot as plt
 print("[python] creating manip server")
 
 server = ms.ManipServer()
-server.initialize(
-    "/home/yifanhou/git/RobotTestBench/applications/ur_test_bench/config/ur_1.yaml"
-    # "/home/yifanhou/git/RobotTestBench/applications/ur_test_bench/config/ur_test_bench.yaml"
-)
+if not server.initialize(
+    "/home/yifanhou/git/RobotTestBench/applications/ur_test_bench/config/ur_test_bench.yaml"
+):
+    print("[python] failed to initialize server")
+    exit(1)
 
 print("[python] server created")
 while not server.is_ready():
@@ -19,15 +20,20 @@ while not server.is_ready():
     sleep(1)
 print("[python] Server is ready")
 
-pose_fb = server.get_pose(1)
-print("[python] pose_fb:", pose_fb)
+pose0_fb = server.get_pose(1, 0)
+pose1_fb = server.get_pose(1, 1)
 
-# server.set_high_level_maintain_position()
+server.set_high_level_maintain_position()
+
+
 # bgr = np.zeros((1080, 1080, 3), dtype=np.uint8)
 # cv2.namedWindow("image")
 
-server.set_force_controlled_axis(np.eye(6), 0)
+server.set_force_controlled_axis(np.eye(6), 6)
 print("[python] done set_force_controlled_axis")
+sleep(10)
+exit(0)
+
 
 pose_cmd = copy.deepcopy(pose_fb)
 pose_cmds = np.zeros((7, 5))
