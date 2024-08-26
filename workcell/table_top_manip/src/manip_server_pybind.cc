@@ -17,19 +17,30 @@ PYBIND11_MODULE(manip_server_pybind, m)
         .def("join_threads", &ManipServer::join_threads)
         .def("is_running", &ManipServer::is_running)
         .def("is_ready", &ManipServer::is_ready)
-        .def("get_camera_rgb", &ManipServer::get_camera_rgb)
-        .def("get_wrench", &ManipServer::get_wrench)
-        .def("get_pose", &ManipServer::get_pose)
-        .def("get_camera_rgb_timestamps_ms", &ManipServer::get_camera_rgb_timestamps_ms)
-        .def("get_wrench_timestamps_ms", &ManipServer::get_wrench_timestamps_ms)
-        .def("get_pose_timestamps_ms", &ManipServer::get_pose_timestamps_ms)
+        .def("get_camera_rgb", &ManipServer::get_camera_rgb,
+                py::arg(), py::arg("camera_id") = 0)
+        .def("get_wrench", &ManipServer::get_wrench,
+                py::arg(), py::arg("sensor_id") = 0)
+        .def("get_pose", &ManipServer::get_pose,
+                py::arg(), py::arg("robot_id") = 0)
+        .def("get_camera_rgb_timestamps_ms", &ManipServer::get_camera_rgb_timestamps_ms,
+                py::arg("id") = 0)
+        .def("get_wrench_timestamps_ms", &ManipServer::get_wrench_timestamps_ms,
+                py::arg("id") = 0)
+        .def("get_pose_timestamps_ms", &ManipServer::get_pose_timestamps_ms,
+                py::arg("id") = 0)
         .def("get_timestamp_now_ms", &ManipServer::get_timestamp_now_ms)
         .def("set_high_level_maintain_position", &ManipServer::set_high_level_maintain_position)
         .def("set_high_level_free_jogging", &ManipServer::set_high_level_free_jogging)
-        .def("set_target_pose", &ManipServer::set_target_pose)
-        .def("set_force_controlled_axis", &ManipServer::set_force_controlled_axis)
-        .def("set_stiffness_matrix", &ManipServer::set_stiffness_matrix)
-        .def("schedule_waypoints", &ManipServer::schedule_waypoints)
-        .def("schedule_stiffness", &ManipServer::schedule_stiffness);
+        .def("set_target_pose", &ManipServer::set_target_pose,
+                py::arg(), py::arg(), py::arg("robot_id") = 0)
+        .def("set_force_controlled_axis", &ManipServer::set_force_controlled_axis,
+                py::arg(), py::arg(), py::arg("robot_id") = 0)
+        .def("set_stiffness_matrix", &ManipServer::set_stiffness_matrix,
+                py::arg(), py::arg("robot_id") = 0)
+        .def("schedule_waypoints", &ManipServer::schedule_waypoints,
+                py::arg(), py::arg(), py::arg("robot_id") = 0)
+        .def("schedule_stiffness", &ManipServer::schedule_stiffness,
+                py::arg(), py::arg(), py::arg("robot_id") = 0);
 }
 // clang-format on

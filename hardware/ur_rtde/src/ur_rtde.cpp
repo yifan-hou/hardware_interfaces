@@ -169,7 +169,7 @@ bool URRTDE::Implementation::checkCartesianTarget(
       std::cerr << "\033[1;33m[URRTDE][checkCartesianTarget] Incremental "
                    "safety check failed.\033[0m\n";
       std::cerr << "set pose: " << pose_xyzq_set.transpose()
-                << ", prev pose: " << pose_xyzq_set_prev.transpose()
+                << "\nprev pose: " << pose_xyzq_set_prev.transpose()
                 << ", max_incre_m: "
                 << config.robot_interface_config.max_incre_m
                 << ", max_incre_rad: "
