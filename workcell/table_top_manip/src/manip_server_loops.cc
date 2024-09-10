@@ -333,7 +333,12 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
         std::lock_guard<std::mutex> lock(_poses_fb_mtxs[id]);
         pose_fb = _poses_fb[id];
       }
-      force_sensor_ptrs[id]->getWrenchNetTool(pose_fb, wrench_fb);
+      if (force_sensor_ptrs[id]->getWrenchNetTool(pose_fb, wrench_fb) < 0) {
+        std::cout << header
+                  << "Wrench is above safety threshold. Ending thread."
+                  << std::endl;
+        break;
+      }
       time_now_ms = timer.toc_ms();
       {
         std::lock_guard<std::mutex> lock(_wrench_buffer_mtxs[id]);

@@ -63,7 +63,6 @@ void* ATI_Monitor(void* pParam) {
 ATINetft::ATINetft() {
   _force = RUT::Vector3d::Zero();
   _force_old = RUT::Vector3d::Zero();
-  _WrenchSafety = RUT::Vector6d::Zero();
   _torque = RUT::Vector3d::Zero();
   _torque_old = RUT::Vector3d::Zero();
   _stall_counts = 0;
@@ -124,6 +123,18 @@ int ATINetft::getWrenchSensor(RUT::Vector6d& wrench) {
       std::cout << "\033[1;31m[ATINetft] Dead Stream\033[0m\n";
       return 2;
     }
+  }
+
+  // safety
+  for (int i = 0; i < 6; ++i) {
+    if (abs(wrench[i]) > _config.WrenchSafety[i]) {
+      std::cout << "\033[1;31m[ATINetft] Force magnitude is above the safety "
+                   "threshold:\033[0m\n";
+      std::cout << "  feedback:" << wrench.transpose() << std::endl;
+      std::cout << "  safety limit: " << _config.WrenchSafety.transpose()
+                << std::endl;
+    }
+    return -1;
   }
 
   return 0;

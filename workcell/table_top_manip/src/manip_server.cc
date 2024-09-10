@@ -202,6 +202,8 @@ bool ManipServer::initialize(const std::string& config_path) {
 
     _stiffnesses_high.push_back(admittance_config.compliance6d.stiffness);
     _stiffnesses_low.push_back(RUT::Matrix6d::Zero());
+    _dampings_high.push_back(admittance_config.compliance6d.damping);
+    _dampings_low.push_back(_config.low_damping);
   }
 
   // create the data buffers
@@ -464,6 +466,7 @@ void ManipServer::set_high_level_maintain_position() {
     std::lock_guard<std::mutex> lock(_controller_mtxs[id]);
     // set the robot to have high stiffness, but still compliant
     _controllers[id].setStiffnessMatrix(_stiffnesses_high[id]);
+    _controllers[id].setDampingMatrix(_dampings_high[id]);
   }
 }
 
@@ -475,6 +478,7 @@ void ManipServer::set_high_level_free_jogging() {
     std::lock_guard<std::mutex> lock(_controller_mtxs[id]);
     // set the robot to be compliant
     _controllers[id].setStiffnessMatrix(_stiffnesses_low[id]);
+    _controllers[id].setDampingMatrix(_dampings_low[id]);
   }
 }
 

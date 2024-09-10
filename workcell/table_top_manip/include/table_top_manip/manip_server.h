@@ -45,6 +45,7 @@ struct ManipServerConfig {
   bool use_perturbation_generator{false};
   CameraSelection camera_selection{CameraSelection::NONE};
   ForceSensingMode force_sensing_mode{ForceSensingMode::NONE};
+  RUT::Matrix6d low_damping{};
 
   bool deserialize(const YAML::Node& node) {
     try {
@@ -64,6 +65,10 @@ struct ManipServerConfig {
           node["camera_selection"].as<std::string>());
       force_sensing_mode = string_to_enum<ForceSensingMode>(
           node["force_sensing_mode"].as<std::string>());
+
+      low_damping = RUT::deserialize_vector<RUT::Vector6d>(node["low_damping"])
+                        .asDiagonal();
+
     } catch (const std::exception& e) {
       std::cerr << "Failed to load the config file: " << e.what() << std::endl;
       return false;
@@ -104,6 +109,7 @@ class ManipServer {
   void join_threads();
   bool is_ready();  // check if all buffers are full
   bool is_running();
+  bool is_bimanual() { return _config.bimanual; }
 
   // getters: get the most recent k data points in the buffer
   const Eigen::MatrixXd get_camera_rgb(int k, int camera_id = 0);
@@ -142,8 +148,6 @@ class ManipServer {
   void stop_saving_data();
   bool is_saving_data();
 
-  bool is_bimanual() { return _config.bimanual; }
-
  private:
   // config
   ManipServerConfig _config;
@@ -177,6 +181,8 @@ class ManipServer {
   // additional configs as local variables
   std::vector<RUT::Matrix6d> _stiffnesses_high{};
   std::vector<RUT::Matrix6d> _stiffnesses_low{};
+  std::vector<RUT::Matrix6d> _dampings_high{};
+  std::vector<RUT::Matrix6d> _dampings_low{};
 
   //  hardware interfaces
   std::vector<std::shared_ptr<CameraInterfaces>> camera_ptrs;

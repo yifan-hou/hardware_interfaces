@@ -17,6 +17,7 @@ PYBIND11_MODULE(manip_server_pybind, m)
         .def("join_threads", &ManipServer::join_threads)
         .def("is_running", &ManipServer::is_running)
         .def("is_ready", &ManipServer::is_ready)
+        .def("is_bimanual", &ManipServer::is_bimanual)
         .def("get_camera_rgb", &ManipServer::get_camera_rgb,
                 py::arg(), py::arg("camera_id") = 0)
         .def("get_wrench", &ManipServer::get_wrench,
