@@ -154,7 +154,7 @@ bool ManipServer::initialize(const std::string& config_path) {
     for (int id : _id_list) {
       image_heights.push_back(1080);
       image_widths.push_back(1080);
-      wrench_publish_rate.push_back(100);
+      wrench_publish_rate.push_back(7000);
     }
   }
 
@@ -383,6 +383,8 @@ bool ManipServer::is_ready() {
     if (_config.run_rgb_thread) {
       std::lock_guard<std::mutex> lock(_camera_rgb_buffer_mtxs[id]);
       if (!_camera_rgb_buffers[id].is_full()) {
+        std::cout << id << ": Camera RGB buffer not full: size: "
+                  << _camera_rgb_buffers[id].size() << std::endl;
         return false;
       }
     }
@@ -390,6 +392,8 @@ bool ManipServer::is_ready() {
     if (_config.run_robot_thread) {
       std::lock_guard<std::mutex> lock(_pose_buffer_mtxs[id]);
       if (!_pose_buffers[id].is_full()) {
+        std::cout << id << ": Pose buffer not full: size: "
+                  << _pose_buffers[id].size() << std::endl;
         return false;
       }
     }
@@ -397,6 +401,8 @@ bool ManipServer::is_ready() {
     if (_config.run_wrench_thread) {
       std::lock_guard<std::mutex> lock(_wrench_buffer_mtxs[id]);
       if (!_wrench_buffers[id].is_full()) {
+        std::cout << id << ": wrench buffer not full: size: "
+                  << _wrench_buffers[id].size() << std::endl;
         return false;
       }
     }

@@ -281,6 +281,7 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
   std::string header =
       "[ManipServer][Wrench thread] " + std::to_string(id) + ": ";
   std::cout << header << "thread starting." << std::endl;
+  std::cout << header << "Rate at" << publish_rate << "Hz." << std::endl;
   RUT::Timer timer;
   timer.tic(time0);  // so this timer is synced with the main timer
 
