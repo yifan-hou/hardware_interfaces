@@ -32,8 +32,6 @@ bool ManipServer::initialize(const std::string& config_path) {
   std::cout << "_id_list: " << _id_list.size() << std::endl;
 
   // parameters to be obtained from config
-  std::vector<int> image_heights;
-  std::vector<int> image_widths;
   std::vector<int> wrench_publish_rate;
 
   std::cout << "[ManipServer] bimanual: " << _config.bimanual << std::endl;
@@ -77,10 +75,6 @@ bool ManipServer::initialize(const std::string& config_path) {
                     << ". Exiting." << std::endl;
           return false;
         }
-        image_heights.push_back(gopro_config.crop_rows[1] -
-                                gopro_config.crop_rows[0]);
-        image_widths.push_back(gopro_config.crop_cols[1] -
-                               gopro_config.crop_cols[0]);
       } else if (_config.camera_selection == CameraSelection::REALSENSE) {
         Realsense::RealsenseConfig realsense_config;
         try {
@@ -99,8 +93,6 @@ bool ManipServer::initialize(const std::string& config_path) {
                     << ". Exiting." << std::endl;
           return false;
         }
-        image_heights.push_back(realsense_config.height);
-        image_widths.push_back(realsense_config.width);
       } else {
         std::cerr << "Invalid camera selection. Exiting." << std::endl;
         return false;
@@ -152,8 +144,6 @@ bool ManipServer::initialize(const std::string& config_path) {
   } else {
     // mock hardware
     for (int id : _id_list) {
-      image_heights.push_back(1080);
-      image_widths.push_back(1080);
       wrench_publish_rate.push_back(7000);
     }
   }
@@ -221,9 +211,9 @@ bool ManipServer::initialize(const std::string& config_path) {
     _waypoints_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
     _stiffness_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
 
-    _camera_rgb_buffers[id].initialize(_config.rgb_buffer_size,
-                                       3 * image_heights[id], image_widths[id],
-                                       "camera_rgb" + std::to_string(id));
+    _camera_rgb_buffers[id].initialize(
+        _config.rgb_buffer_size, 3 * _config.output_rgb_hw[0],
+        _config.output_rgb_hw[1], "camera_rgb" + std::to_string(id));
 
     _pose_buffers[id].initialize(_config.pose_buffer_size, 7, 1,
                                  "pose" + std::to_string(id));

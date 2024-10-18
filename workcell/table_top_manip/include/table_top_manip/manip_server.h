@@ -46,6 +46,7 @@ struct ManipServerConfig {
   CameraSelection camera_selection{CameraSelection::NONE};
   ForceSensingMode force_sensing_mode{ForceSensingMode::NONE};
   RUT::Matrix6d low_damping{};
+  std::vector<int> output_rgb_hw{};
 
   bool deserialize(const YAML::Node& node) {
     try {
@@ -68,6 +69,7 @@ struct ManipServerConfig {
 
       low_damping = RUT::deserialize_vector<RUT::Vector6d>(node["low_damping"])
                         .asDiagonal();
+      output_rgb_hw = node["output_rgb_hw"].as<std::vector<int>>();
 
     } catch (const std::exception& e) {
       std::cerr << "Failed to load the config file: " << e.what() << std::endl;

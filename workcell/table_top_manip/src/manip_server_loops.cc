@@ -334,7 +334,9 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
         std::lock_guard<std::mutex> lock(_poses_fb_mtxs[id]);
         pose_fb = _poses_fb[id];
       }
-      if (force_sensor_ptrs[id]->getWrenchNetTool(pose_fb, wrench_fb) < 0) {
+      int safety_flag =
+          force_sensor_ptrs[id]->getWrenchNetTool(pose_fb, wrench_fb);
+      if (safety_flag < 0) {
         std::cout << header
                   << "Wrench is above safety threshold. Ending thread."
                   << std::endl;
@@ -422,6 +424,7 @@ void ManipServer::rgb_loop(const RUT::TimePoint& time0, int id) {
   }
   std::cout << header << "Loop started." << std::endl;
 
+  cv::Mat resized_color_mat;
   cv::Mat bgr[3];  //destination array
   Eigen::MatrixXd bm, gm, rm;
   Eigen::MatrixXd rgb_row_combined;
@@ -438,13 +441,16 @@ void ManipServer::rgb_loop(const RUT::TimePoint& time0, int id) {
         usleep(20 * 1000);  // 20ms, 50hz
       }
       time_now_ms = timer.toc_ms();
-      cv::split(_color_mats[id], bgr);  //split source
+      cv::resize(_color_mats[id], resized_color_mat,
+                 cv::Size(_config.output_rgb_hw[1], _config.output_rgb_hw[0]),
+                 cv::INTER_LINEAR);
+      cv::split(resized_color_mat, bgr);  //split source
     }
 
     cv::cv2eigen(bgr[0], bm);
     cv::cv2eigen(bgr[1], gm);
     cv::cv2eigen(bgr[2], rm);
-    rgb_row_combined.resize(_color_mats[id].rows * 3, _color_mats[id].cols);
+    rgb_row_combined.resize(resized_color_mat.rows * 3, resized_color_mat.cols);
     rgb_row_combined << rm, gm, bm;
     {
       std::lock_guard<std::mutex> lock(_camera_rgb_buffer_mtxs[id]);

@@ -133,8 +133,8 @@ int ATINetft::getWrenchSensor(RUT::Vector6d& wrench) {
       std::cout << "  feedback:" << wrench.transpose() << std::endl;
       std::cout << "  safety limit: " << _config.WrenchSafety.transpose()
                 << std::endl;
+      return -1;
     }
-    return -1;
   }
 
   return 0;
@@ -156,12 +156,6 @@ int ATINetft::getWrenchNetTool(const RUT::Vector7d& pose,
   _GinT = _config.Pcom.cross(_GinF);
   wrench_net_T.head(3) = _wrench_tool_temp.head(3) + _config.Foffset - _GinF;
   wrench_net_T.tail(3) = _wrench_tool_temp.tail(3) + _config.Toffset - _GinT;
-
-  // safety
-  for (int i = 0; i < 6; ++i) {
-    if (abs(wrench_net_T[i]) > _WrenchSafety[i])
-      return 3;
-  }
 
   return flag;
 }
