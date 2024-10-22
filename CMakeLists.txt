@@ -19,7 +19,7 @@ find_library(RUT Utilities HINTS ${CMAKE_INSTALL_PREFIX}/lib/RobotUtilities)
 include_directories(
   include/
   ${EIGEN3_INCLUDE_DIRS}
-  ${CMAKE_INSTALL_PREFIX}/include/arx5-sdk/
+  # ${CMAKE_INSTALL_PREFIX}/include/arx5-sdk/
 )
 add_library(HI_COMMON SHARED
   src/types.cpp
@@ -55,7 +55,7 @@ add_executable(test_hardware_interfaces
 )
 target_include_directories(test_hardware_interfaces PRIVATE
   hardware/ati_netft/include/
-  hardware/arx_can/include/
+  # hardware/arx_can/include/
   hardware/realsense/include/
   hardware/ur_rtde/include/
   hardware/robotiq_ft_modbus/include/
