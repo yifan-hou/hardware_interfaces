@@ -15,6 +15,7 @@ find_package(Boost REQUIRED COMPONENTS
 )
 find_library(YAMLLib yaml-cpp HINTS /usr/local/lib)
 find_library(RUT Utilities HINTS ${CMAKE_INSTALL_PREFIX}/lib/RobotUtilities)
+find_library(FORCE_CONTROLLERS FORCE_CONTROLLERS HINTS ${CMAKE_INSTALL_PREFIX}/lib/)
 
 include_directories(
   include/
@@ -38,6 +39,11 @@ add_subdirectory(hardware/robotiq_ft_modbus)
 file(GLOB HARDWARE_INCLUDE_DIRS "hardware/*/include")
 include_directories(${HARDWARE_INCLUDE_DIRS})
 add_subdirectory(workcell/table_top_manip)
+
+# Application to build
+add_subdirectory(applications/force_control_demo)
+add_subdirectory(applications/ft_calibration)
+add_subdirectory(applications/manipulation_data_collection)
 
 # install common
 install(DIRECTORY include/
