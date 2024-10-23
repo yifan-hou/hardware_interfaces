@@ -30,8 +30,9 @@ void main_print(const std::string& msg) {
 int main() {
   // read config files
   const std::string config_path =
-      "/home/yifanhou/git/RobotTestBench/applications/ur_test_bench/"
-      "config/manip_server_config_left_arm.yaml";
+      "/home/yifanhou/git/hardware_interfaces/workcell/"
+      "table_top_manip/"
+      "config/bimanual_data_collection.yaml";
 
   ManipServer server(config_path);
 

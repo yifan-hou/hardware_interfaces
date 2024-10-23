@@ -1,0 +1,173 @@
+# Inference
+#    plot_rgb: false
+#    damping: high damping
+#    max_spring_force_magnitude: 50
+# Data collection:
+#    plot_rgb: true
+#    damping: low damping
+#    max_spring_force_magnitude: 15
+# always check the first few parameters:
+data_folder: "/home/yifanhou/data/real/vase_wiping_v5.2"
+mock_hardware: false
+bimanual: true
+use_perturbation_generator: false
+
+run_robot_thread: true
+run_wrench_thread: true
+run_rgb_thread: true
+plot_rgb: true
+
+rgb_buffer_size: 11
+pose_buffer_size: 200
+wrench_buffer_size: 8000
+camera_selection: "GOPRO"
+force_sensing_mode: "FORCE_MODE_ATI"
+low_damping: [2.0, 2.0, 2.0, 0.1, 0.1, 0.1]
+output_rgb_hw: [224, 224]
+
+ur_rtde0:
+  robot_ip: "192.168.2.105"
+  rtde_frequency: 500.0
+  rt_receive_priority: 90
+  rt_control_priority: 85
+  interface_priority: 80
+  linear_vel: 0.5
+  linear_acc: 0.5
+  servoL_lookahead_time: 0.1
+  servoL_gain: 600
+  robot_interface_config:
+    zone_safety_mode: "SAFETY_MODE_TRUNCATE"
+    incre_safety_mode: "SAFETY_MODE_STOP"
+    operation_mode: "OPERATION_MODE_CARTESIAN"
+    max_incre_m: 0.03
+    max_incre_rad: 0.2
+    max_incre_joint_rad: 0.0628
+    safe_zone: [-0.5, 0.7, -0.05, 0.9, 0.2, 0.8]
+
+ur_rtde1:
+  robot_ip: "192.168.2.106"
+  rtde_frequency: 500.0
+  rt_receive_priority: 90
+  rt_control_priority: 85
+  interface_priority: 80
+  linear_vel: 0.5
+  linear_acc: 0.5
+  servoL_lookahead_time: 0.1
+  servoL_gain: 600
+  robot_interface_config:
+    zone_safety_mode: "SAFETY_MODE_TRUNCATE"
+    incre_safety_mode: "SAFETY_MODE_STOP"
+    operation_mode: "OPERATION_MODE_CARTESIAN"
+    max_incre_m: 0.03
+    max_incre_rad: 0.2
+    max_incre_joint_rad: 0.0628
+    safe_zone: [-0.5, 0.7, -0.9, -0.2, 0.2, 0.8]
+
+ati_netft0:
+    ip_address: "192.168.2.101"
+    counts_per_force: 1000000
+    counts_per_torque: 1000000
+    sensor_name: "netft0"
+    print_flag: false
+    fullpath: "/tmp/netft0_data.txt"
+    publish_rate: 7000
+    noise_level: 0.0
+    stall_threshold: 100
+    Foffset: [1.75977, -15.7202, 11.796]
+    Toffset: [0.568241, 0.0393391, -0.0971978]
+    Gravity: [-0.0428787, -0.00588047, -1.4547]
+    Pcom: [-0.00219259, 0.00318527, 0.110859]
+    WrenchSafety: [80.0, 80.0, 100.0, 4, 4, 4]
+    PoseSensorTool: [0, 0, -0.079, -0.25882,  0,  0,  0.9659258]
+
+ati_netft1:
+    ip_address: "192.168.2.102"
+    counts_per_force: 1000000
+    counts_per_torque: 1000000
+    sensor_name: "netft1"
+    print_flag: false
+    fullpath: "/tmp/netft1_data.txt"
+    publish_rate: 7000
+    noise_level: 0.0
+    stall_threshold: 100
+    Foffset: [8.84652, -32.1008, 6.99603]
+    Toffset: [1.40613, 0.398585, 0.0327958]
+    Gravity: [-0.0985681, 0.0387578, -1.39927]
+    Pcom: [0.000927347, 0.0053171, 0.10987]
+    WrenchSafety: [80.0, 80.0, 100.0, 4, 4, 4]
+    PoseSensorTool: [0, 0, -0.079, -0.25882,  0,  0,  0.9659258]
+
+gopro0:
+  device_name: "/dev/v4l/by-id/usb-Elgato_Elgato_HD60_X_A00XB320216NRW-video-index0"
+  frame_width: 1920
+  frame_height: 1080
+  crop_rows: [0, 1080] # set to negative to disable cropping
+  crop_cols: [420, 1500]
+  fps: 60
+
+gopro1:
+  device_name: "/dev/v4l/by-id/usb-Elgato_Elgato_HD60_X_A00XB320216MTR-video-index0"
+  frame_width: 1920
+  frame_height: 1080
+  crop_rows: [0, 1080] # set to negative to disable cropping
+  crop_cols: [420, 1500]
+  fps: 60
+
+admittance_controller0:
+  dt: 0.002
+  log_to_file: false
+  log_file_path: "/tmp/admittance0_controller.log"
+  compliance6d:
+    stiffness: [200, 200, 300, 2, 2, 2] 
+    damping: [4.1, 4.1, 4.1, 0.3, 0.3, 0.3] # for data collection
+    inertia: [0.2, 0.2, 0.2, 0.001, 0.001, 0.001]
+  max_spring_force_magnitude: 15
+  direct_force_control_gains:
+    P_trans: 0.5
+    I_trans: 0
+    D_trans: 0
+    P_rot: 0.5
+    I_rot: 0
+    D_rot: 0
+  direct_force_control_I_limit: [0, 0, 0, 0, 0, 0]
+
+admittance_controller1:
+  dt: 0.002
+  log_to_file: false
+  log_file_path: "/tmp/admittance1_controller.log"
+  compliance6d:
+    stiffness: [200, 200, 300, 2, 2, 2] 
+    damping: [20, 20, 20, 0.3, 0.3, 0.3]
+    # damping: [3.1, 3.1, 3.1, 0.3, 0.3, 0.3] # for data collection
+    inertia: [0.1, 0.1, 0.1, 0.001, 0.001, 0.001]
+  max_spring_force_magnitude: 15
+  direct_force_control_gains:
+    P_trans: 0.5
+    I_trans: 0
+    D_trans: 0
+    P_rot: 0.5
+    I_rot: 0
+    D_rot: 0
+  direct_force_control_I_limit: [0, 0, 0, 0, 0, 0]
+
+perturbation_generator0:
+  force_magnitude: 1.0
+  force_stddev: 5
+  torque_magnitude: 1.5
+  torque_stddev: 0.1
+  perturbation_duration_ms: 100
+  interval_duration_ms: 100
+  interval_stddev: 100
+  magnitude_type: "CONSTANT"
+  duration_type: "CONSTANT"
+
+perturbation_generator1:
+  force_magnitude: 1.0
+  force_stddev: 5
+  torque_magnitude: 1.5
+  torque_stddev: 0.1
+  perturbation_duration_ms: 100
+  interval_duration_ms: 100
+  interval_stddev: 100
+  magnitude_type: "CONSTANT"
+  duration_type: "CONSTANT"
