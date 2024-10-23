@@ -10,19 +10,11 @@
 
 int main() {
   ATINetft ati;
-  // ARXCAN robot;
   Realsense realsense;
   RobotiqFTModbus robotiq;
 
   RUT::Timer timer;
   RUT::TimePoint time0 = timer.tic();
-
-  // ARXCAN::ARXCANConfig arx_config;
-  // arx_config.can_interface = "can0";
-  // arx_config.urdf_path = "";
-  // arx_config.send_receive_in_background = false;
-  // arx_config.enable_gravity_compensation = false;
-  // arx_config.reset_to_home_upon_start = true;
 
   ATINetft::ATINetftConfig ati_config;
   ati_config.ip_address = "192.168.1.101";

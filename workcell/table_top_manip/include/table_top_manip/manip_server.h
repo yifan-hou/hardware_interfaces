@@ -28,8 +28,6 @@
 
 #include <RobotUtilities/data_buffer.h>
 
-// typedef Eigen::TensorMap<Eigen::Tensor<float, 3, Eigen::RowMajor>> RGBTensor;
-
 struct ManipServerConfig {
   std::string data_folder{""};
   bool run_robot_thread{false};

@@ -31,7 +31,7 @@ int main() {
 
   // open file
   const std::string CONFIG_PATH =
-      "/home/yifanhou/git/RobotTestBench/applications/force_control_demo/"
+      "/path/to/hardware_interfaces/applications/force_control_demo/"
       "config/force_control_demo.yaml";
   YAML::Node config{};
   try {

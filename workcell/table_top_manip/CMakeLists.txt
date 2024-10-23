@@ -51,18 +51,6 @@ pybind11_add_module(manip_server_pybind
 )
 target_link_libraries(manip_server_pybind PRIVATE
   ManipServer
-#   REALSENSE
-#   ATI_NETFT
-#   GoPro
-#   ROBOTIQ_FT_HW
-#   RQSensorLinux
-#   UR_RTDE
-#   HI_COMMON
-#   ${RUT}
-#   ${FORCE_CONTROLLERS}
-#   ${realsense2_LIBRARY}
-#   ${OpenCV_LIBS}
-#   ${YAMLLib}
 )
 
 # set the output directory for the pybind module

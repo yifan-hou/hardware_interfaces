@@ -30,14 +30,11 @@ void main_print(const std::string& msg) {
 int main() {
   // read config files
   const std::string config_path =
-      "/home/yifanhou/git/hardware_interfaces/workcell/"
+      "/path/to/hardware_interfaces/workcell/"
       "table_top_manip/"
       "config/bimanual_data_collection.yaml";
 
   ManipServer server(config_path);
-
-  // RUT::Timer timer;
-  // RUT::TimePoint time0 = timer.tic();
 
   // wait for threads to be ready
   while (!server.is_ready()) {
