@@ -20,7 +20,6 @@ find_library(FORCE_CONTROLLERS FORCE_CONTROLLERS HINTS ${CMAKE_INSTALL_PREFIX}/l
 include_directories(
   include/
   ${EIGEN3_INCLUDE_DIRS}
-  # ${CMAKE_INSTALL_PREFIX}/include/arx5-sdk/
 )
 add_library(HI_COMMON SHARED
   src/types.cpp
@@ -28,7 +27,6 @@ add_library(HI_COMMON SHARED
 
 # hardware to build
 add_subdirectory(hardware/ati_netft)
-# add_subdirectory(hardware/arx_can)
 add_subdirectory(hardware/realsense)
 add_subdirectory(hardware/gopro)
 add_subdirectory(hardware/ur_rtde)
@@ -62,7 +60,6 @@ add_executable(test_hardware_interfaces
 )
 target_include_directories(test_hardware_interfaces PRIVATE
   hardware/ati_netft/include/
-  # hardware/arx_can/include/
   hardware/realsense/include/
   hardware/ur_rtde/include/
   hardware/robotiq_ft_modbus/include/
@@ -74,7 +71,4 @@ target_link_libraries(test_hardware_interfaces
   REALSENSE
   ROBOTIQ_FT_HW
   spdlog::spdlog
-  # ARX_CAN
-  # ${CMAKE_INSTALL_PREFIX}/lib/arx5-sdk/libhardware.so 
-  # ${CMAKE_INSTALL_PREFIX}/lib/arx5-sdk/libsolver.so
 )

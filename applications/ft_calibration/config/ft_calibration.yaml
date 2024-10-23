@@ -50,7 +50,6 @@ robotiq_ft_modbus:
   Gravity: [0.0, 0.0, 0.0]
   Pcom: [0.0, 0.0, 0.0]
   WrenchSafety: [80.0, 80.0, 100.0, 5, 5, 5]
-  # PoseSensorTool: [0.0, 0.0, -0.035, 0.70710678, 0., 0., 0.70710678]
   PoseSensorTool: [0.0, 0.0, -0.035, 0.70710678, 0., 0. , -0.70710678] # tail on the left
 
 
@@ -82,10 +81,8 @@ admittance_controller:
   log_file_path: "/tmp/admittance_controller.log"
   compliance6d:
     stiffness: [1, 1, 1, 0.1, 0.1, 0.1] # [100, 100, 100, 1, 1, 1] 
-    damping: [1.6, 1.6, 1.6, 0.03, 0.03, 0.03] # some damping, flip up
-    # damping: [0.2, 0.2, 0.2, 0.01, 0.01, 0.01] # low damping, free motion
-    # inertia: [0.1, 0.1, 0.1, 0.001, 0.001, 0.001]
-    inertia: [0.1, 0.1, 0.1, 0.001, 0.001, 0.001] # low inertia, free motion
+    damping: [1.6, 1.6, 1.6, 0.03, 0.03, 0.03]
+    inertia: [0.1, 0.1, 0.1, 0.001, 0.001, 0.001]
   direct_force_control_gains:
     P_trans: 0
     I_trans: 0
