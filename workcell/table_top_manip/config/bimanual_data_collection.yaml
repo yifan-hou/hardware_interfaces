@@ -10,7 +10,6 @@
 data_folder: "/home/yifanhou/data/real/vase_wiping_v5.2"
 mock_hardware: false
 bimanual: true
-use_perturbation_generator: false
 
 run_robot_thread: true
 run_wrench_thread: true
@@ -149,25 +148,3 @@ admittance_controller1:
     I_rot: 0
     D_rot: 0
   direct_force_control_I_limit: [0, 0, 0, 0, 0, 0]
-
-perturbation_generator0:
-  force_magnitude: 1.0
-  force_stddev: 5
-  torque_magnitude: 1.5
-  torque_stddev: 0.1
-  perturbation_duration_ms: 100
-  interval_duration_ms: 100
-  interval_stddev: 100
-  magnitude_type: "CONSTANT"
-  duration_type: "CONSTANT"
-
-perturbation_generator1:
-  force_magnitude: 1.0
-  force_stddev: 5
-  torque_magnitude: 1.5
-  torque_stddev: 0.1
-  perturbation_duration_ms: 100
-  interval_duration_ms: 100
-  interval_stddev: 100
-  magnitude_type: "CONSTANT"
-  duration_type: "CONSTANT"

@@ -148,7 +148,7 @@ bool ManipServer::initialize(const std::string& config_path) {
     }
   }
 
-  // initialize Admittance controller and perturbation generator
+  // initialize Admittance controller
   for (int id : _id_list) {
     AdmittanceController::AdmittanceControllerConfig admittance_config;
     try {
@@ -176,19 +176,6 @@ bool ManipServer::initialize(const std::string& config_path) {
     // The user needs to set the desired compliance afterwards.
     int n_af = 0;
     _controllers[id].setForceControlledAxis(Tr, n_af);
-
-    // perturbation generator
-    PerturbationGenerator::PerturbationGeneratorConfig perturbation_config;
-    try {
-      perturbation_config.deserialize(
-          config["perturbation_generator" + std::to_string(id)]);
-    } catch (const std::exception& e) {
-      std::cerr << "Failed to load the perturbation generator config file: "
-                << e.what() << std::endl;
-      return false;
-    }
-    _perturbation_generators.emplace_back();
-    _perturbation_generators[id].init(perturbation_config);
 
     _stiffnesses_high.push_back(admittance_config.compliance6d.stiffness);
     _stiffnesses_low.push_back(RUT::Matrix6d::Zero());

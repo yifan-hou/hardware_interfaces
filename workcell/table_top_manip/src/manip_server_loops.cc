@@ -38,9 +38,6 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
 
   bool ctrl_flag_saving = false;  // local copy
 
-  bool perturbation_is_applied = false;
-  RUT::Vector6d perturbation;
-
   RUT::InterpolationController intp_controller;
   intp_controller.initialize(pose_fb, timer.toc_ms());
   std::cout << header << "intp_controller initialized with pose_fb: "
@@ -149,17 +146,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
     loop_profiler.stop("stiffness");
     loop_profiler.start();
 
-    // apply perturbation
     wrench_WTr.setZero();
-    perturbation.setZero();
-    if (_config.use_perturbation_generator) {
-      perturbation_is_applied =
-          _perturbation_generators[id].generate_perturbation(perturbation);
-      wrench_WTr += perturbation;
-    }
-
-    loop_profiler.stop("perturbation");
-    loop_profiler.start();
 
     // std::cout << "[debug] time: " << time_now_ms
     //           << ", wrench_fb_ur: " << wrench_fb_ur.transpose()
@@ -218,7 +205,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       _states_robot_thread_saving[id] = true;
       save_robot_data_json(_ctrl_robot_data_streams[id],
                            _states_robot_seq_id[id], timer.toc_ms(), pose_fb,
-                           perturbation_is_applied);
+                           false);
       json_frame_ending(_ctrl_robot_data_streams[id]);
       _states_robot_seq_id[id]++;
     } else {
@@ -229,7 +216,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
         // save one last frame, so we can do the correct different frame ending
         save_robot_data_json(_ctrl_robot_data_streams[id],
                              _states_robot_seq_id[id], timer.toc_ms(), pose_fb,
-                             perturbation_is_applied);
+                             false);
         json_file_ending(_ctrl_robot_data_streams[id]);
         _ctrl_robot_data_streams[id].close();
         ctrl_flag_saving = false;

@@ -24,7 +24,6 @@
 #include <gopro/gopro.h>
 #include <realsense/realsense.h>
 #include <robotiq_ft_modbus/robotiq_ft_modbus.h>
-#include <table_top_manip/perturbation_generator.h>
 #include <ur_rtde/ur_rtde.h>
 
 #include <RobotUtilities/data_buffer.h>
@@ -42,7 +41,6 @@ struct ManipServerConfig {
   int wrench_buffer_size{100};
   bool mock_hardware{false};
   bool bimanual{false};
-  bool use_perturbation_generator{false};
   CameraSelection camera_selection{CameraSelection::NONE};
   ForceSensingMode force_sensing_mode{ForceSensingMode::NONE};
   RUT::Matrix6d low_damping{};
@@ -60,8 +58,6 @@ struct ManipServerConfig {
       wrench_buffer_size = node["wrench_buffer_size"].as<int>();
       mock_hardware = node["mock_hardware"].as<bool>();
       bimanual = node["bimanual"].as<bool>();
-      use_perturbation_generator =
-          node["use_perturbation_generator"].as<bool>();
       camera_selection = string_to_enum<CameraSelection>(
           node["camera_selection"].as<std::string>());
       force_sensing_mode = string_to_enum<ForceSensingMode>(
@@ -192,7 +188,6 @@ class ManipServer {
   std::vector<std::shared_ptr<RobotInterfaces>> robot_ptrs;
   // controllers
   std::vector<AdmittanceController> _controllers;
-  std::vector<PerturbationGenerator> _perturbation_generators;
   std::deque<std::mutex> _controller_mtxs;
 
   // threads

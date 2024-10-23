@@ -22,7 +22,7 @@ include_directories(
   ${EIGEN3_INCLUDE_DIRS}
 )
 
-add_library(ManipServer SHARED src/manip_server.cc src/manip_server_loops.cc src/perturbation_generator.cc)
+add_library(ManipServer SHARED src/manip_server.cc src/manip_server_loops.cc)
 target_link_libraries(ManipServer
   REALSENSE
   ATI_NETFT
