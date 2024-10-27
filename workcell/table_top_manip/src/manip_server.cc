@@ -148,6 +148,14 @@ bool ManipServer::initialize(const std::string& config_path) {
     }
   }
 
+  // initialize wrench filter
+  for (int id : _id_list) {
+    // same parameter for all filters
+    _wrench_filters.emplace_back(_config.wrench_filter_parameters[0],
+                                 _config.wrench_filter_parameters[1],
+                                 _config.wrench_filter_parameters[2], 6);
+  }
+
   // initialize Admittance controller and perturbation generator
   for (int id : _id_list) {
     AdmittanceController::AdmittanceControllerConfig admittance_config;
@@ -202,12 +210,14 @@ bool ManipServer::initialize(const std::string& config_path) {
     _camera_rgb_buffers.push_back(RUT::DataBuffer<Eigen::MatrixXd>());
     _pose_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
     _wrench_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
+    _wrench_filtered_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
     _waypoints_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
     _stiffness_buffers.push_back(RUT::DataBuffer<Eigen::MatrixXd>());
 
     _camera_rgb_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
     _pose_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
     _wrench_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
+    _wrench_filtered_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
     _waypoints_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
     _stiffness_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
 
@@ -219,6 +229,9 @@ bool ManipServer::initialize(const std::string& config_path) {
                                  "pose" + std::to_string(id));
     _wrench_buffers[id].initialize(_config.wrench_buffer_size, 6, 1,
                                    "wrench" + std::to_string(id));
+    _wrench_filtered_buffers[id].initialize(
+        _config.wrench_buffer_size, 6, 1,
+        "wrench_filtered" + std::to_string(id));
 
     _waypoints_buffers[id].initialize(-1, 7, 1,
                                       "waypoints" + std::to_string(id));
@@ -234,6 +247,9 @@ bool ManipServer::initialize(const std::string& config_path) {
     _wrench_timestamp_ms_buffers[id].initialize(
         _config.wrench_buffer_size, 1, 1,
         "wrench" + std::to_string(id) + "_timestamp_ms");
+    _wrench_filtered_timestamp_ms_buffers[id].initialize(
+        _config.wrench_buffer_size, 1, 1,
+        "wrench_filtered" + std::to_string(id) + "_timestamp_ms");
     _waypoints_timestamp_ms_buffers[id].initialize(
         -1, 1, 1, "waypoints" + std::to_string(id) + "_timestamp_ms");
     _stiffness_timestamp_ms_buffers[id].initialize(
@@ -245,6 +261,7 @@ bool ManipServer::initialize(const std::string& config_path) {
     _camera_rgb_buffer_mtxs.emplace_back();
     _pose_buffer_mtxs.emplace_back();
     _wrench_buffer_mtxs.emplace_back();
+    _wrench_filtered_buffer_mtxs.emplace_back();
     _waypoints_buffer_mtxs.emplace_back();
     _stiffness_buffer_mtxs.emplace_back();
   }
@@ -274,6 +291,7 @@ bool ManipServer::initialize(const std::string& config_path) {
     _camera_rgb_timestamps_ms.push_back(Eigen::VectorXd());
     _pose_timestamps_ms.push_back(Eigen::VectorXd());
     _wrench_timestamps_ms.push_back(Eigen::VectorXd());
+    _wrench_filtered_timestamps_ms.push_back(Eigen::VectorXd());
   }
 
   // kickoff the threads
@@ -418,6 +436,13 @@ const Eigen::MatrixXd ManipServer::get_wrench(int k, int id) {
   return _wrench_buffers[id].get_last_k(k);
 }
 
+const Eigen::MatrixXd ManipServer::get_wrench_filtered(int k, int id) {
+  std::lock_guard<std::mutex> lock(_wrench_filtered_buffer_mtxs[id]);
+  _wrench_filtered_timestamps_ms[id] =
+      _wrench_filtered_timestamp_ms_buffers[id].get_last_k(k);
+  return _wrench_filtered_buffers[id].get_last_k(k);
+}
+
 const Eigen::MatrixXd ManipServer::get_pose(int k, int id) {
   std::lock_guard<std::mutex> lock(_pose_buffer_mtxs[id]);
   _pose_timestamps_ms[id] = _pose_timestamp_ms_buffers[id].get_last_k(k);
@@ -429,6 +454,9 @@ const Eigen::VectorXd ManipServer::get_camera_rgb_timestamps_ms(int id) {
 }
 const Eigen::VectorXd ManipServer::get_wrench_timestamps_ms(int id) {
   return _wrench_timestamps_ms[id];
+}
+const Eigen::VectorXd ManipServer::get_wrench_filtered_timestamps_ms(int id) {
+  return _wrench_filtered_timestamps_ms[id];
 }
 const Eigen::VectorXd ManipServer::get_pose_timestamps_ms(int id) {
   return _pose_timestamps_ms[id];

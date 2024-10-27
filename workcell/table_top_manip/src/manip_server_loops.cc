@@ -286,6 +286,7 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
   timer.tic(time0);  // so this timer is synced with the main timer
 
   RUT::Vector6d wrench_fb;
+  RUT::Vector6d wrench_fb_filtered;
 
   if (!_config.mock_hardware) {
     // wait for force sensor to be ready
@@ -348,14 +349,29 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
         _wrench_buffers[id].put(wrench_fb);
         _wrench_timestamp_ms_buffers[id].put(time_now_ms);
       }
+      time_now_ms = timer.toc_ms();
+      {
+        std::lock_guard<std::mutex> lock(_wrench_filtered_buffer_mtxs[id]);
+        wrench_fb_filtered = _wrench_filters[id].step(wrench_fb);
+        _wrench_filtered_buffers[id].put(wrench_fb_filtered);
+        _wrench_filtered_timestamp_ms_buffers[id].put(time_now_ms);
+      }
     } else {
       // mock hardware
       wrench_fb.setZero();
+      wrench_fb_filtered.setZero();
       time_now_ms = timer.toc_ms();
       {
         std::lock_guard<std::mutex> lock(_wrench_buffer_mtxs[id]);
         _wrench_buffers[id].put(wrench_fb);
         _wrench_timestamp_ms_buffers[id].put(time_now_ms);
+      }
+      time_now_ms = timer.toc_ms();
+      {
+        std::lock_guard<std::mutex> lock(_wrench_filtered_buffer_mtxs[id]);
+        wrench_fb_filtered = _wrench_filters[id].step(wrench_fb);
+        _wrench_filtered_buffers[id].put(wrench_fb_filtered);
+        _wrench_filtered_timestamp_ms_buffers[id].put(time_now_ms);
       }
     }
 
@@ -373,7 +389,7 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
       _states_wrench_thread_saving[id] = true;
       save_wrench_data_json(_ctrl_wrench_data_streams[id],
                             _states_wrench_seq_id[id], timer.toc_ms(),
-                            wrench_fb);
+                            wrench_fb, wrench_fb_filtered);
       json_frame_ending(_ctrl_wrench_data_streams[id]);
       _states_wrench_seq_id[id]++;
     } else {
@@ -384,7 +400,7 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
         // save one last frame, so we can do the correct different frame ending
         save_wrench_data_json(_ctrl_wrench_data_streams[id],
                               _states_wrench_seq_id[id], timer.toc_ms(),
-                              wrench_fb);
+                              wrench_fb, wrench_fb_filtered);
         json_file_ending(_ctrl_wrench_data_streams[id]);
         _ctrl_wrench_data_streams[id].close();
         ctrl_flag_saving = false;

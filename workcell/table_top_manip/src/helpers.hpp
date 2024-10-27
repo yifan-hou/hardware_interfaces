@@ -72,7 +72,8 @@ inline bool save_robot_data_json(std::ostream& os, int seq_id,
 
 inline bool save_wrench_data_json(std::ostream& os, int seq_id,
                                   double timestamp_ms,
-                                  const RUT::Vector6d& wrench) {
+                                  const RUT::Vector6d& wrench,
+                                  const RUT::Vector6d& wrench_filtered) {
   Eigen::IOFormat good_looking_fmt(Eigen::StreamPrecision, Eigen::DontAlignCols,
                                    ", ", ", ", "", "", "", "");
   os << "\t{\n";
@@ -81,6 +82,8 @@ inline bool save_wrench_data_json(std::ostream& os, int seq_id,
      << timestamp_ms << ",\n";
   os << std::fixed << std::setprecision(4);
   os << "\t\t\"wrench\": [" << wrench.format(good_looking_fmt) << "],\n";
+  os << "\t\t\"wrench_filtered\": [" << wrench_filtered.format(good_looking_fmt)
+     << "],\n";
   return true;
 }
 

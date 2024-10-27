@@ -12,6 +12,7 @@
 #include <opencv2/opencv.hpp>
 #include <unsupported/Eigen/CXX11/Tensor>
 
+#include <RobotUtilities/butterworth.h>
 #include <RobotUtilities/spatial_utilities.h>
 #include <RobotUtilities/timer_linux.h>
 
@@ -47,6 +48,8 @@ struct ManipServerConfig {
   ForceSensingMode force_sensing_mode{ForceSensingMode::NONE};
   RUT::Matrix6d low_damping{};
   std::vector<int> output_rgb_hw{};
+  std::vector<double>
+      wrench_filter_parameters{};  // cutoff frequency, sampling time, order
 
   bool deserialize(const YAML::Node& node) {
     try {
@@ -70,6 +73,8 @@ struct ManipServerConfig {
       low_damping = RUT::deserialize_vector<RUT::Vector6d>(node["low_damping"])
                         .asDiagonal();
       output_rgb_hw = node["output_rgb_hw"].as<std::vector<int>>();
+      wrench_filter_parameters =
+          node["wrench_filter_parameters"].as<std::vector<double>>();
 
     } catch (const std::exception& e) {
       std::cerr << "Failed to load the config file: " << e.what() << std::endl;
@@ -116,6 +121,7 @@ class ManipServer {
   // getters: get the most recent k data points in the buffer
   const Eigen::MatrixXd get_camera_rgb(int k, int camera_id = 0);
   const Eigen::MatrixXd get_wrench(int k, int sensor_id = 0);
+  const Eigen::MatrixXd get_wrench_filtered(int k, int sensor_id = 0);
   const Eigen::MatrixXd get_pose(int k, int robot_id = 0);
 
   // the following functions return the timestamps of
@@ -123,6 +129,7 @@ class ManipServer {
   //  So size is already know
   const Eigen::VectorXd get_camera_rgb_timestamps_ms(int id = 0);
   const Eigen::VectorXd get_wrench_timestamps_ms(int id = 0);
+  const Eigen::VectorXd get_wrench_filtered_timestamps_ms(int id = 0);
   const Eigen::VectorXd get_pose_timestamps_ms(int id = 0);
 
   double get_timestamp_now_ms();  // access the current hardware time
@@ -161,6 +168,7 @@ class ManipServer {
   std::vector<RUT::DataBuffer<Eigen::MatrixXd>> _camera_rgb_buffers;
   std::vector<RUT::DataBuffer<Eigen::VectorXd>> _pose_buffers;
   std::vector<RUT::DataBuffer<Eigen::VectorXd>> _wrench_buffers;
+  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _wrench_filtered_buffers;
   // action buffer
   std::vector<RUT::DataBuffer<Eigen::VectorXd>> _waypoints_buffers;
   std::vector<RUT::DataBuffer<Eigen::MatrixXd>> _stiffness_buffers;
@@ -168,12 +176,14 @@ class ManipServer {
   std::vector<RUT::DataBuffer<double>> _camera_rgb_timestamp_ms_buffers;
   std::vector<RUT::DataBuffer<double>> _pose_timestamp_ms_buffers;
   std::vector<RUT::DataBuffer<double>> _wrench_timestamp_ms_buffers;
+  std::vector<RUT::DataBuffer<double>> _wrench_filtered_timestamp_ms_buffers;
   std::vector<RUT::DataBuffer<double>> _waypoints_timestamp_ms_buffers;
   std::vector<RUT::DataBuffer<double>> _stiffness_timestamp_ms_buffers;
 
   std::deque<std::mutex> _camera_rgb_buffer_mtxs;
   std::deque<std::mutex> _pose_buffer_mtxs;
   std::deque<std::mutex> _wrench_buffer_mtxs;
+  std::deque<std::mutex> _wrench_filtered_buffer_mtxs;
   std::deque<std::mutex> _waypoints_buffer_mtxs;
   std::deque<std::mutex> _stiffness_buffer_mtxs;
 
@@ -194,6 +204,9 @@ class ManipServer {
   std::vector<AdmittanceController> _controllers;
   std::vector<PerturbationGenerator> _perturbation_generators;
   std::deque<std::mutex> _controller_mtxs;
+
+  // wrench filters
+  std::vector<RUT::Butterworth> _wrench_filters;
 
   // threads
   std::vector<std::thread> _robot_threads;
@@ -235,6 +248,7 @@ class ManipServer {
   std::vector<Eigen::VectorXd> _camera_rgb_timestamps_ms;
   std::vector<Eigen::VectorXd> _pose_timestamps_ms;
   std::vector<Eigen::VectorXd> _wrench_timestamps_ms;
+  std::vector<Eigen::VectorXd> _wrench_filtered_timestamps_ms;
 
   void robot_loop(const RUT::TimePoint& time0, int robot_id);
   void rgb_loop(const RUT::TimePoint& time0, int camera_id);

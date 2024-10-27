@@ -24,6 +24,7 @@ camera_selection: "GOPRO"
 force_sensing_mode: "FORCE_MODE_ATI"
 low_damping: [2.0, 2.0, 2.0, 0.1, 0.1, 0.1]
 output_rgb_hw: [224, 224]
+wrench_filter_parameters: [5, 0.000143, 5] # cutoff frequency, sampling time, order
 
 ur_rtde0:
   robot_ip: "192.168.2.105"
