@@ -453,7 +453,7 @@ void ManipServer::rgb_loop(const RUT::TimePoint& time0, int id) {
         _color_mats[id] = camera_ptrs[id]->next_rgb_frame_blocking();
       } else {
         // mock hardware
-        _color_mats[id] = cv::Mat::zeros(1080, 1080, CV_8UC3);
+        _color_mats[id] = cv::Mat::zeros(224, 224, CV_8UC3);
         usleep(20 * 1000);  // 20ms, 50hz
       }
       time_now_ms = timer.toc_ms();

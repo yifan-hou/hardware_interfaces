@@ -123,6 +123,7 @@ class ManipServer {
   const Eigen::MatrixXd get_wrench(int k, int sensor_id = 0);
   const Eigen::MatrixXd get_wrench_filtered(int k, int sensor_id = 0);
   const Eigen::MatrixXd get_pose(int k, int robot_id = 0);
+  const int get_test();
 
   // the following functions return the timestamps of
   //  the most recent getter call of the corresponding feedback
@@ -131,6 +132,7 @@ class ManipServer {
   const Eigen::VectorXd get_wrench_timestamps_ms(int id = 0);
   const Eigen::VectorXd get_wrench_filtered_timestamps_ms(int id = 0);
   const Eigen::VectorXd get_pose_timestamps_ms(int id = 0);
+  const double get_test_timestamp_ms();
 
   double get_timestamp_now_ms();  // access the current hardware time
 
@@ -179,6 +181,7 @@ class ManipServer {
   std::vector<RUT::DataBuffer<double>> _wrench_filtered_timestamp_ms_buffers;
   std::vector<RUT::DataBuffer<double>> _waypoints_timestamp_ms_buffers;
   std::vector<RUT::DataBuffer<double>> _stiffness_timestamp_ms_buffers;
+  double _test_timestamp_ms;
 
   std::deque<std::mutex> _camera_rgb_buffer_mtxs;
   std::deque<std::mutex> _pose_buffer_mtxs;

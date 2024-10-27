@@ -449,6 +449,11 @@ const Eigen::MatrixXd ManipServer::get_pose(int k, int id) {
   return _pose_buffers[id].get_last_k(k);
 }
 
+const int ManipServer::get_test() {
+  _test_timestamp_ms = _timer.toc_ms();
+  return 0;
+}
+
 const Eigen::VectorXd ManipServer::get_camera_rgb_timestamps_ms(int id) {
   return _camera_rgb_timestamps_ms[id];
 }
@@ -460,6 +465,10 @@ const Eigen::VectorXd ManipServer::get_wrench_filtered_timestamps_ms(int id) {
 }
 const Eigen::VectorXd ManipServer::get_pose_timestamps_ms(int id) {
   return _pose_timestamps_ms[id];
+}
+
+const double ManipServer::get_test_timestamp_ms() {
+  return _test_timestamp_ms;
 }
 
 double ManipServer::get_timestamp_now_ms() {
