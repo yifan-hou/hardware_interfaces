@@ -39,6 +39,7 @@ add_subdirectory(hardware/robotiq_ft_modbus)
 file(GLOB HARDWARE_INCLUDE_DIRS "hardware/*/include")
 include_directories(${HARDWARE_INCLUDE_DIRS})
 add_subdirectory(workcell/table_top_manip)
+add_subdirectory(workcell/test)
 
 # Application to build
 add_subdirectory(applications/force_control_demo)

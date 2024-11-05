@@ -8,7 +8,7 @@
 #    max_spring_force_magnitude: 15
 # always check the first few parameters:
 data_folder: "/home/yifanhou/data/real/flipup_raw_v0"
-mock_hardware: true
+mock_hardware: false
 bimanual: false
 use_perturbation_generator: false
 
@@ -63,7 +63,6 @@ ati_netft0:
     PoseSensorTool: [0, 0, -0.079, -0.25882,  0,  0,  0.9659258]
 
 gopro0:
-  # device_name: "/dev/video1"
   device_name: "/dev/v4l/by-id/usb-Elgato_Elgato_HD60_X_A00XB320216NRW-video-index0"
   # device_name: "/dev/v4l/by-id/usb-Elgato_Elgato_HD60_X_A00XB320216MTR-video-index0" # right arm
   frame_width: 1920
