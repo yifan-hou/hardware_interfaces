@@ -245,7 +245,9 @@ class ManipServer {
 
   // shared variables between robot thread and wrench thread
   std::vector<Eigen::VectorXd> _poses_fb;
+  std::vector<Eigen::VectorXd> _perturbation;
   std::deque<std::mutex> _poses_fb_mtxs;
+  std::deque<std::mutex> _perturbation_mtxs;
 
   // temp variables storing timestamps of data just being fetched
   std::vector<Eigen::VectorXd> _camera_rgb_timestamps_ms;

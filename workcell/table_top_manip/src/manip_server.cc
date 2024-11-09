@@ -288,6 +288,8 @@ bool ManipServer::initialize(const std::string& config_path) {
     _color_mat_mtxs.emplace_back();
     _poses_fb.push_back(Eigen::VectorXd());
     _poses_fb_mtxs.emplace_back();
+    _perturbation.push_back(Eigen::VectorXd::Zero(6));
+    _perturbation_mtxs.emplace_back();
     _camera_rgb_timestamps_ms.push_back(Eigen::VectorXd());
     _pose_timestamps_ms.push_back(Eigen::VectorXd());
     _wrench_timestamps_ms.push_back(Eigen::VectorXd());

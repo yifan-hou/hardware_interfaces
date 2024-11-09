@@ -150,17 +150,22 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
     loop_profiler.start();
 
     // apply perturbation
-    wrench_WTr.setZero();
     perturbation.setZero();
     if (_config.use_perturbation_generator) {
       perturbation_is_applied =
           _perturbation_generators[id].generate_perturbation(perturbation);
-      wrench_WTr += perturbation;
+      wrench_fb_ur += perturbation;
+    }
+    // record perturbation so wrench thread knows it
+    {
+      std::lock_guard<std::mutex> lock(_perturbation_mtxs[id]);
+      _perturbation[id] = perturbation;
     }
 
     loop_profiler.stop("perturbation");
     loop_profiler.start();
 
+    wrench_WTr.setZero();
     // std::cout << "[debug] time: " << time_now_ms
     //           << ", wrench_fb_ur: " << wrench_fb_ur.transpose()
     //           << ", wrench_WTr: " << wrench_WTr.transpose() << std::endl;
@@ -321,6 +326,7 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
   bool ctrl_flag_saving = false;  // local copy
 
   RUT::Vector7d pose_fb;
+  RUT::Vector6d perturbation;
 
   RUT::Timer loop_timer;
   loop_timer.set_loop_rate_hz(publish_rate);
@@ -329,6 +335,13 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
     // Update robot status
     RUT::TimePoint t_start;
     double time_now_ms;
+
+    // read perturbations
+    {
+      std::lock_guard<std::mutex> lock(_perturbation_mtxs[id]);
+      perturbation = _perturbation[id];
+    }
+
     if (!_config.mock_hardware) {
       // get the most recent tool pose (for static calibration)
       {
@@ -343,6 +356,7 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
                   << std::endl;
         break;
       }
+      wrench_fb += perturbation;  // apply perturbation
       time_now_ms = timer.toc_ms();
       {
         std::lock_guard<std::mutex> lock(_wrench_buffer_mtxs[id]);
@@ -359,7 +373,7 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
     } else {
       // mock hardware
       wrench_fb.setZero();
-      wrench_fb_filtered.setZero();
+      wrench_fb += perturbation;  // apply perturbation
       time_now_ms = timer.toc_ms();
       {
         std::lock_guard<std::mutex> lock(_wrench_buffer_mtxs[id]);
@@ -367,6 +381,7 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
         _wrench_timestamp_ms_buffers[id].put(time_now_ms);
       }
       time_now_ms = timer.toc_ms();
+      wrench_fb_filtered.setZero();
       {
         std::lock_guard<std::mutex> lock(_wrench_filtered_buffer_mtxs[id]);
         wrench_fb_filtered = _wrench_filters[id].step(wrench_fb);
