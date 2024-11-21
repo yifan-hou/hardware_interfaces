@@ -108,14 +108,19 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
             intp_controller.set_new_target(pose_target_waypoint,
                                            target_time_ms);
             new_wp_found = true;
+            // std::cout << "[debug] time_now_ms: " << time_now_ms
+            //           << ", time now: " << timer.toc_ms()
+            //           << ", target_time_ms:" << target_time_ms
+            //           << ", pose_target_waypoint: "
+            //           << pose_target_waypoint.transpose() << std::endl;
+
             break;
           }
         }
       }
       if (!new_wp_found) {
-        // std::cout << "[debug] time_now_ms: " << time_now_ms
+        // std::cout << "[debug] no new wp found at time_now_ms: " << time_now_ms
         //           << ", time now: " << timer.toc_ms()
-        //           << ", target_time_ms:" << target_time_ms
         //           << ", pose_target_waypoint: "
         //           << pose_target_waypoint.transpose() << std::endl;
         intp_controller.keep_the_last_target(time_now_ms);

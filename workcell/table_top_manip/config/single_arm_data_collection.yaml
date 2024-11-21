@@ -7,10 +7,10 @@
 #    damping: low damping
 #    max_spring_force_magnitude: 15
 # always check the first few parameters:
-data_folder: "/home/yifanhou/data/real/flipup_raw_v0"
+data_folder: "/home/yifanhou/data/real/drag_perturbation_test"
 mock_hardware: false
 bimanual: false
-use_perturbation_generator: false
+use_perturbation_generator: true
 
 run_robot_thread: true
 run_wrench_thread: true
@@ -25,7 +25,6 @@ force_sensing_mode: "FORCE_MODE_ATI"
 low_damping: [2.0, 2.0, 2.0, 0.1, 0.1, 0.1]
 output_rgb_hw: [224, 224]
 wrench_filter_parameters: [5, 0.000143, 5] # cutoff frequency, sampling time, order
-
 
 ur_rtde0:
   robot_ip: "192.168.2.105"
@@ -56,10 +55,10 @@ ati_netft0:
     publish_rate: 7000
     noise_level: 0.0
     stall_threshold: 100
-    Foffset: [1.88304, -15.861, 11.4758]
-    Toffset: [0.576757, 0.054351, -0.0933367]
-    Gravity: [-0.0512774, 0.0304736, -0.804662]
-    Pcom: [0.000241627, 0.000264568, 0.0835715]
+    Foffset: [2.35782, -16.7001, 10.9528]
+    Toffset: [0.621768, 0.0907079, -0.0919309]
+    Gravity: [-0.0186664, -0.0207649, -0.916754]
+    Pcom: [-1.17041e-05, -0.000307188, 0.0840279]
     WrenchSafety: [40.0, 40.0, 60.0, 3, 3, 3]
     PoseSensorTool: [0, 0, -0.079, -0.25882,  0,  0,  0.9659258]
 
@@ -92,12 +91,12 @@ admittance_controller0:
   direct_force_control_I_limit: [0, 0, 0, 0, 0, 0]
 
 perturbation_generator0:
-  force_magnitude: 1.0
-  force_stddev: 5
+  force_magnitude: 2.0
+  force_stddev: 1.0
   torque_magnitude: 1.5
-  torque_stddev: 0.1
+  torque_stddev: 1.5
   perturbation_duration_ms: 100
   interval_duration_ms: 100
   interval_stddev: 100
-  magnitude_type: "CONSTANT"
+  magnitude_type: "CONSTANT" # "CONSTANT"
   duration_type: "CONSTANT"

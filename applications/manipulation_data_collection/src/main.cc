@@ -32,7 +32,7 @@ int main() {
   const std::string config_path =
       "/home/yifanhou/git/hardware_interfaces/workcell/"
       "table_top_manip/"
-      "config/bimanual_data_collection.yaml";
+      "config/single_arm_data_collection.yaml";
 
   ManipServer server(config_path);
 

@@ -599,6 +599,8 @@ void ManipServer::schedule_waypoints(const Eigen::MatrixXd& waypoints,
   }
   if (input_id_start >= timepoints_ms.size()) {
     // all input points are in the past. Do nothing.
+    std::cerr << "[debug][schedule_waypoints] all input points are in the past."
+              << std::endl;
     return;
   }
 
@@ -641,7 +643,12 @@ void ManipServer::schedule_waypoints(const Eigen::MatrixXd& waypoints,
       _waypoints_buffers[robot_id].put(waypoints.col(i));
       _waypoints_timestamp_ms_buffers[robot_id].put(timepoints_ms(i));
     }
+    // std::cout << "[debug][schedule_waypoints] scheduled "
+    //           << input_id_end - input_id_start + 1
+    //           << " waypoints. buffer size = "
+    //           << _waypoints_buffers[robot_id].size() << std::endl;
   }
+
 }  // end function schedule_waypoints
 
 /*
