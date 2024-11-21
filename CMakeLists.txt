@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED On)
 set(CMAKE_CXX_EXTENSIONS Off)
 
-find_package(Eigen3 REQUIRED)
+find_package(Eigen3 3.4 REQUIRED)
 find_package(pybind11 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS
   system
@@ -27,6 +27,7 @@ add_library(HI_COMMON SHARED
 
 # hardware to build
 add_subdirectory(hardware/ati_netft)
+add_subdirectory(hardware/coinft)
 add_subdirectory(hardware/realsense)
 add_subdirectory(hardware/gopro)
 add_subdirectory(hardware/ur_rtde)
