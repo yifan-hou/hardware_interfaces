@@ -15,7 +15,7 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include "CoinFT.h"
+#include "coinft/coin_ft.h"  // Include the CoinFT class
 
 int main(int argc, char* argv[]) {
   if (argc < 2) {
@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
 
   try {
     // Provide the serial port, baud rate, and calibration matrix file name
-    CoinFT sensor("/dev/tty.usbmodem2102", 115200, "../src/calMat_UFT6.csv");
+    CoinFT sensor("/dev/tty.usbmodem2102", 115200, "../config/calMat_UFT6.csv");
 
     sensor.startStreaming();
 

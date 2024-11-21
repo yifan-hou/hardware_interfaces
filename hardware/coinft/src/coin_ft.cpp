@@ -11,7 +11,7 @@
  *              Force in [N]. Moment in [Nm].
  ***************************************************************************************************/
 
-#include "CoinFT.h"
+#include "coinft/coin_ft.h"
 #include <fstream>
 #include <sstream>
 

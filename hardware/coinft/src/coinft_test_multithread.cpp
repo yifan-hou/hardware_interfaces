@@ -18,7 +18,7 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include "CoinFT.h"  // Include the CoinFT class
+#include "coinft/coin_ft.h"  // Include the CoinFT class
 
 // Simulate the robot_control function with variable delay
 void robot_control(int& delay_ms, int& increment, const int min_delay,
