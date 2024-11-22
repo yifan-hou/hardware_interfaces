@@ -28,9 +28,14 @@ int main(int argc, char* argv[]) {
 
   try {
     // Provide the serial port, baud rate, and calibration matrix file name
-    CoinFT sensor("/dev/tty.usbmodem2102", 115200, "../config/calMat_UFT6.csv");
-
+    std::cout << "Creating CoinFT object..." << std::endl;
+    CoinFT sensor("/dev/ttyACM0", 115200,
+                  "/home/yifanhou/git/hardware_interfaces/hardware/coinft/"
+                  "config/calMat_UFT6.csv");
+    std::cout << "CoinFT object created." << std::endl;
+    std::cout << "Starting streaming..." << std::endl;
     sensor.startStreaming();
+    std::cout << "Streaming started." << std::endl;
 
     // Start the timer
     auto start_time = std::chrono::steady_clock::now();
@@ -39,6 +44,7 @@ int main(int argc, char* argv[]) {
     while (std::chrono::duration<double>(std::chrono::steady_clock::now() -
                                          start_time)
                .count() < run_duration) {
+      std::cout << "debug 1" << std::endl;
       // Retrieve the force/torque data
       std::vector<double> ftData = sensor.getLatestData();
 
