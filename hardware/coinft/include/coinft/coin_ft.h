@@ -50,7 +50,7 @@ class CoinFT {
   void initializeSensor();
   void sendChar(uint8_t cmd);
   std::vector<uint8_t> readData(size_t length);
-  std::vector<uint16_t> readRawData();
+  bool readRawData(std::vector<uint16_t>& rawData);
   void dataAcquisitionLoop();  // The function run by the background thread
 
   boost::asio::io_service io;

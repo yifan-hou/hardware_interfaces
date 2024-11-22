@@ -142,12 +142,18 @@ void CoinFT::tare() {
 
 void CoinFT::dataAcquisitionLoop() {
   while (running) {
+    std::vector<uint16_t> processedPacket(num_sensors, 0);
+    Eigen::VectorXd rawInput(num_sensors);
+    Eigen::VectorXd sum(num_sensors);
+    Eigen::VectorXd newTareOffset(num_sensors);
+    Eigen::VectorXd adjustedInput(num_sensors);
+    Eigen::VectorXd extendedInput(num_sensors * 2);
+    Eigen::VectorXd FT;
     try {
       // Read raw data
-      std::vector<uint16_t> processedPacket = readRawData();
+      readRawData(processedPacket);
 
       // Convert to Eigen vector
-      Eigen::VectorXd rawInput(num_sensors);
       for (int i = 0; i < num_sensors; ++i) {
         rawInput(i) = static_cast<double>(processedPacket[i]);
       }
@@ -161,12 +167,11 @@ void CoinFT::dataAcquisitionLoop() {
         // When enough samples are collected, compute tareOffset
         if (tareSampleCount >= tareSampleTarget) {
           // Compute average tareOffset
-          Eigen::VectorXd sum = Eigen::VectorXd::Zero(num_sensors);
+          sum.setZero();
           for (const auto& sample : tareSamples) {
             sum += sample;
           }
-          Eigen::VectorXd newTareOffset =
-              sum / static_cast<double>(tareSampleCount);
+          newTareOffset = sum / static_cast<double>(tareSampleCount);
           {
             std::lock_guard<std::mutex> lock(data_mutex);
             tareOffset = newTareOffset;
@@ -182,14 +187,12 @@ void CoinFT::dataAcquisitionLoop() {
       }
 
       // Adjust rawInput by subtracting tareOffset
-      Eigen::VectorXd adjustedInput(num_sensors);
       {
         std::lock_guard<std::mutex> lock(data_mutex);
         adjustedInput = rawInput - tareOffset;
       }
 
       // Create the extended vector [adjustedInput, adjustedInput.^2]
-      Eigen::VectorXd extendedInput(num_sensors * 2);
       for (int i = 0; i < num_sensors; ++i) {
         double value = adjustedInput(i);
         extendedInput(i) = value;
@@ -205,7 +208,7 @@ void CoinFT::dataAcquisitionLoop() {
         continue;
       }
 
-      Eigen::VectorXd FT = calibrationMatrix * extendedInput;
+      FT = calibrationMatrix * extendedInput;
 
       // Store the latest data thread-safely
       {
@@ -223,7 +226,7 @@ void CoinFT::dataAcquisitionLoop() {
   }
 }
 
-std::vector<uint16_t> CoinFT::readRawData() {
+bool CoinFT::readRawData(std::vector<uint16_t>& rawData) {
   // Wait for STX byte
   uint8_t byte = 0;
   do {
@@ -239,14 +242,13 @@ std::vector<uint16_t> CoinFT::readRawData() {
 
   // Check for ETX byte
   if (buffer[packet_size - 1] == ETX) {
-    std::vector<uint16_t> rawData(num_sensors, 0);
     for (int i = 0; i < num_sensors; ++i) {
       rawData[i] = buffer[2 * i] + 256 * buffer[2 * i + 1];
     }
-    return rawData;
   } else {
     throw std::runtime_error("Bad end framing byte.");
   }
+  return true;
 }
 
 std::vector<double> CoinFT::getLatestData() {
