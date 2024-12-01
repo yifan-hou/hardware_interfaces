@@ -82,18 +82,18 @@ int main() {
 
   controller.init(time0, admittance_config, pose);
 
-  RUT::Matrix6d Tr = RUT::Matrix6d::Identity();
-  // RUT::Matrix6d Tr;
-  // // clang-format off
-  // Tr <<
-  //       0, 1, 0, 0, 0, 0,
-  //       0, 0, 0, 1, 0, 0,
-  //       0, 0, 0, 0, 1, 0,
-  //       0, 0, 0, 0, 0, 1,
-  //       1, 0, 0, 0, 0, 0,
-  //       0, 0, 1, 0, 0, 0;
-  // // clang-format on
-  int n_af = 6;
+  // RUT::Matrix6d Tr = RUT::Matrix6d::Identity();
+  RUT::Matrix6d Tr;
+  // clang-format off
+  Tr <<
+        0, 0, 0, 1, 0, 0,
+        0, 0, 0, 0, 1, 0,
+        0, 0, 0, 0, 0, 1,
+        1, 0, 0, 0, 0, 0,
+        0, 1, 0, 0, 0, 0,
+        0, 0, 1, 0, 0, 0;
+  // clang-format on
+  int n_af = 3;
   controller.setForceControlledAxis(Tr, n_af);
 
   pose_ref = pose;
@@ -144,11 +144,15 @@ int main() {
     printf("t = %f, wrench: %f %f %f %f %f %f\n", dt, wrench_T[0], wrench_T[1],
            wrench_T[2], wrench_T[3], wrench_T[4], wrench_T[5]);
 
-    if (dt > 300000)
+    if (dt > 3000)
       break;
 
     robot.rtde_wait_period(t_start);
   }
+  std::cout << "Main loop stopped ..." << std::endl;
+
+  sensor.stopStreaming();
+  std::cout << "Done." << std::endl;
 
   return 0;
 }
