@@ -65,7 +65,7 @@ inline bool save_robot_data_json(std::ostream& os, int seq_id,
   os << "\t\t\"mask\": " << mask << ",\n";
   os << "\t\t\"robot_time_stamps\": " << std::fixed << std::setprecision(2)
      << timestamp_ms << ",\n";
-  os << std::fixed << std::setprecision(4);
+  os << std::fixed << std::setprecision(7);
   os << "\t\t\"ts_pose_fb\": [" << pose.format(good_looking_fmt) << "],\n";
   return true;
 }
