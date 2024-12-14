@@ -272,7 +272,8 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
   RUT::Timer timer;
   timer.tic(time0);  // so this timer is synced with the main timer
 
-  RUT::Vector6d wrench_fb;
+  int num_ft_sensors = force_sensor_ptrs[id]->getNumSensors();
+  RUT::VectorXd wrench_fb;
 
   if (!_config.mock_hardware) {
     // wait for force sensor to be ready
@@ -337,7 +338,7 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
       }
     } else {
       // mock hardware
-      wrench_fb.setZero();
+      wrench_fb.setZero(num_ft_sensors * 6);
       time_now_ms = timer.toc_ms();
       {
         std::lock_guard<std::mutex> lock(_wrench_buffer_mtxs[id]);

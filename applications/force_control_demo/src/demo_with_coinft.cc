@@ -28,6 +28,7 @@ T deserialize_vector(const YAML::Node& node) {
 
 int main() {
   URRTDE::URRTDEConfig robot_config;
+  CoinFT::CoinFTConfig coinft_config;
   AdmittanceController::AdmittanceControllerConfig admittance_config;
 
   // open file
@@ -46,36 +47,27 @@ int main() {
   try {
     config = YAML::LoadFile(CONFIG_PATH);
     robot_config.deserialize(config["ur_rtde"]);
+    coinft_config.deserialize(config["coin_ft"]);
     deserialize(config["admittance_controller"], admittance_config);
-    ft_use_coinft = config["ft_use_coinft"].as<bool>();
 
-    coinft_port = config["coin_ft"]["port"].as<std::string>();
-    coinft_baud_rate = config["coin_ft"]["baud_rate"].as<unsigned int>();
-    coinft_calibration_file =
-        config["coin_ft"]["calibration_file"].as<std::string>();
-    coinft_PoseSensorTool =
-        config["coin_ft"]["PoseSensorTool"].as<std::vector<double>>();
-    RUT::Vector7d pose_sensor_tool;
-    pose_sensor_tool = RUT::Vector7d::Map(coinft_PoseSensorTool.data(), 7);
-    adj_sensor_tool = RUT::SE32Adj(RUT::pose2SE3(pose_sensor_tool));
   } catch (const std::exception& e) {
     std::cerr << "Failed to load the config file: " << e.what() << std::endl;
     return -1;
   }
 
   URRTDE robot;
+  CoinFT sensor;
   AdmittanceController controller;
   RUT::Timer timer;
   RUT::TimePoint time0 = timer.tic();
   RUT::Vector7d pose, pose_ref, pose_cmd;
-  RUT::Vector6d wrench_S, wrench_T, wrench_WTr;
+  RUT::VectorXd wrench, wrench_WTr;
   wrench_WTr.setZero();
 
   robot.init(time0, robot_config);
   robot.getCartesian(pose);
 
-  CoinFT sensor(coinft_port, coinft_baud_rate, coinft_calibration_file);
-  sensor.startStreaming();
+  sensor.init(time0, coinft_config);
 
   std::cout << "Starting in 2 seconds ..." << std::endl;
   sleep(2.0);
@@ -97,7 +89,11 @@ int main() {
   controller.setForceControlledAxis(Tr, n_af);
 
   pose_ref = pose;
-  wrench_T.setZero();
+
+  while (!sensor.is_data_ready()) {
+    std::cout << "Waiting for data..." << std::endl;
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  }
 
   timer.tic();
 
@@ -107,27 +103,9 @@ int main() {
     robot.getCartesian(pose);
 
     // read wrench
-    // robot.getWrenchTool(wrench);
-    std::vector<double> ftData = sensor.getLatestData();
+    sensor.getWrenchTool(wrench);
 
-    if (!ftData.empty()) {
-      std::cout << "[" << timer.toc_ms() << " ms] "
-                << "Force/Torque Data: ";
-      for (const auto& value : ftData) {
-        std::cout << value << " ";
-      }
-      std::cout << std::endl;
-    } else {
-      std::cout << "No data available yet." << std::endl;
-      continue;
-    }
-    for (size_t i = 0; i < 6; i++) {
-      wrench_S[i] = ftData[i];
-    }
-    // Transform sensor wrench to robot base frame
-    wrench_T = adj_sensor_tool.transpose() * wrench_S;
-
-    controller.setRobotStatus(pose, wrench_T);
+    controller.setRobotStatus(pose, wrench);
 
     // Update robot reference
     controller.setRobotReference(pose_ref, wrench_WTr);
@@ -141,8 +119,8 @@ int main() {
     }
 
     double dt = timer.toc_ms();
-    printf("t = %f, wrench: %f %f %f %f %f %f\n", dt, wrench_T[0], wrench_T[1],
-           wrench_T[2], wrench_T[3], wrench_T[4], wrench_T[5]);
+    printf("t = %f, wrench: %f %f %f %f %f %f\n", dt, wrench[0], wrench[1],
+           wrench[2], wrench[3], wrench[4], wrench[5]);
 
     if (dt > 3000)
       break;

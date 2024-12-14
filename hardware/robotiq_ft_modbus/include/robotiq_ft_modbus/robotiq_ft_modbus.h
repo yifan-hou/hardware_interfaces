@@ -81,7 +81,7 @@ class RobotiqFTModbus : public FTInterfaces {
    * @return  0: no error.
    *   1: still waiting for new data. 2: dead stream.
    */
-  int getWrenchSensor(RUT::Vector6d& wrench) override;
+  int getWrenchSensor(RUT::VectorXd& wrench, int num_of_sensors = 1) override;
   /**
    * Get the wrench in tool frame.
    *
@@ -89,7 +89,7 @@ class RobotiqFTModbus : public FTInterfaces {
    *
    * @return     0: no error. 1: still waiting for new data. 2: dead stream.
    */
-  int getWrenchTool(RUT::Vector6d& wrench_T) override;
+  int getWrenchTool(RUT::VectorXd& wrench_T, int num_of_sensors = 1) override;
   /**
    * Get the tool wrench after tool weight compensation.
    *
@@ -99,26 +99,16 @@ class RobotiqFTModbus : public FTInterfaces {
    * @return     0: no error. 1: still waiting for new data. 2: dead stream.
    *             3: force is too big.
    */
-  int getWrenchNetTool(const RUT::Vector7d& pose,
-                       RUT::Vector6d& wrench_net_T) override;
+  int getWrenchNetTool(const RUT::Vector7d& pose, RUT::VectorXd& wrench_net_T,
+                       int num_of_sensors = 1) override;
 
+  int getNumSensors() override { return 1; }
   // store the results
-  RUT::Vector3d _force, _torque;
   std::mutex _mutex;
-
-  // pre-allocated internal variables
-  RUT::Vector3d _force_old, _torque_old;
-  RUT::Vector6d _wrench_sensor_temp, _wrench_tool_temp;
-  RUT::Matrix3d _R_WT;
-  RUT::Vector3d _GinF, _GinT;
 
   RUT::TimePoint _time0;  ///< high resolution timer.
   std::ofstream _file;
   RobotiqFTModbusConfig _config;
-
-  // monitor pausing of the data stream.
-  // if the data is the same in 50 frames, the stream is considered dead.
-  int _stall_counts;
 
  private:
   // thread

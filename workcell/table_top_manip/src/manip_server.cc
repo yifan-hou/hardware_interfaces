@@ -186,6 +186,7 @@ bool ManipServer::initialize(const std::string& config_path) {
   // create the data buffers
   std::cout << "[ManipServer] Creating data buffers.\n";
   for (int id : _id_list) {
+    int num_ft_sensors = force_sensor_ptrs[id]->getNumSensors();
     _camera_rgb_buffers.push_back(RUT::DataBuffer<Eigen::MatrixXd>());
     _pose_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
     _wrench_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
@@ -204,7 +205,8 @@ bool ManipServer::initialize(const std::string& config_path) {
 
     _pose_buffers[id].initialize(_config.pose_buffer_size, 7, 1,
                                  "pose" + std::to_string(id));
-    _wrench_buffers[id].initialize(_config.wrench_buffer_size, 6, 1,
+    _wrench_buffers[id].initialize(_config.wrench_buffer_size,
+                                   6 * num_ft_sensors, 1,
                                    "wrench" + std::to_string(id));
 
     _waypoints_buffers[id].initialize(-1, 7, 1,

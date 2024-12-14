@@ -47,22 +47,45 @@ Eigen::MatrixXd readMatrixFromCSV(const std::string& filename) {
   return mat;
 }
 
-CoinFT::CoinFT(const std::string& port, unsigned int baud_rate,
-               const std::string& calibration_file)
-    : io(),
-      serial(io, port),
-      running(false),
-      reading_counter(0),
-      tareFlag(false),
-      tareSampleCount(0),
-      tareSampleTarget(100) {
-  serial.set_option(boost::asio::serial_port_base::baud_rate(baud_rate));
+CoinFT::CoinFT() {
+  _force = RUT::Vector3d::Zero();
+  _force_old = RUT::Vector3d::Zero();
+  _torque = RUT::Vector3d::Zero();
+  _torque_old = RUT::Vector3d::Zero();
+  _stall_counts = 0;
+}
+
+CoinFT::~CoinFT() {
+  stopStreaming();
+  closePort();
+}
+
+bool CoinFT::init(RUT::TimePoint time0, const CoinFTConfig& config) {
+  std::cout << "[CoinFT] initializing connection to " << config.port
+            << std::endl;
+  _time0 = time0;
+  _config = config;
+  _flag_started = false;
+
+  _adj_sensor_tool = RUT::SE32Adj(RUT::pose2SE3(config.PoseSensorTool));
+
+  io_ptr = std::make_shared<boost::asio::io_service>();
+  serial_ptr = std::make_shared<boost::asio::serial_port>(*io_ptr, config.port);
+
+  running = false;
+  reading_counter = 0;
+  tareFlag = false;
+  tareSampleCount = 0;
+  tareSampleTarget = 100;
+
+  serial_ptr->set_option(
+      boost::asio::serial_port_base::baud_rate(_config.baud_rate));
   std::cout << "Connected to Comport" << std::endl;
   initializeSensor();
 
   // Load the calibration matrix
   try {
-    calibrationMatrix = readMatrixFromCSV(calibration_file);
+    calibrationMatrix = readMatrixFromCSV(_config.calibration_file);
     std::cout << "Calibration matrix loaded. Dimensions: "
               << calibrationMatrix.rows() << " x " << calibrationMatrix.cols()
               << std::endl;
@@ -76,15 +99,71 @@ CoinFT::CoinFT(const std::string& port, unsigned int baud_rate,
   }
 
   // Initialize tareOffset to zero
-  tareOffset = Eigen::VectorXd::Zero(num_sensors);
+  tareOffset = Eigen::VectorXd::Zero(num_sensor_units);
 
   // Initialize tareSamples
   tareSamples.clear();
+
+  startStreaming();
+
+  return true;
 }
 
-CoinFT::~CoinFT() {
-  stopStreaming();
-  closePort();
+int CoinFT::getWrenchSensor(RUT::VectorXd& wrench, int num_of_sensors) {
+  assert(wrench.size() == 6 * num_of_sensors);
+
+  wrench.head(3) = _force;
+  wrench.tail(3) = _torque;
+
+  double data_change = (wrench.head(3) - _force_old).norm() +
+                       10 * (wrench.tail(3) - _torque_old).norm();
+
+  _force_old = _force;
+  _torque_old = _torque;
+
+  if (data_change > _config.noise_level) {
+    _stall_counts = 0;
+  } else {
+    _stall_counts++;
+    if (_stall_counts >= _config.stall_threshold) {
+      std::cout << "\033[1;31m[CoinFT] Dead Stream\033[0m\n";
+      return 2;
+    }
+  }
+
+  // safety
+  for (int i = 0; i < 6; ++i) {
+    if (abs(wrench[i]) > _config.WrenchSafety[i]) {
+      std::cout << "\033[1;31m[CoinFT] Force magnitude is above the safety "
+                   "threshold:\033[0m\n";
+      std::cout << "  feedback:" << wrench.transpose() << std::endl;
+      std::cout << "  safety limit: " << _config.WrenchSafety.transpose()
+                << std::endl;
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
+int CoinFT::getWrenchTool(RUT::VectorXd& wrench_T, int num_of_sensors) {
+  int flag = this->getWrenchSensor(_wrench_sensor_temp);
+  wrench_T = _adj_sensor_tool.transpose() * _wrench_sensor_temp;
+  return flag;
+}
+
+int CoinFT::getWrenchNetTool(const RUT::Vector7d& pose,
+                             RUT::VectorXd& wrench_net_T, int num_of_sensors) {
+  int flag = this->getWrenchTool(_wrench_tool_temp);
+
+  // compensate for the weight of object
+  _R_WT = RUT::quat2SO3(pose[3], pose[4], pose[5], pose[6]);
+  _GinF = _R_WT.transpose() * _config.Gravity;
+  _GinT = _config.Pcom.cross(_GinF);
+  wrench_net_T.head(3) = _wrench_tool_temp.head(3) + _config.Foffset - _GinF;
+  wrench_net_T.tail(3) = _wrench_tool_temp.tail(3) + _config.Toffset - _GinT;
+
+  return flag;
 }
 
 void CoinFT::initializeSensor() {
@@ -104,17 +183,18 @@ void CoinFT::initializeSensor() {
     throw std::runtime_error("Failed to read packet size.");
   }
 
-  num_sensors = (packet_size - 1) / 2;
-  std::cout << "Number of sensors: " << num_sensors << std::endl;
+  num_sensor_units = (packet_size - 1) / 2;
+  std::cout << "Number of sensor units per CoinFT: " << num_sensor_units
+            << std::endl;
 }
 
 void CoinFT::sendChar(uint8_t cmd) {
-  boost::asio::write(serial, boost::asio::buffer(&cmd, 1));
+  boost::asio::write(*serial_ptr, boost::asio::buffer(&cmd, 1));
 }
 
 std::vector<uint8_t> CoinFT::readData(size_t length) {
   std::vector<uint8_t> buffer(length);
-  boost::asio::read(serial, boost::asio::buffer(buffer));
+  boost::asio::read(*serial_ptr, boost::asio::buffer(buffer));
   return buffer;
 }
 
@@ -142,19 +222,19 @@ void CoinFT::tare() {
 
 void CoinFT::dataAcquisitionLoop() {
   while (running) {
-    std::vector<uint16_t> processedPacket(num_sensors, 0);
-    Eigen::VectorXd rawInput(num_sensors);
-    Eigen::VectorXd sum(num_sensors);
-    Eigen::VectorXd newTareOffset(num_sensors);
-    Eigen::VectorXd adjustedInput(num_sensors);
-    Eigen::VectorXd extendedInput(num_sensors * 2);
+    std::vector<uint16_t> processedPacket(num_sensor_units, 0);
+    Eigen::VectorXd rawInput(num_sensor_units);
+    Eigen::VectorXd sum(num_sensor_units);
+    Eigen::VectorXd newTareOffset(num_sensor_units);
+    Eigen::VectorXd adjustedInput(num_sensor_units);
+    Eigen::VectorXd extendedInput(num_sensor_units * 2);
     Eigen::VectorXd FT;
     try {
       // Read raw data
       readRawData(processedPacket);
 
       // Convert to Eigen vector
-      for (int i = 0; i < num_sensors; ++i) {
+      for (int i = 0; i < num_sensor_units; ++i) {
         rawInput(i) = static_cast<double>(processedPacket[i]);
       }
 
@@ -193,10 +273,10 @@ void CoinFT::dataAcquisitionLoop() {
       }
 
       // Create the extended vector [adjustedInput, adjustedInput.^2]
-      for (int i = 0; i < num_sensors; ++i) {
+      for (int i = 0; i < num_sensor_units; ++i) {
         double value = adjustedInput(i);
         extendedInput(i) = value;
-        extendedInput(i + num_sensors) = value * value;
+        extendedInput(i + num_sensor_units) = value * value;
       }
 
       // Perform the multiplication
@@ -214,11 +294,18 @@ void CoinFT::dataAcquisitionLoop() {
       {
         std::lock_guard<std::mutex> lock(data_mutex);
         latest_data.assign(FT.data(), FT.data() + FT.size());
+
+        _force[0] = latest_data[0];
+        _force[1] = latest_data[1];
+        _force[2] = latest_data[2];
+        _torque[0] = latest_data[3];
+        _torque[1] = latest_data[4];
+        _torque[2] = latest_data[5];
       }
       data_cond
           .notify_one();  // Notify any waiting threads that new data is available
       reading_counter.fetch_add(1, std::memory_order_relaxed);
-
+      _flag_started = true;
     } catch (const std::exception& e) {
       std::cerr << "Error in data acquisition loop: " << e.what() << std::endl;
       running = false;
@@ -238,11 +325,11 @@ bool CoinFT::readRawData(std::vector<uint16_t>& rawData) {
 
   // Read the rest of the packet
   std::vector<uint8_t> buffer(packet_size);
-  boost::asio::read(serial, boost::asio::buffer(buffer));
+  boost::asio::read(*serial_ptr, boost::asio::buffer(buffer));
 
   // Check for ETX byte
   if (buffer[packet_size - 1] == ETX) {
-    for (int i = 0; i < num_sensors; ++i) {
+    for (int i = 0; i < num_sensor_units; ++i) {
       rawData[i] = buffer[2 * i] + 256 * buffer[2 * i + 1];
     }
   } else {
@@ -257,9 +344,9 @@ std::vector<double> CoinFT::getLatestData() {
 }
 
 void CoinFT::closePort() {
-  if (serial.is_open()) {
+  if (serial_ptr->is_open()) {
     sendChar(IDLE);  // Ensure sensor is idle before closing
-    serial.close();
+    serial_ptr->close();
     std::cout << "Port closed" << std::endl;
   }
 }
