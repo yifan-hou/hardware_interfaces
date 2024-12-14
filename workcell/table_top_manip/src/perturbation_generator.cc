@@ -3,14 +3,15 @@
 void PerturbationGenerator::init(const PerturbationGeneratorConfig& config) {
   _config = config;
 
-  _perturbation = RUT::Vector6d::Zero();
+  _perturbation = RUT::VectorXd::Zero(6);
   _rand_dist = std::normal_distribution<double>(0.0, 1.0);
   _status = InternalStatus::NO_PERTURBATION;
 
   _timer.tic();
 }
 
-bool PerturbationGenerator::generate_perturbation(RUT::Vector6d& perturbation) {
+bool PerturbationGenerator::generate_perturbation(RUT::VectorXd& perturbation) {
+  assert(perturbation.size() == 6);
   double elapsed_time = _timer.toc_ms();
 
   if (_status == InternalStatus::NO_PERTURBATION) {

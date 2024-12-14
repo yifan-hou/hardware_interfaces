@@ -2,6 +2,7 @@
 #include <memory>
 
 #include <yaml-cpp/yaml.h>
+#include <Eigen/Dense>
 
 #include <RobotUtilities/spatial_utilities.h>
 #include <RobotUtilities/timer_linux.h>
@@ -138,7 +139,8 @@ int main() {
   RUT::Timer timer;
   RUT::TimePoint time0 = timer.tic();
   RUT::Vector7d pose, pose_ref, pose_cmd;
-  RUT::Vector6d wrench, wrench_WTr;
+  RUT::Vector6d wrench_6d, wrench_WTr;
+  RUT::VectorXd wrench;
 
   robot.init(time0, robot_config);
   robot.getCartesian(pose);
@@ -187,8 +189,8 @@ int main() {
     RUT::TimePoint t_start = robot.rtde_init_period();
     // Update robot status
     robot.getCartesian(pose);
-    robot.getWrenchTool(wrench);
-    controller.setRobotStatus(pose, wrench);
+    robot.getWrenchTool(wrench_6d);
+    controller.setRobotStatus(pose, wrench_6d);
 
     // Update robot reference
     controller.setRobotReference(pose_ref, wrench_WTr);

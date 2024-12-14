@@ -9,10 +9,10 @@ include_directories(include)
 
 # Add the source files
 add_library(COIN_FT src/coin_ft.cpp)
-target_link_libraries(COIN_FT ${Boost_LIBRARIES} Eigen3::Eigen)
+target_link_libraries(COIN_FT ${Boost_LIBRARIES} ${RUT} ${YAMLLib} Eigen3::Eigen)
 
 add_executable(coinft_test src/coinft_test.cpp)
-target_link_libraries(coinft_test COIN_FT)
+target_link_libraries(coinft_test COIN_FT ${RUT})
 
 # Install the library
 install(DIRECTORY include/

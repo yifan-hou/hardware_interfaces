@@ -149,7 +149,6 @@ void* ft_Monitor(void* pParam) {
 RobotiqFTModbus::RobotiqFTModbus() {
   _force = RUT::Vector3d::Zero();
   _force_old = RUT::Vector3d::Zero();
-  _WrenchSafety = RUT::Vector6d::Zero();
   _torque = RUT::Vector3d::Zero();
   _torque_old = RUT::Vector3d::Zero();
   _stall_counts = 0;
@@ -190,7 +189,10 @@ bool RobotiqFTModbus::init(RUT::TimePoint time0,
   return true;
 }
 
-int RobotiqFTModbus::getWrenchSensor(RUT::Vector6d& wrench) {
+int RobotiqFTModbus::getWrenchSensor(RUT::VectorXd& wrench,
+                                     int num_of_sensors) {
+  assert(num_of_sensors == 1);
+  assert(wrench.size() == 6);
   _mutex.lock();
   wrench.head(3) = _force;
   wrench.tail(3) = _torque;
@@ -215,15 +217,17 @@ int RobotiqFTModbus::getWrenchSensor(RUT::Vector6d& wrench) {
   return 0;
 }
 
-int RobotiqFTModbus::getWrenchTool(RUT::Vector6d& wrench_T) {
-  int flag = getWrenchSensor(_wrench_sensor_temp);
+int RobotiqFTModbus::getWrenchTool(RUT::VectorXd& wrench_T,
+                                   int num_of_sensors) {
+  int flag = this->getWrenchSensor(_wrench_sensor_temp);
   wrench_T = _adj_sensor_tool.transpose() * _wrench_sensor_temp;
   return flag;
 }
 
 int RobotiqFTModbus::getWrenchNetTool(const RUT::Vector7d& pose,
-                                      RUT::Vector6d& wrench_net_T) {
-  int flag = getWrenchTool(_wrench_tool_temp);
+                                      RUT::VectorXd& wrench_net_T,
+                                      int num_of_sensors) {
+  int flag = this->getWrenchTool(_wrench_tool_temp);
 
   // compensate for the weight of object
   _R_WT = RUT::quat2SO3(pose[3], pose[4], pose[5], pose[6]);
@@ -234,7 +238,7 @@ int RobotiqFTModbus::getWrenchNetTool(const RUT::Vector7d& pose,
 
   // safety
   for (int i = 0; i < 6; ++i) {
-    if (abs(wrench_net_T[i]) > _WrenchSafety[i])
+    if (abs(wrench_net_T[i]) > _config.WrenchSafety[i])
       return 3;
   }
 

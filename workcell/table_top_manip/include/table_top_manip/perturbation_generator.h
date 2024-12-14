@@ -48,14 +48,14 @@ class PerturbationGenerator {
 
   void init(const PerturbationGeneratorConfig& config);
 
-  bool generate_perturbation(RUT::Vector6d& perturbation);
+  bool generate_perturbation(RUT::VectorXd& perturbation);
 
  private:
   PerturbationGeneratorConfig _config;
   RUT::Timer _timer;
 
   double _current_duration_ms{0.0};
-  RUT::Vector6d _perturbation;
+  RUT::VectorXd _perturbation;
   enum class InternalStatus { PERTURBATION, NO_PERTURBATION };
   InternalStatus _status{InternalStatus::NO_PERTURBATION};
 

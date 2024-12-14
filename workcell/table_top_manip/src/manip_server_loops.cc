@@ -39,7 +39,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
   bool ctrl_flag_saving = false;  // local copy
 
   bool perturbation_is_applied = false;
-  RUT::Vector6d perturbation;
+  RUT::VectorXd perturbation = RUT::VectorXd::Zero(6);
 
   RUT::InterpolationController intp_controller;
   intp_controller.initialize(pose_fb, timer.toc_ms());
@@ -295,8 +295,9 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
   RUT::Timer timer;
   timer.tic(time0);  // so this timer is synced with the main timer
 
-  RUT::Vector6d wrench_fb;
-  RUT::Vector6d wrench_fb_filtered;
+  RUT::VectorXd wrench_fb;
+  RUT::VectorXd wrench_fb_filtered;
+  int num_ft_sensors = force_sensor_ptrs[id]->getNumSensors();
 
   if (!_config.mock_hardware) {
     // wait for force sensor to be ready
@@ -331,7 +332,7 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
   bool ctrl_flag_saving = false;  // local copy
 
   RUT::Vector7d pose_fb;
-  RUT::Vector6d perturbation;
+  RUT::VectorXd perturbation;
 
   RUT::Timer loop_timer;
   loop_timer.set_loop_rate_hz(publish_rate);
@@ -377,7 +378,7 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
       }
     } else {
       // mock hardware
-      wrench_fb.setZero();
+      wrench_fb.setZero(num_ft_sensors * 6);
       wrench_fb += perturbation;  // apply perturbation
       time_now_ms = timer.toc_ms();
       {

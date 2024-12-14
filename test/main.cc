@@ -56,7 +56,7 @@ int main() {
       continue;
     }
     // get data from sensors
-    RUT::Vector6d wrench;
+    RUT::VectorXd wrench;
     robotiq.getWrenchSensor(wrench);
     std::cout << "t = " << timer.toc_ms() << ", wrench: " << wrench.transpose()
               << std::endl;

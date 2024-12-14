@@ -105,7 +105,9 @@ bool ATINetft::init(RUT::TimePoint time0, const ATINetftConfig& config) {
   return true;
 }
 
-int ATINetft::getWrenchSensor(RUT::Vector6d& wrench) {
+int ATINetft::getWrenchSensor(RUT::VectorXd& wrench, int num_of_sensors) {
+  assert(num_of_sensors == 1);
+  assert(wrench.size() == 6);
   wrench.head(3) = _force;
   wrench.tail(3) = _torque;
 
@@ -140,15 +142,16 @@ int ATINetft::getWrenchSensor(RUT::Vector6d& wrench) {
   return 0;
 }
 
-int ATINetft::getWrenchTool(RUT::Vector6d& wrench_T) {
-  int flag = getWrenchSensor(_wrench_sensor_temp);
+int ATINetft::getWrenchTool(RUT::VectorXd& wrench_T, int num_of_sensors) {
+  int flag = this->getWrenchSensor(_wrench_sensor_temp);
   wrench_T = _adj_sensor_tool.transpose() * _wrench_sensor_temp;
   return flag;
 }
 
 int ATINetft::getWrenchNetTool(const RUT::Vector7d& pose,
-                               RUT::Vector6d& wrench_net_T) {
-  int flag = getWrenchTool(_wrench_tool_temp);
+                               RUT::VectorXd& wrench_net_T,
+                               int num_of_sensors) {
+  int flag = this->getWrenchTool(_wrench_tool_temp);
 
   // compensate for the weight of object
   _R_WT = RUT::quat2SO3(pose[3], pose[4], pose[5], pose[6]);

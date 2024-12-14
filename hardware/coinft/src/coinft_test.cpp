@@ -15,6 +15,8 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include "RobotUtilities/spatial_utilities.h"
+#include "RobotUtilities/timer_linux.h"
 #include "coinft/coin_ft.h"  // Include the CoinFT class
 
 int main(int argc, char* argv[]) {
@@ -24,52 +26,43 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  double run_duration = std::stod(argv[1]);  // Convert duration to double
+  double run_duration_ms =
+      1000. * std::stod(argv[1]);  // Convert duration to double
+
+  RUT::Timer timer;
+  RUT::TimePoint time0 = timer.tic();
+
+  CoinFT::CoinFTConfig config;
+  config.port = "/dev/ttyACM0";
+  config.baud_rate = 115200;
+  config.calibration_file =
+      "/home/yifanhou/git/hardware_interfaces/hardware/coinft/config/"
+      "calMat_UFT6.csv";
 
   try {
     // Provide the serial port, baud rate, and calibration matrix file name
     std::cout << "Creating CoinFT object..." << std::endl;
-    CoinFT sensor("/dev/ttyACM0", 115200,
-                  "/home/yifanhou/git/hardware_interfaces/hardware/coinft/"
-                  "config/calMat_UFT6.csv");
+    CoinFT sensor;
+    sensor.init(time0, config);
     std::cout << "CoinFT object created." << std::endl;
-    std::cout << "Starting streaming..." << std::endl;
-    sensor.startStreaming();
-    std::cout << "Streaming started." << std::endl;
-
-    // Start the timer
-    auto start_time = std::chrono::steady_clock::now();
 
     // Main loop
-    while (std::chrono::duration<double>(std::chrono::steady_clock::now() -
-                                         start_time)
-               .count() < run_duration) {
-      std::cout << "debug 1" << std::endl;
-      // Retrieve the force/torque data
-      std::vector<double> ftData = sensor.getLatestData();
-
-      // Output the data
-      if (!ftData.empty()) {
-        std::cout << "[" << std::fixed << std::setprecision(3)
-                  << std::chrono::duration<double>(
-                         std::chrono::steady_clock::now() - start_time)
-                         .count()
-                  << " s] "
-                  << "Force/Torque Data: ";
-        for (const auto& value : ftData) {
-          std::cout << value << " ";
-        }
-        std::cout << std::endl;
-      } else {
-        std::cout << "No data available yet." << std::endl;
+    RUT::VectorXd wrench;
+    while (timer.toc_ms() < run_duration_ms) {
+      if (!sensor.is_data_ready()) {
+        std::cout << "Waiting for data..." << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        continue;
       }
+
+      sensor.getWrenchSensor(wrench);
+      std::cout << "Time: " << timer.toc_ms() << " ms, Wrench: " << wrench
+                << std::endl;
 
       // Sleep for a short duration
       std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 
-    // Stop streaming and clean up
-    sensor.stopStreaming();
   } catch (const std::exception& e) {
     std::cerr << "An error occurred: " << e.what() << std::endl;
   }
