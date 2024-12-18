@@ -22,7 +22,13 @@ enum class RobotOperationMode {
   OPERATION_MODE_JOINT
 };
 
-enum class ForceSensingMode { NONE, FORCE_MODE_ATI, FORCE_MODE_ROBOTIQ };
+enum class ForceSensingMode {
+  NONE,
+  FORCE_MODE_ATI,
+  FORCE_MODE_ROBOTIQ,
+  FORCE_MODE_COINFT
+};
+
 enum class CameraSelection { NONE, GOPRO, REALSENSE };
 
 enum class RandomType {

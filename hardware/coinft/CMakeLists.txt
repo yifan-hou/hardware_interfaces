@@ -8,7 +8,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 include_directories(include)
 
 # Add the source files
-add_library(COIN_FT src/coin_ft.cpp)
+add_library(COIN_FT SHARED src/coin_ft.cpp)
 target_link_libraries(COIN_FT ${Boost_LIBRARIES} ${RUT} ${YAMLLib} Eigen3::Eigen)
 
 add_executable(coinft_test src/coinft_test.cpp)

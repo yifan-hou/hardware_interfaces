@@ -4,6 +4,7 @@ include_directories(
 )
 
 add_library(WSG_GRIPPER SHARED
+  src/wsg_gripper.cpp
   src/WSG50Controller.cpp
   src/WSG50Subject.cpp
   src/WSG50Communicator.cpp

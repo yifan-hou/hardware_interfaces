@@ -70,6 +70,19 @@ inline bool save_robot_data_json(std::ostream& os, int seq_id,
   return true;
 }
 
+inline bool save_eoat_data_json(std::ostream& os, int seq_id,
+                                double timestamp_ms, const RUT::Vector1d& pos) {
+  Eigen::IOFormat good_looking_fmt(Eigen::StreamPrecision, Eigen::DontAlignCols,
+                                   ", ", ", ", "", "", "", "");
+  os << "\t{\n";
+  os << "\t\t\"seq_id\": " << seq_id << ",\n";
+  os << "\t\t\"eoat_time_stamps\": " << std::fixed << std::setprecision(2)
+     << timestamp_ms << ",\n";
+  os << std::fixed << std::setprecision(7);
+  os << "\t\t\"eoat_pos_fb\": [" << pos.format(good_looking_fmt) << "],\n";
+  return true;
+}
+
 inline bool save_wrench_data_json(std::ostream& os, int seq_id,
                                   double timestamp_ms,
                                   const RUT::Vector6d& wrench,

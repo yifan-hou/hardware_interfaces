@@ -40,6 +40,8 @@ coin_ft:
   port: "/dev/ttyACM0"
   baud_rate: 115200
   calibration_file: "/home/yifanhou/git/hardware_interfaces/hardware/coinft/config/calMat_UFT6.csv"
+  num_sensors: 1
+  publish_rate: 360
   noise_level: 0.0
   stall_threshold: 100
   Foffset: [1.88304, -15.861, 11.4758]

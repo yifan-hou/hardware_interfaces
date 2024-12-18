@@ -5,15 +5,18 @@
 
 #include <RobotUtilities/spatial_utilities.h>
 
-bool WSGGripper::initialize(
-    RUT::TimePoint time0,
-    const WSGGripper::WSGGripperConfig& wsg_gripper_config) {
+WSGGripper::WSGGripper() {}
+
+WSGGripper::~WSGGripper() {}
+
+bool WSGGripper::init(RUT::TimePoint time0,
+                      const WSGGripper::WSGGripperConfig& wsg_gripper_config) {
   _time0 = time0;
   _config = wsg_gripper_config;
 
   /* Establish connection with WSG gripper */
-  std::cout << "[WSGGripper] Connecting to gripper at " << config.robot_ip
-            << ", port " << config.port << std::endl;
+  std::cout << "[WSGGripper] Connecting to gripper at " << _config.robot_ip
+            << ", port " << _config.port << std::endl;
   _wsg_ptr = std::make_shared<WSG50Controller>(_config.robot_ip, _config.port);
 
   while (!_wsg_ptr->ready()) {
@@ -28,38 +31,38 @@ bool WSGGripper::initialize(
 }
 
 bool WSGGripper::checkJointTarget(RUT::VectorXd& joints_set) {
-  if (config.js_interface_config.incre_safety_mode !=
+  if (_config.js_interface_config.incre_safety_mode !=
       RobotSafetyMode::SAFETY_MODE_NONE) {
     bool incre_safe = incre_safety_check(joints_set, _joints_set_prev,
-                                         config.js_interface_config.max_incre);
+                                         _config.js_interface_config.max_incre);
     if (!incre_safe) {
       std::cerr << "\033[1;33m[WSGGripper][checkJointTarget] Incremental "
                    "safety check failed.\033[0m\n";
       std::cerr << "set joint: " << joints_set.transpose()
                 << "\nprev set joint: " << _joints_set_prev.transpose()
-                << ", max_incre: " << config.js_interface_config.max_incre
+                << ", max_incre: " << _config.js_interface_config.max_incre
                 << std::endl;
-      if (config.js_interface_config.incre_safety_mode ==
+      if (_config.js_interface_config.incre_safety_mode ==
           RobotSafetyMode::SAFETY_MODE_STOP) {
         std::cerr << "[WSGGripper][checkJointTarget] Returning false."
                   << std::endl;
         return false;
-      } else if (config.js_interface_config.incre_safety_mode ==
+      } else if (_config.js_interface_config.incre_safety_mode ==
                  RobotSafetyMode::SAFETY_MODE_TRUNCATE) {
         // clip the joint set around the previous joint set
         joints_set = _joints_set_prev +
                      (joints_set - _joints_set_prev)
-                         .cwiseMin(config.js_interface_config.max_incre)
-                         .cwiseMax(-config.js_interface_config.max_incre);
+                         .cwiseMin(_config.js_interface_config.max_incre)
+                         .cwiseMax(-_config.js_interface_config.max_incre);
         return false;
       }
     }
   }
 
   bool zone_safe = range_safety_check(
-      joints_set, config.js_interface_config.safe_zone, _joints_set_truncated);
+      joints_set, _config.js_interface_config.safe_zone, _joints_set_truncated);
   if (!zone_safe) {
-    if (config.js_interface_config.range_safety_mode ==
+    if (_config.js_interface_config.range_safety_mode ==
         RobotSafetyMode::SAFETY_MODE_STOP) {
       std::cerr
           << "\033[1;33m[WSGGripper][checkJointTarget] Range safety check "
@@ -67,10 +70,10 @@ bool WSGGripper::checkJointTarget(RUT::VectorXd& joints_set) {
       std::cerr << "[WSGGripper][checkJointTarget] target joints: "
                 << joints_set.transpose() << std::endl;
       std::cerr << "[WSGGripper][checkJointTarget] safe range: "
-                << config.js_interface_config.safe_zone.transpose()
+                << _config.js_interface_config.safe_zone.transpose()
                 << std::endl;
       return false;
-    } else if (config.js_interface_config.range_safety_mode ==
+    } else if (_config.js_interface_config.range_safety_mode ==
                RobotSafetyMode::SAFETY_MODE_TRUNCATE) {
       std::cerr << "[WSGGripper][checkJointTarget] Zone safety check failed. "
                    "Using truncated pose."
@@ -97,7 +100,7 @@ bool WSGGripper::setJoints(const RUT::VectorXd& joints) {
   }
   _joints_set_prev = _joints_set_processed;
 
-  while (!wsgController.ready()) {
+  while (!_wsg_ptr->ready()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
   _wsg_ptr->prePositionFingers(false, _joints_set_processed[0]);
@@ -113,18 +116,16 @@ bool WSGGripper::setJointsPosForce(const RUT::VectorXd& joints,
   }
   _joints_set_prev = _joints_set_processed;
 
-  while (!wsgController.ready()) {
+  while (!_wsg_ptr->ready()) {
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
-  _wsg_ptr->setVelResolvedControl(_joints_set_processed[0], forces[0],
-                                  _config.velResControl_stiffness,
-                                  _config.velResControl_damping);
+  _wsg_ptr->setVelResolvedControl(
+      static_cast<float>(_joints_set_processed[0]),
+      static_cast<float>(forces[0]),
+      static_cast<float>(_config.velResControl_stiffness),
+      static_cast<float>(_config.velResControl_damping));
   // _wsg_ptr->setPDControl(_joints_set_processed[0], _config.PDControl_kp,
   //                        _config.PDControl_kd, forces[0]);
   return true;
 }
-
-WSGGripper::WSGGripper() : m_impl{std::make_unique<Implementation>()} {}
-
-WSGGripper::~WSGGripper() {}

@@ -19,7 +19,8 @@ const std::vector<RobotOperationMode>& all_operation_modes() {
 const std::vector<ForceSensingMode>& all_force_sensing_modes() {
   static const std::vector<ForceSensingMode> modes = {
       ForceSensingMode::NONE, ForceSensingMode::FORCE_MODE_ATI,
-      ForceSensingMode::FORCE_MODE_ROBOTIQ};
+      ForceSensingMode::FORCE_MODE_ROBOTIQ,
+      ForceSensingMode::FORCE_MODE_COINFT};
   return modes;
 }
 
@@ -76,6 +77,8 @@ const char* to_string(const ForceSensingMode e) {
       return "FORCE_MODE_ATI";
     case ForceSensingMode::FORCE_MODE_ROBOTIQ:
       return "FORCE_MODE_ROBOTIQ";
+    case ForceSensingMode::FORCE_MODE_COINFT:
+      return "FORCE_MODE_COINFT";
     default:
       return "INVALID_FORCE_SENSING_MODE";
   }
