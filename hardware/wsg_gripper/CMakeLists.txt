@@ -1,0 +1,29 @@
+include_directories(
+  include
+  ${Boost_INCLUDE_DIRS}
+)
+
+add_library(WSG_GRIPPER SHARED
+  src/WSG50Controller.cpp
+  src/WSG50Subject.cpp
+  src/WSG50Communicator.cpp
+)
+target_link_libraries(WSG_GRIPPER
+  pthread
+  rt
+  ${Boost_LIBRARIES}
+)
+
+
+add_executable(wsg_test
+    src/test.cpp
+)
+target_link_libraries(wsg_test WSG_GRIPPER)
+
+
+install(DIRECTORY include/
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/include/
+)
+install(TARGETS WSG_GRIPPER
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/
+)
