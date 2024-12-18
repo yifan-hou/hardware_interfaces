@@ -46,6 +46,7 @@ class WSGGripper : public JSInterfaces {
 
   WSGGripper();
   ~WSGGripper();
+
   /**
    * Initialize the wsg controller
    *
@@ -55,12 +56,12 @@ class WSGGripper : public JSInterfaces {
    * @return     True if success.
    */
   bool init(RUT::TimePoint time0, const WSGGripperConfig& config);
-  bool checkJointTarget(RUT::Vector7d& pose_xyzq_set);
+  bool checkJointTarget(RUT::VectorXd& pose_xyzq_set);
 
   bool getJoints(RUT::VectorXd& joints) override;
   bool setJoints(const RUT::VectorXd& joints) override;
-  bool setJointsPosForceForce(const RUT::VectorXd& joints,
-                              const RUT::VectorXd& forces) override;
+  bool setJointsPosForce(const RUT::VectorXd& joints,
+                         const RUT::VectorXd& forces) override;
 
  private:
   RUT::TimePoint _time0;

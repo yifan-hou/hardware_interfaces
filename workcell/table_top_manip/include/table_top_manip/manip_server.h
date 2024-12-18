@@ -17,25 +17,30 @@
 
 #include <force_control/admittance_controller.h>
 #include <force_control/config_deserialize.h>
+#include <hardware_interfaces/js_interfaces.h>
 #include <hardware_interfaces/robot_interfaces.h>
 #include <hardware_interfaces/types.h>
 // hardware used in this app
 #include <ati_netft/ati_netft.h>
+#include <coinft/coin_ft.h>
 #include <gopro/gopro.h>
 #include <realsense/realsense.h>
 #include <robotiq_ft_modbus/robotiq_ft_modbus.h>
 #include <ur_rtde/ur_rtde.h>
+#include <wsg_gripper/wsg_gripper.h>
 
 #include <RobotUtilities/data_buffer.h>
 
 struct ManipServerConfig {
   std::string data_folder{""};
   bool run_robot_thread{false};
+  bool run_eoat_thread{false};
   bool run_wrench_thread{false};
   bool run_rgb_thread{false};
   bool plot_rgb{false};
   int rgb_buffer_size{5};
   int pose_buffer_size{100};
+  int eoat_buffer_size{100};
   int wrench_buffer_size{100};
   bool mock_hardware{false};
   bool bimanual{false};
@@ -48,11 +53,13 @@ struct ManipServerConfig {
     try {
       data_folder = node["data_folder"].as<std::string>();
       run_robot_thread = node["run_robot_thread"].as<bool>();
+      run_eoat_thread = node["run_eoat_thread"].as<bool>();
       run_wrench_thread = node["run_wrench_thread"].as<bool>();
       run_rgb_thread = node["run_rgb_thread"].as<bool>();
       plot_rgb = node["plot_rgb"].as<bool>();
       rgb_buffer_size = node["rgb_buffer_size"].as<int>();
       pose_buffer_size = node["pose_buffer_size"].as<int>();
+      eoat_buffer_size = node["eoat_buffer_size"].as<int>();
       wrench_buffer_size = node["wrench_buffer_size"].as<int>();
       mock_hardware = node["mock_hardware"].as<bool>();
       bimanual = node["bimanual"].as<bool>();
@@ -111,6 +118,7 @@ class ManipServer {
   const Eigen::MatrixXd get_camera_rgb(int k, int camera_id = 0);
   const Eigen::MatrixXd get_wrench(int k, int sensor_id = 0);
   const Eigen::MatrixXd get_pose(int k, int robot_id = 0);
+  const Eigen::MatrixXd get_eoat(int k, int robot_id = 0);
 
   // the following functions return the timestamps of
   //  the most recent getter call of the corresponding feedback
@@ -118,6 +126,7 @@ class ManipServer {
   const Eigen::VectorXd get_camera_rgb_timestamps_ms(int id = 0);
   const Eigen::VectorXd get_wrench_timestamps_ms(int id = 0);
   const Eigen::VectorXd get_pose_timestamps_ms(int id = 0);
+  const Eigen::VectorXd get_eoat_timestamps_ms(int id = 0);
 
   double get_timestamp_now_ms();  // access the current hardware time
 
@@ -133,6 +142,9 @@ class ManipServer {
   void schedule_waypoints(const Eigen::MatrixXd& waypoints,
                           const Eigen::VectorXd& timepoints_ms,
                           int robot_id = 0);
+  void schedule_eoat_waypoints(const Eigen::MatrixXd& waypoints,
+                               const Eigen::VectorXd& timepoints_ms,
+                               int robot_id = 0);
   void schedule_stiffness(const Eigen::MatrixXd& stiffness,
                           const Eigen::VectorXd& timepoints_ms,
                           int robot_id = 0);
@@ -154,21 +166,27 @@ class ManipServer {
   // data buffer
   std::vector<RUT::DataBuffer<Eigen::MatrixXd>> _camera_rgb_buffers;
   std::vector<RUT::DataBuffer<Eigen::VectorXd>> _pose_buffers;
+  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _eoat_buffers;
   std::vector<RUT::DataBuffer<Eigen::VectorXd>> _wrench_buffers;
   // action buffer
+  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _eoat_waypoints_buffers;
   std::vector<RUT::DataBuffer<Eigen::VectorXd>> _waypoints_buffers;
   std::vector<RUT::DataBuffer<Eigen::MatrixXd>> _stiffness_buffers;
 
   std::vector<RUT::DataBuffer<double>> _camera_rgb_timestamp_ms_buffers;
   std::vector<RUT::DataBuffer<double>> _pose_timestamp_ms_buffers;
+  std::vector<RUT::DataBuffer<double>> _eoat_timestamp_ms_buffers;
   std::vector<RUT::DataBuffer<double>> _wrench_timestamp_ms_buffers;
   std::vector<RUT::DataBuffer<double>> _waypoints_timestamp_ms_buffers;
+  std::vector<RUT::DataBuffer<double>> _eoat_waypoints_timestamp_ms_buffers;
   std::vector<RUT::DataBuffer<double>> _stiffness_timestamp_ms_buffers;
 
   std::deque<std::mutex> _camera_rgb_buffer_mtxs;
   std::deque<std::mutex> _pose_buffer_mtxs;
+  std::deque<std::mutex> _eoat_buffer_mtxs;
   std::deque<std::mutex> _wrench_buffer_mtxs;
   std::deque<std::mutex> _waypoints_buffer_mtxs;
+  std::deque<std::mutex> _eoat_waypoints_buffer_mtxs;
   std::deque<std::mutex> _stiffness_buffer_mtxs;
 
   // timing
@@ -184,12 +202,14 @@ class ManipServer {
   std::vector<std::shared_ptr<CameraInterfaces>> camera_ptrs;
   std::vector<std::shared_ptr<FTInterfaces>> force_sensor_ptrs;
   std::vector<std::shared_ptr<RobotInterfaces>> robot_ptrs;
+  std::vector<std::shared_ptr<JSInterfaces>> eoat_ptrs;
   // controllers
   std::vector<AdmittanceController> _controllers;
   std::deque<std::mutex> _controller_mtxs;
 
   // threads
   std::vector<std::thread> _robot_threads;
+  std::vector<std::thread> _eoat_threads;
   std::vector<std::thread> _wrench_threads;
   std::vector<std::thread> _rgb_threads;
   std::thread _rgb_plot_thread;
@@ -197,6 +217,7 @@ class ManipServer {
   // control variables to control the threads
   std::vector<std::string> _ctrl_rgb_folders;
   std::vector<std::ofstream> _ctrl_robot_data_streams;
+  std::vector<std::ofstream> _ctrl_eoat_data_streams;
   std::vector<std::ofstream> _ctrl_wrench_data_streams;
   bool _ctrl_flag_running = false;  // flag to terminate the program
   bool _ctrl_flag_saving = false;   // flag for ongoing data collection
@@ -204,15 +225,18 @@ class ManipServer {
 
   // state variable indicating the status of the threads
   std::vector<bool> _states_robot_thread_ready{};
+  std::vector<bool> _states_eoat_thread_ready{};
   std::vector<bool> _states_rgb_thread_ready{};
   std::vector<bool> _states_wrench_thread_ready{};
   bool _state_plot_thread_ready{false};
 
   std::vector<bool> _states_robot_thread_saving{};
+  std::vector<bool> _states_eoat_thread_saving{};
   std::vector<bool> _states_rgb_thread_saving{};
   std::vector<bool> _states_wrench_thread_saving{};
 
   std::vector<int> _states_robot_seq_id{};
+  std::vector<int> _states_eoat_seq_id{};
   std::vector<int> _states_rgb_seq_id{};
   std::vector<int> _states_wrench_seq_id{};
 
@@ -227,9 +251,11 @@ class ManipServer {
   // temp variables storing timestamps of data just being fetched
   std::vector<Eigen::VectorXd> _camera_rgb_timestamps_ms;
   std::vector<Eigen::VectorXd> _pose_timestamps_ms;
+  std::vector<Eigen::VectorXd> _eoat_timestamps_ms;
   std::vector<Eigen::VectorXd> _wrench_timestamps_ms;
 
   void robot_loop(const RUT::TimePoint& time0, int robot_id);
+  void eoat_loop(const RUT::TimePoint& time0, int robot_id);
   void rgb_loop(const RUT::TimePoint& time0, int camera_id);
   void wrench_loop(const RUT::TimePoint& time0, int publish_rate,
                    int sensor_id);

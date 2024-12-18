@@ -263,6 +263,155 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
   std::cout << "[robot thread] Joined." << std::endl;
 }
 
+void ManipServer::eoat_loop(const RUT::TimePoint& time0, int id) {
+  std::string header =
+      "[ManipServer][EoAT thread] " + std::to_string(id) + ": ";
+  std::cout << header + "starting thread.\n";
+
+  RUT::Timer timer;
+  timer.tic(time0);  // so this timer is synced with the main timer
+
+  RUT::VectorXd pos_fb = RUT::VectorXd::Zero(1);
+  RUT::Vector2d eoat_target_waypoint;
+  RUT::Vector2d eoat_cmd;
+  if (!_config.mock_hardware) {
+    eoat_ptrs[id]->getJoints(pos_fb);
+  }
+  eoat_cmd << pos_fb, 0;
+
+  bool ctrl_flag_saving = false;  // local copy
+
+  RUT::InterpolationController intp_controller;
+  intp_controller.initialize(eoat_cmd, timer.toc_ms());
+  std::cout << header
+            << "intp_controller initialized with pos_fb: " << pos_fb.transpose()
+            << std::endl;
+
+  {
+    std::lock_guard<std::mutex> lock(_ctrl_mtx);
+    _states_eoat_thread_ready[id] = true;
+  }
+
+  std::cout << header << "Loop started." << std::endl;
+
+  RUT::Timer loop_timer;
+  loop_timer.set_loop_rate_hz(30);
+  loop_timer.start_timed_loop();
+  while (true) {
+    // Update EoAT status (for query and logging)
+    double time_now_ms;
+    if (!_config.mock_hardware) {
+      // real hardware
+      eoat_ptrs[id]->getJoints(pos_fb);
+      time_now_ms = timer.toc_ms();
+    } else {
+      // mock hardware
+      time_now_ms = timer.toc_ms();
+      pos_fb[0] = eoat_cmd[0];
+    }
+    // save state to eoat fb buffer
+    {
+      std::lock_guard<std::mutex> lock(_eoat_buffer_mtxs[id]);
+      _eoat_buffers[id].put(pos_fb);
+      _eoat_timestamp_ms_buffers[id].put(time_now_ms);
+    }
+
+    // update control target from interpolation controller
+    if (!intp_controller.get_control(time_now_ms, eoat_cmd)) {
+      bool new_wp_found = false;
+      {
+        // need to get new waypoint from buffer
+        std::lock_guard<std::mutex> lock(_eoat_waypoints_buffer_mtxs[id]);
+        while (!_eoat_waypoints_buffers[id].is_empty()) {
+          // keep querying buffer until we get a target that is in the future
+          eoat_target_waypoint = _eoat_waypoints_buffers[id].pop();
+          double target_time_ms =
+              _eoat_waypoints_timestamp_ms_buffers[id].pop();
+          if (target_time_ms > time_now_ms) {
+            intp_controller.set_new_target(eoat_target_waypoint,
+                                           target_time_ms);
+            new_wp_found = true;
+            break;
+          }
+        }
+      }
+      if (!new_wp_found) {
+        // std::cout << "[debug] time_now_ms: " << time_now_ms
+        //           << ", time now: " << timer.toc_ms()
+        //           << ", target_time_ms:" << target_time_ms
+        //           << ", eoat_target_waypoint: "
+        //           << eoat_target_waypoint.transpose() << std::endl;
+        intp_controller.keep_the_last_target(time_now_ms);
+      }
+      intp_controller.get_control(time_now_ms, eoat_cmd);
+    }
+
+    // Send command to EoAT
+    if ((!_config.mock_hardware) && (!eoat_ptrs[id]->setJointsPosForce(
+                                        eoat_cmd.head(1), eoat_cmd.tail(1)))) {
+      std::cout << header << "setJointsPosForce failed. Ending thread."
+                << std::endl;
+      std::cout << header << "last pos_fb: " << pos_fb.transpose() << std::endl;
+      std::cout << header << "last eoat_cmd: " << eoat_cmd.transpose()
+                << std::endl;
+      break;
+    }
+
+    // std::cout << "t = " << timer.toc_ms()
+    //           << ", eoat_cmd: " << eoat_cmd.transpose() << std::endl;
+
+    // logging
+    _ctrl_mtx.lock();
+    if (_ctrl_flag_saving) {
+      _ctrl_mtx.unlock();
+
+      if (!ctrl_flag_saving) {
+        std::cout << header << "Start saving eoat data." << std::endl;
+        json_file_start(_ctrl_eoat_data_streams[id]);
+        ctrl_flag_saving = true;
+      }
+
+      _states_eoat_thread_saving[id] = true;
+      save_eoat_data_json(_ctrl_eoat_data_streams[id], _states_eoat_seq_id[id],
+                          timer.toc_ms(), pos_fb);
+      json_frame_ending(_ctrl_eoat_data_streams[id]);
+      _states_eoat_seq_id[id]++;
+    } else {
+      _ctrl_mtx.unlock();
+
+      if (ctrl_flag_saving) {
+        std::cout << header << "Stop saving eoat data." << std::endl;
+        // save one last frame, so we can do the correct different frame ending
+        save_eoat_data_json(_ctrl_eoat_data_streams[id],
+                            _states_eoat_seq_id[id], timer.toc_ms(), pos_fb);
+        json_file_ending(_ctrl_eoat_data_streams[id]);
+        _ctrl_eoat_data_streams[id].close();
+        ctrl_flag_saving = false;
+        _states_eoat_thread_saving[id] = false;
+      }
+    }
+
+    {
+      std::lock_guard<std::mutex> lock(_ctrl_mtx);
+      if (!_ctrl_flag_running) {
+        std::cout << header
+                  << "_ctrl_flag_running is false. Shuting "
+                     "down this thread."
+                  << std::endl;
+        break;
+      }
+    }
+
+    loop_timer.sleep_till_next();
+  }  // end of while loop
+
+  {
+    std::lock_guard<std::mutex> lock(_ctrl_mtx);
+    _ctrl_flag_running = false;
+  }
+  std::cout << "[EoAT thread] Joined." << std::endl;
+}
+
 void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
                               int id) {
   std::string header =

@@ -36,6 +36,7 @@ class CoinFT : public FTInterfaces {
     unsigned int baud_rate{115200};
     std::string calibration_file{"netft"};
     int num_sensors{1};
+    int publish_rate{360};
     // If the force change is smaller than noise_level for more than stall_threshold frames,
     // the stream is considered dead.
     double noise_level{0.0};
@@ -53,6 +54,7 @@ class CoinFT : public FTInterfaces {
         baud_rate = node["baud_rate"].as<unsigned int>();
         calibration_file = node["calibration_file"].as<std::string>();
         num_sensors = node["num_sensors"].as<int>();
+        publish_rate = node["publish_rate"].as<int>();
         noise_level = node["noise_level"].as<double>();
         stall_threshold = node["stall_threshold"].as<int>();
         Foffset = RUT::deserialize_vector<RUT::Vector3d>(node["Foffset"]);

@@ -30,6 +30,8 @@ target_link_libraries(ManipServer
   ROBOTIQ_FT_HW
   RQSensorLinux
   UR_RTDE
+  WSG_GRIPPER
+  COIN_FT
   HI_COMMON
   ${RUT}
   ${FORCE_CONTROLLERS}
