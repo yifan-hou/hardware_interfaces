@@ -30,8 +30,9 @@ add_subdirectory(hardware/ati_netft)
 add_subdirectory(hardware/coinft)
 add_subdirectory(hardware/realsense)
 add_subdirectory(hardware/gopro)
-add_subdirectory(hardware/ur_rtde)
 add_subdirectory(hardware/robotiq_ft_modbus)
+add_subdirectory(hardware/ur_rtde)
+add_subdirectory(hardware/wsg_gripper)
 
 # workcell to build
 # include every "include" directory under /hardware/*
