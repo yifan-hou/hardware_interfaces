@@ -69,8 +69,7 @@ target_include_directories(test_hardware_interfaces PRIVATE
 target_link_libraries(test_hardware_interfaces
   ${Boost_LIBRARIES}
   ${RUT}
-  ATI_NETFT
-  REALSENSE
-  ROBOTIQ_FT_HW
-  spdlog::spdlog
+  WSG_GRIPPER
+  COIN_FT
+  # spdlog::spdlog
 )

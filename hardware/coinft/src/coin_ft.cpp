@@ -69,8 +69,14 @@ bool CoinFT::init(RUT::TimePoint time0, const CoinFTConfig& config) {
 
   _adj_sensor_tool = RUT::SE32Adj(RUT::pose2SE3(config.PoseSensorTool));
 
-  io_ptr = std::make_shared<boost::asio::io_service>();
-  serial_ptr = std::make_shared<boost::asio::serial_port>(*io_ptr, config.port);
+  try {
+    io_ptr = std::make_shared<boost::asio::io_service>();
+    serial_ptr =
+        std::make_shared<boost::asio::serial_port>(*io_ptr, config.port);
+  } catch (const std::exception& e) {
+    std::cerr << "[CoinFT] Failed to open port " << config.port
+              << ". Error: " << e.what() << '\n';
+  }
 
   running = false;
   reading_counter = 0;
