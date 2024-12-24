@@ -2,112 +2,86 @@
 #include <exception>
 #include <iostream>
 
-#include "wsg_gripper/WSG50Controller.h"
+#include <RobotUtilities/spatial_utilities.h>
+#include <RobotUtilities/timer_linux.h>
+#include "wsg_gripper/wsg_gripper.h"
+#include "wsg_gripper/wsg_gripper_driver.h"
 
-// #include <boost/thread/thread.hpp>
+// int main() {
+//   WSGGripper::WSGGripperConfig config;
+//   config.robot_ip = "192.168.1.101";
+//   config.port = "1000";
+//   config.velResControl_stiffness = 10.0;
+//   config.velResControl_damping = 0.001;
+//   config.PDControl_kp = 10.0;
+//   config.PDControl_kd = 0.001;
+//   config.js_interface_config.num_joints = 1;
+//   config.js_interface_config.range_safety_mode =
+//       RobotSafetyMode::SAFETY_MODE_STOP;
+//   config.js_interface_config.incre_safety_mode =
+//       RobotSafetyMode::SAFETY_MODE_STOP;
+//   config.js_interface_config.max_incre = 80;
+//   config.js_interface_config.safe_zone = {5, 90};
 
-#ifndef PI
-#define PI 3.1415926535897932384626433832795
-#endif
+//   WSGGripper wsg_gripper;
+//   RUT::Timer timer;
+//   wsg_gripper.init(timer.tic(), config);
 
-#ifndef RAD
-#define RAD(A) ((A) * PI / 180.0)
-#endif
+//   RUT::VectorXd fb_pos = RUT::VectorXd::Zero(1);
+//   RUT::VectorXd target_pos = RUT::VectorXd::Zero(1);
+//   RUT::VectorXd target_force = RUT::VectorXd::Zero(1);
+//   target_pos[0] = 40;
+//   target_force[0] = 10;
 
-#ifndef DEG
-#define DEG(A) ((A) * 180.0 / PI)
-#endif
+//   wsg_gripper.setJointsPosForce(target_pos, target_force);
+//   // for (int i = 0; i < 200; i++) {
+//   //   wsg_gripper.setJointsPosForce(target_pos, target_force);
+//   //   std::cout << i << ", Time_ms: " << timer.toc_ms() << std::endl;
+//   // }
+//   std::cout << "Done" << std::endl;
 
-int main(int argc, char* argv[]) {
-  // create controller
-  //
-  WSG50Controller wsgController("192.168.1.101", "1000");
+//   return 0;
+// }
 
-  while (!wsgController.ready()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
-  }
+int main() {
+  std::string robot_ip = "192.168.2.111";
+  std::string port = "1000";
+  float pos_target = 20;
+  float force_target = 0;
+  float velResControl_kp = 3;
+  float velResControl_kf = 10;
+  float PDControl_kp = 10.0;
+  float PDControl_kd = 0.001;
 
-  // homing
-  wsgController.homing(80.0);
+  std::cout << "[main] Starting connection" << std::endl;
+  WSGGripperDriver wsg(robot_ip, port);
+  std::cout << "[main] Connection established." << std::endl;
 
-  while (!wsgController.ready()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
-  }
+  // get states
+  std::cout << "[main] Getting state" << std::endl;
+  unsigned char cmd_id = wsg.setEmpty();
+  WSGState state = wsg.getState(cmd_id);
+  wsg.printState(state);
 
-  // // move to position
-  std::cout << "Setting force limit." << std::endl;
-  wsgController.setForceLimit(10.0);  // set the grasping-force-limit
-  while (!wsgController.ready()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-  }
-  // std::cout << "Grasping." << std::endl;
-  // wsgController.grasp(0.0, 400.0);
-  // while (!wsgController.ready()) {
-  //   std::this_thread::sleep_for(std::chrono::milliseconds(200));
-  // }
+  // set vel resolved control
+  RUT::Timer timer;
+  timer.tic();
+  std::cout << "[main] Setting vel resolved control" << std::endl;
+  int count = 0;
+  while (timer.toc_ms() < 2000) {
+    cmd_id = wsg.setVelResolvedControl(pos_target, force_target,
+                                       velResControl_kp, velResControl_kf);
+    state = wsg.getState(cmd_id);
+    // wsg.printState(state);
 
-  // std::cout << "Press Enter to continue." << std::endl;
-  // getchar();
-  // return 0;
-  // std::cout << "Done." << std::endl;
-
-  // test PD loop
-  double stiffness = 1;  // N/mm
-  double kd = 1;
-  double pos_target = 0.0;
-  double speedlimit = 400.0;
-  double forcelimit = 50;
-
-  auto time0 = std::chrono::duration_cast<std::chrono::milliseconds>(
-                   std::chrono::system_clock::now().time_since_epoch())
-                   .count();
-
-  wsgController.grasp(pos_target, speedlimit);
-  std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-
-  while (true) {
-    // double pos = wsgController.getWidth();
-    // double speed = wsgController.getSpeed();
-    // double force = wsgController.getForce();
-
-    // double pos_cmd = pos_target + force / stiffness - speed * kd;
-
-    // wsgController.prePositionFingers(false, pos_cmd, speedlimit);
-
-    // std::cout << "speed: " << speed << ", force: " << force
-    //           << ", pos_cmd: " << pos_cmd << ", time: "
-    //           << std::chrono::duration_cast<std::chrono::milliseconds>(
-    //                  std::chrono::system_clock::now().time_since_epoch())
-    //                      .count() -
-    //                  time0
-    //           << std::endl;
-    auto time_now = std::chrono::duration_cast<std::chrono::milliseconds>(
-                        std::chrono::system_clock::now().time_since_epoch())
-                        .count() -
-                    time0;
-    int time_ms = time_now % 2000;
-    if (time_ms > 1000) {
-      forcelimit = 80;
-    } else {
-      forcelimit = 5;
-    }
-    wsgController.setForceLimit(forcelimit);
-    while (!wsgController.ready()) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(2));
-    }
-    wsgController.grasp(pos_target, speedlimit);
-    std::cout << "time_ms: " << time_ms << ", forcelimit: " << forcelimit
+    std::cout << "Count: " << ++count << ", Time: " << timer.toc_ms()
+              << ", State: " << state.state << ", Pos: " << state.position
+              << ", Vel: " << state.velocity << ", Force: " << state.force_motor
               << std::endl;
-
-    while (!wsgController.ready()) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(2));
-    }
-    // std::this_thread::sleep_for(std::chrono::milliseconds(30));
-
-    if (time_now > 10000) {
-      break;
-    }
   }
+
+  wsg.disconnect();
+  std::cout << "Done" << std::endl;
 
   return 0;
 }

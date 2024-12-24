@@ -12,7 +12,7 @@
 #include <RobotUtilities/timer_linux.h>
 
 #include "hardware_interfaces/js_interfaces.h"
-#include "wsg_gripper/WSG50Controller.h"
+#include "wsg_gripper/wsg_gripper_driver.h"
 
 class WSGGripper : public JSInterfaces {
  public:
@@ -66,7 +66,7 @@ class WSGGripper : public JSInterfaces {
  private:
   RUT::TimePoint _time0;
   WSGGripperConfig _config;
-  std::shared_ptr<WSG50Controller> _wsg_ptr;
+  std::shared_ptr<WSGGripperDriver> _wsg_ptr;
 
   // internal variables
   Eigen::VectorXd _joints_set_prev;

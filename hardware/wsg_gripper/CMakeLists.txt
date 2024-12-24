@@ -5,9 +5,7 @@ include_directories(
 
 add_library(WSG_GRIPPER SHARED
   src/wsg_gripper.cpp
-  src/WSG50Controller.cpp
-  src/WSG50Subject.cpp
-  src/WSG50Communicator.cpp
+  src/wsg_gripper_driver.cpp
 )
 target_link_libraries(WSG_GRIPPER
   pthread
@@ -19,7 +17,7 @@ target_link_libraries(WSG_GRIPPER
 add_executable(wsg_test
     src/test.cpp
 )
-target_link_libraries(wsg_test WSG_GRIPPER)
+target_link_libraries(wsg_test WSG_GRIPPER ${RUT})
 
 
 install(DIRECTORY include/

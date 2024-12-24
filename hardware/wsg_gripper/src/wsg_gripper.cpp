@@ -5,7 +5,11 @@
 
 #include <RobotUtilities/spatial_utilities.h>
 
-WSGGripper::WSGGripper() {}
+WSGGripper::WSGGripper() {
+  _joints_set_prev = RUT::VectorXd::Zero(1);
+  _joints_set_truncated = RUT::VectorXd::Zero(1);
+  _joints_set_processed = RUT::VectorXd::Zero(1);
+}
 
 WSGGripper::~WSGGripper() {}
 
@@ -17,16 +21,11 @@ bool WSGGripper::init(RUT::TimePoint time0,
   /* Establish connection with WSG gripper */
   std::cout << "[WSGGripper] Connecting to gripper at " << _config.robot_ip
             << ", port " << _config.port << std::endl;
-  _wsg_ptr = std::make_shared<WSG50Controller>(_config.robot_ip, _config.port);
-
-  while (!_wsg_ptr->ready()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
-  }
+  _wsg_ptr = std::make_shared<WSGGripperDriver>(_config.robot_ip, _config.port);
   std::cout << "[WSGGripper] Connection established." << std::endl;
 
   // read current state
   assert(getJoints(_joints_set_prev));
-
   return true;
 }
 
@@ -85,10 +84,7 @@ bool WSGGripper::checkJointTarget(RUT::VectorXd& joints_set) {
 }
 
 bool WSGGripper::getJoints(RUT::VectorXd& joints) {
-  while (!_wsg_ptr->ready()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  }
-  joints[0] = _wsg_ptr->getWidth();
+  // joints[0] = _wsg_ptr->getWidth();
   return true;
 }
 
@@ -100,10 +96,7 @@ bool WSGGripper::setJoints(const RUT::VectorXd& joints) {
   }
   _joints_set_prev = _joints_set_processed;
 
-  while (!_wsg_ptr->ready()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  }
-  _wsg_ptr->prePositionFingers(false, _joints_set_processed[0]);
+  // _wsg_ptr->prePositionFingers(false, _joints_set_processed[0]);
   return true;
 }
 
@@ -116,16 +109,14 @@ bool WSGGripper::setJointsPosForce(const RUT::VectorXd& joints,
   }
   _joints_set_prev = _joints_set_processed;
 
-  while (!_wsg_ptr->ready()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  }
-
-  _wsg_ptr->setVelResolvedControl(
-      static_cast<float>(_joints_set_processed[0]),
-      static_cast<float>(forces[0]),
-      static_cast<float>(_config.velResControl_stiffness),
-      static_cast<float>(_config.velResControl_damping));
-  // _wsg_ptr->setPDControl(_joints_set_processed[0], _config.PDControl_kp,
-  //                        _config.PDControl_kd, forces[0]);
+  // _wsg_ptr->setPDControl(static_cast<float>(_joints_set_processed[0]),
+  //                        static_cast<float>(_config.PDControl_kp),
+  //                        static_cast<float>(_config.PDControl_kd),
+  //                        static_cast<float>(forces[0]));
+  // _wsg_ptr->setVelResolvedControl(
+  //     static_cast<float>(_joints_set_processed[0]),
+  //     static_cast<float>(forces[0]),
+  //     static_cast<float>(_config.velResControl_stiffness),
+  //     static_cast<float>(_config.velResControl_damping));
   return true;
 }
