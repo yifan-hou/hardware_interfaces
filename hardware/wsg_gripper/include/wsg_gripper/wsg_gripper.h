@@ -19,8 +19,8 @@ class WSGGripper : public JSInterfaces {
   struct WSGGripperConfig {
     std::string robot_ip{};
     std::string port{};
-    float velResControl_stiffness{0.0};
-    float velResControl_damping{0.0};
+    float velResControl_kp{0.0};
+    float velResControl_kf{0.0};
     float PDControl_kp{0.0};
     float PDControl_kd{0.0};
     JSInterfaceConfig js_interface_config{};
@@ -29,8 +29,8 @@ class WSGGripper : public JSInterfaces {
       try {
         robot_ip = node["robot_ip"].as<std::string>();
         port = node["port"].as<std::string>();
-        velResControl_stiffness = node["velResControl_stiffness"].as<float>();
-        velResControl_damping = node["velResControl_damping"].as<float>();
+        velResControl_kp = node["velResControl_kp"].as<float>();
+        velResControl_kf = node["velResControl_kf"].as<float>();
         PDControl_kp = node["PDControl_kp"].as<float>();
         PDControl_kd = node["PDControl_kd"].as<float>();
 
@@ -58,8 +58,10 @@ class WSGGripper : public JSInterfaces {
   bool init(RUT::TimePoint time0, const WSGGripperConfig& config);
   bool checkJointTarget(RUT::VectorXd& pose_xyzq_set);
 
+  // only read the stored feedback
   bool getJoints(RUT::VectorXd& joints) override;
   bool setJoints(const RUT::VectorXd& joints) override;
+  // set the target position and force, and update feedback internally
   bool setJointsPosForce(const RUT::VectorXd& joints,
                          const RUT::VectorXd& forces) override;
 
@@ -72,6 +74,9 @@ class WSGGripper : public JSInterfaces {
   Eigen::VectorXd _joints_set_prev;
   Eigen::VectorXd _joints_set_truncated;
   Eigen::VectorXd _joints_set_processed;
+
+  // feedback
+  WSGState _wsg_state;
 };
 
 #endif

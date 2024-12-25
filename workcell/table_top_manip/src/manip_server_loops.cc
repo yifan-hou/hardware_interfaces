@@ -295,7 +295,7 @@ void ManipServer::eoat_loop(const RUT::TimePoint& time0, int id) {
   std::cout << header << "Loop started." << std::endl;
 
   RUT::Timer loop_timer;
-  loop_timer.set_loop_rate_hz(30);
+  loop_timer.set_loop_rate_hz(100);
   loop_timer.start_timed_loop();
   while (true) {
     // Update EoAT status (for query and logging)
@@ -347,6 +347,14 @@ void ManipServer::eoat_loop(const RUT::TimePoint& time0, int id) {
     }
 
     // Send command to EoAT
+    double force_fb = 0;
+    {
+      std::lock_guard<std::mutex> lock(_wrench_fb_mtxs[id]);
+      // TODO: currently, assuming the grasping force is captured by Z axis of the first wrench sensor.
+      // Need to find a better way to specify it.
+      force_fb = _wrench_fb[id][2];
+    }
+    eoat_cmd[1] -= force_fb;
     if ((!_config.mock_hardware) && (!eoat_ptrs[id]->setJointsPosForce(
                                         eoat_cmd.head(1), eoat_cmd.tail(1)))) {
       std::cout << header << "setJointsPosForce failed. Ending thread."
@@ -484,6 +492,10 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
         std::lock_guard<std::mutex> lock(_wrench_buffer_mtxs[id]);
         _wrench_buffers[id].put(wrench_fb);
         _wrench_timestamp_ms_buffers[id].put(time_now_ms);
+      }
+      {
+        std::lock_guard<std::mutex> lock(_wrench_fb_mtxs[id]);
+        _wrench_fb[id] = wrench_fb;
       }
     } else {
       // mock hardware

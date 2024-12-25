@@ -248,6 +248,10 @@ class ManipServer {
   std::vector<Eigen::VectorXd> _poses_fb;
   std::deque<std::mutex> _poses_fb_mtxs;
 
+  // shared variables between eoat thread and wrench thread
+  std::vector<Eigen::VectorXd> _wrench_fb;
+  std::deque<std::mutex> _wrench_fb_mtxs;
+
   // temp variables storing timestamps of data just being fetched
   std::vector<Eigen::VectorXd> _camera_rgb_timestamps_ms;
   std::vector<Eigen::VectorXd> _pose_timestamps_ms;
