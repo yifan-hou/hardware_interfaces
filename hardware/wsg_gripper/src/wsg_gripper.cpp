@@ -24,7 +24,9 @@ bool WSGGripper::init(RUT::TimePoint time0,
   _wsg_ptr = std::make_shared<WSGGripperDriver>(_config.robot_ip, _config.port);
   std::cout << "[WSGGripper] Connection established." << std::endl;
 
-  // read current state
+  // read current state, initialize _joints_set_prev
+  unsigned char cmd_id = _wsg_ptr->setEmpty();
+  _wsg_state = _wsg_ptr->getState(cmd_id);
   assert(getJoints(_joints_set_prev));
   return true;
 }
@@ -84,11 +86,14 @@ bool WSGGripper::checkJointTarget(RUT::VectorXd& joints_set) {
 }
 
 bool WSGGripper::getJoints(RUT::VectorXd& joints) {
-  // joints[0] = _wsg_ptr->getWidth();
+  assert(joints.size() == 1);
+  joints[0] = static_cast<double>(_wsg_state.position);
   return true;
 }
 
 bool WSGGripper::setJoints(const RUT::VectorXd& joints) {
+  // TODO: Implement setJoints command in wsg_gripper_driver
+  throw std::runtime_error("Not implemented.");
   // safety checks
   _joints_set_processed = joints;
   if (!checkJointTarget(_joints_set_processed)) {
@@ -96,7 +101,10 @@ bool WSGGripper::setJoints(const RUT::VectorXd& joints) {
   }
   _joints_set_prev = _joints_set_processed;
 
-  // _wsg_ptr->prePositionFingers(false, _joints_set_processed[0]);
+  // _wsg_ptr->setPDControl(static_cast<float>(_joints_set_processed[0]),
+  //                        static_cast<float>(_config.PDControl_kp),
+  //                        static_cast<float>(_config.PDControl_kd),
+  //                        static_cast<float>(forces[0]));
   return true;
 }
 
@@ -113,10 +121,11 @@ bool WSGGripper::setJointsPosForce(const RUT::VectorXd& joints,
   //                        static_cast<float>(_config.PDControl_kp),
   //                        static_cast<float>(_config.PDControl_kd),
   //                        static_cast<float>(forces[0]));
-  // _wsg_ptr->setVelResolvedControl(
-  //     static_cast<float>(_joints_set_processed[0]),
-  //     static_cast<float>(forces[0]),
-  //     static_cast<float>(_config.velResControl_stiffness),
-  //     static_cast<float>(_config.velResControl_damping));
+  unsigned char cmd_id = _wsg_ptr->setVelResolvedControl(
+      static_cast<float>(_joints_set_processed[0]),
+      static_cast<float>(forces[0]),
+      static_cast<float>(_config.velResControl_kp),
+      static_cast<float>(_config.velResControl_kf));
+  _wsg_state = _wsg_ptr->getState(cmd_id);
   return true;
 }

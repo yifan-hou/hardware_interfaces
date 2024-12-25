@@ -11,8 +11,8 @@
 //   WSGGripper::WSGGripperConfig config;
 //   config.robot_ip = "192.168.1.101";
 //   config.port = "1000";
-//   config.velResControl_stiffness = 10.0;
-//   config.velResControl_damping = 0.001;
+//   config.velResControl_kp = 10.0;
+//   config.velResControl_kf = 0.001;
 //   config.PDControl_kp = 10.0;
 //   config.PDControl_kd = 0.001;
 //   config.js_interface_config.num_joints = 1;
