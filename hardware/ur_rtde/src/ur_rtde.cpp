@@ -16,6 +16,8 @@ struct URRTDE::Implementation {
 
   std::vector<double>
       tcp_pose_feedback{};  // std vector to be compatible with ur_rtde lib
+  std::vector<double>
+      tcp_speed_feedback{};  // std vector to be compatible with ur_rtde lib
   std::vector<double> tcp_pose_command{};
   RUT::Vector7d pose_xyzq_set_prev{};
 
@@ -34,6 +36,7 @@ struct URRTDE::Implementation {
 
   bool initialize(RUT::TimePoint time0, const URRTDE::URRTDEConfig& config);
   bool getCartesian(RUT::Vector7d& pose_xyzq);
+  bool getCartesianVelocity(RUT::Vector6d& vel);
   bool getWrenchBaseOnTool(RUT::Vector6d& wrench);
   bool getWrenchTool(RUT::Vector6d& wrench);
   bool checkCartesianTarget(RUT::Vector7d& pose_xyzq_set);
@@ -45,6 +48,7 @@ struct URRTDE::Implementation {
 
 URRTDE::Implementation::Implementation() {
   tcp_pose_feedback.resize(6);
+  tcp_speed_feedback.resize(6);
   tcp_pose_command.resize(6);
 }
 
@@ -131,6 +135,15 @@ bool URRTDE::Implementation::getCartesian(RUT::Vector7d& pose_xyzq) {
 
   pose_xyzq.tail<4>() = RUT::aa2quat(angle, v_axis_receive);
 
+  return true;
+}
+
+bool URRTDE::Implementation::getCartesianVelocity(RUT::Vector6d& velocity) {
+  tcp_speed_feedback = rtde_receive_ptr->getActualTCPSpeed();  // std vector
+
+  for (int i = 0; i < 6; i++) {
+    velocity[i] = tcp_speed_feedback[i];
+  }
   return true;
 }
 
@@ -280,6 +293,10 @@ bool URRTDE::init(RUT::TimePoint time0, const URRTDEConfig& ur_rtde_config) {
 
 bool URRTDE::getCartesian(RUT::Vector7d& pose_xyzq) {
   return m_impl->getCartesian(pose_xyzq);
+}
+
+bool URRTDE::getCartesianVelocity(RUT::Vector6d& velocity) {
+  return m_impl->getCartesianVelocity(velocity);
 }
 
 bool URRTDE::getWrenchBaseOnTool(RUT::Vector6d& wrench) {

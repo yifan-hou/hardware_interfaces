@@ -15,11 +15,13 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
 
   RUT::Vector7d pose_fb;
   RUT::Vector7d pose_target_waypoint;
+  RUT::Vector6d vel_fb;
   RUT::Vector7d force_control_ref_pose;
   RUT::Vector7d pose_rdte_cmd;
   // The following two initial values are used in mock hardware mode
   pose_fb << id, 0, 0, 1, 0, 0, 0;
   pose_rdte_cmd = pose_fb;
+  vel_fb << 0, 0, 0, 0, 0, 0;
 
   RUT::Vector6d wrench_fb_ur, wrench_WTr;
   RUT::Matrix6d stiffness;
@@ -66,6 +68,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       // real hardware
       t_start = urrtde_ptr->rtde_init_period();
       urrtde_ptr->getCartesian(pose_fb);
+      urrtde_ptr->getCartesianVelocity(vel_fb);
       time_now_ms = timer.toc_ms();
       loop_profiler.stop("compute");
       loop_profiler.start();
@@ -81,6 +84,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       // mock hardware
       time_now_ms = timer.toc_ms();
       pose_fb = pose_rdte_cmd;
+      vel_fb.setZero();
       wrench_fb_ur.setZero();
     }
     // buffer robot pose
@@ -90,6 +94,11 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       std::lock_guard<std::mutex> lock(_pose_buffer_mtxs[id]);
       _pose_buffers[id].put(pose_fb);
       _pose_timestamp_ms_buffers[id].put(time_now_ms);
+    }
+    {
+      std::lock_guard<std::mutex> lock(_vel_buffer_mtxs[id]);
+      _vel_buffers[id].put(vel_fb);
+      _vel_timestamp_ms_buffers[id].put(time_now_ms);
     }
     loop_profiler.stop("lock");
     loop_profiler.start();

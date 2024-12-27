@@ -249,6 +249,7 @@ bool ManipServer::initialize(const std::string& config_path) {
     int num_ft_sensors = force_sensor_ptrs[id]->getNumSensors();
     _camera_rgb_buffers.push_back(RUT::DataBuffer<Eigen::MatrixXd>());
     _pose_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
+    _vel_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
     _eoat_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
     _wrench_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
     _wrench_filtered_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
@@ -258,6 +259,7 @@ bool ManipServer::initialize(const std::string& config_path) {
 
     _camera_rgb_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
     _pose_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
+    _vel_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
     _eoat_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
     _wrench_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
     _wrench_filtered_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
@@ -269,8 +271,11 @@ bool ManipServer::initialize(const std::string& config_path) {
         _config.rgb_buffer_size, 3 * _config.output_rgb_hw[0],
         _config.output_rgb_hw[1], "camera_rgb" + std::to_string(id));
 
-    _pose_buffers[id].initialize(_config.pose_buffer_size, 7, 1,  // xyzqwqxqyqz
+    _pose_buffers[id].initialize(_config.pose_buffer_size, 7,
+                                 1,  //xyz qwqxqyqz
                                  "pose" + std::to_string(id));
+    _vel_buffers[id].initialize(_config.pose_buffer_size, 6, 1,  // xyz rxryrz
+                                "vel" + std::to_string(id));
     _eoat_buffers[id].initialize(_config.eoat_buffer_size, 2, 1,  // pos, force
                                  "eoat" + std::to_string(id));
     _wrench_buffers[id].initialize(_config.wrench_buffer_size,
@@ -293,6 +298,9 @@ bool ManipServer::initialize(const std::string& config_path) {
     _pose_timestamp_ms_buffers[id].initialize(
         _config.pose_buffer_size, 1, 1,
         "pose" + std::to_string(id) + "_timestamp_ms");
+    _vel_timestamp_ms_buffers[id].initialize(
+        _config.pose_buffer_size, 1, 1,  // pose/vel buffers have the same size
+        "vel" + std::to_string(id) + "_timestamp_ms");
     _eoat_timestamp_ms_buffers[id].initialize(
         _config.eoat_buffer_size, 1, 1,
         "eoat" + std::to_string(id) + "_timestamp_ms");
@@ -314,6 +322,7 @@ bool ManipServer::initialize(const std::string& config_path) {
   for (int id : _id_list) {
     _camera_rgb_buffer_mtxs.emplace_back();
     _pose_buffer_mtxs.emplace_back();
+    _vel_buffer_mtxs.emplace_back();
     _eoat_buffer_mtxs.emplace_back();
     _wrench_buffer_mtxs.emplace_back();
     _wrench_filtered_buffer_mtxs.emplace_back();
@@ -354,6 +363,7 @@ bool ManipServer::initialize(const std::string& config_path) {
     _wrench_fb_mtxs.emplace_back();
     _camera_rgb_timestamps_ms.push_back(Eigen::VectorXd());
     _pose_timestamps_ms.push_back(Eigen::VectorXd());
+    _vel_timestamps_ms.push_back(Eigen::VectorXd());
     _eoat_timestamps_ms.push_back(Eigen::VectorXd());
     _wrench_timestamps_ms.push_back(Eigen::VectorXd());
     _wrench_filtered_timestamps_ms.push_back(Eigen::VectorXd());
@@ -537,6 +547,12 @@ const Eigen::MatrixXd ManipServer::get_pose(int k, int id) {
   return _pose_buffers[id].get_last_k(k);
 }
 
+const Eigen::MatrixXd ManipServer::get_vel(int k, int id) {
+  std::lock_guard<std::mutex> lock(_vel_buffer_mtxs[id]);
+  _vel_timestamps_ms[id] = _vel_timestamp_ms_buffers[id].get_last_k(k);
+  return _vel_buffers[id].get_last_k(k);
+}
+
 const int ManipServer::get_test() {
   _test_timestamp_ms = _timer.toc_ms();
   return 0;
@@ -553,6 +569,9 @@ const Eigen::VectorXd ManipServer::get_wrench_filtered_timestamps_ms(int id) {
 }
 const Eigen::VectorXd ManipServer::get_pose_timestamps_ms(int id) {
   return _pose_timestamps_ms[id];
+}
+const Eigen::VectorXd ManipServer::get_vel_timestamps_ms(int id) {
+  return _vel_timestamps_ms[id];
 }
 const Eigen::VectorXd ManipServer::get_eoat_timestamps_ms(int id) {
   return _eoat_timestamps_ms[id];
