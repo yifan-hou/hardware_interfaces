@@ -114,6 +114,15 @@ class RobotInterfaces {
   virtual bool setJoints(const Eigen::VectorXd& joints) = 0;
 
   // ----------------------------------------
+  //  Optional interfaces
+  // ----------------------------------------
+  virtual bool getCartesianVelocity(RUT::Vector6d& velocity) {
+    std::cerr << "[RobotInterfaces] getCartesianVelocity not implemented yet"
+              << std::endl;
+    return false;
+  }
+
+  // ----------------------------------------
   //  public state and parameters
   // ----------------------------------------
 

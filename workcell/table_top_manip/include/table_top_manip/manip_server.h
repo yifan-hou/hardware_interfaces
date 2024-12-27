@@ -118,6 +118,8 @@ class ManipServer {
   const Eigen::MatrixXd get_camera_rgb(int k, int camera_id = 0);
   const Eigen::MatrixXd get_wrench(int k, int sensor_id = 0);
   const Eigen::MatrixXd get_pose(int k, int robot_id = 0);
+  const Eigen::MatrixXd get_vel(int k, int robot_id = 0);
+  const int get_test();
   const Eigen::MatrixXd get_eoat(int k, int robot_id = 0);
 
   // the following functions return the timestamps of
@@ -126,6 +128,8 @@ class ManipServer {
   const Eigen::VectorXd get_camera_rgb_timestamps_ms(int id = 0);
   const Eigen::VectorXd get_wrench_timestamps_ms(int id = 0);
   const Eigen::VectorXd get_pose_timestamps_ms(int id = 0);
+  const Eigen::VectorXd get_vel_timestamps_ms(int id = 0);
+  const double get_test_timestamp_ms();
   const Eigen::VectorXd get_eoat_timestamps_ms(int id = 0);
 
   double get_timestamp_now_ms();  // access the current hardware time
@@ -166,6 +170,7 @@ class ManipServer {
   // data buffer
   std::vector<RUT::DataBuffer<Eigen::MatrixXd>> _camera_rgb_buffers;
   std::vector<RUT::DataBuffer<Eigen::VectorXd>> _pose_buffers;
+  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _vel_buffers;
   std::vector<RUT::DataBuffer<Eigen::VectorXd>> _eoat_buffers;
   std::vector<RUT::DataBuffer<Eigen::VectorXd>> _wrench_buffers;
   // action buffer
@@ -175,6 +180,7 @@ class ManipServer {
 
   std::vector<RUT::DataBuffer<double>> _camera_rgb_timestamp_ms_buffers;
   std::vector<RUT::DataBuffer<double>> _pose_timestamp_ms_buffers;
+  std::vector<RUT::DataBuffer<double>> _vel_timestamp_ms_buffers;
   std::vector<RUT::DataBuffer<double>> _eoat_timestamp_ms_buffers;
   std::vector<RUT::DataBuffer<double>> _wrench_timestamp_ms_buffers;
   std::vector<RUT::DataBuffer<double>> _waypoints_timestamp_ms_buffers;
@@ -183,6 +189,7 @@ class ManipServer {
 
   std::deque<std::mutex> _camera_rgb_buffer_mtxs;
   std::deque<std::mutex> _pose_buffer_mtxs;
+  std::deque<std::mutex> _vel_buffer_mtxs;
   std::deque<std::mutex> _eoat_buffer_mtxs;
   std::deque<std::mutex> _wrench_buffer_mtxs;
   std::deque<std::mutex> _waypoints_buffer_mtxs;
@@ -255,6 +262,7 @@ class ManipServer {
   // temp variables storing timestamps of data just being fetched
   std::vector<Eigen::VectorXd> _camera_rgb_timestamps_ms;
   std::vector<Eigen::VectorXd> _pose_timestamps_ms;
+  std::vector<Eigen::VectorXd> _vel_timestamps_ms;
   std::vector<Eigen::VectorXd> _eoat_timestamps_ms;
   std::vector<Eigen::VectorXd> _wrench_timestamps_ms;
 

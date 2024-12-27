@@ -69,6 +69,8 @@ class URRTDE : public RobotInterfaces {
   bool init(RUT::TimePoint time0, const URRTDEConfig& config);
 
   bool getCartesian(RUT::Vector7d& pose) override;
+  bool getCartesianVelocity(RUT::Vector6d& velocity) override;
+
   bool setCartesian(const RUT::Vector7d& pose) override;
 
   // interfaces unique to URRTDE
