@@ -27,6 +27,8 @@ PYBIND11_MODULE(manip_server_pybind, m)
         .def("get_pose", &ManipServer::get_pose,
                 py::arg(), py::arg("robot_id") = 0)
         .def("get_test", &ManipServer::get_test)
+        .def("get_vel", &ManipServer::get_vel,
+                py::arg(), py::arg("robot_id") = 0)
         .def("get_camera_rgb_timestamps_ms", &ManipServer::get_camera_rgb_timestamps_ms,
                 py::arg("id") = 0)
         .def("get_wrench_timestamps_ms", &ManipServer::get_wrench_timestamps_ms,
