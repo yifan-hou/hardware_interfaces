@@ -534,6 +534,10 @@ const Eigen::VectorXd ManipServer::get_eoat_timestamps_ms(int id) {
   return _eoat_timestamps_ms[id];
 }
 
+const double ManipServer::get_test_timestamp_ms() {
+  return _test_timestamp_ms;
+}
+
 double ManipServer::get_timestamp_now_ms() {
   return _timer.toc_ms();
 }

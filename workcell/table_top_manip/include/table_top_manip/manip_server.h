@@ -186,6 +186,7 @@ class ManipServer {
   std::vector<RUT::DataBuffer<double>> _waypoints_timestamp_ms_buffers;
   std::vector<RUT::DataBuffer<double>> _eoat_waypoints_timestamp_ms_buffers;
   std::vector<RUT::DataBuffer<double>> _stiffness_timestamp_ms_buffers;
+  double _test_timestamp_ms;
 
   std::deque<std::mutex> _camera_rgb_buffer_mtxs;
   std::deque<std::mutex> _pose_buffer_mtxs;
