@@ -64,3 +64,44 @@ cmake ..
 make -j
 make install
 ```
+
+## Install to a local path
+The above instruction will install the libraries to /usr, which affects all users on your system.
+It is recommended to install to a local folder instead.
+
+### Configure folders and environmental variables
+In your $HOME, create the following file structure:
+```
+$HOME/
+    .local/
+        bin/
+        include/
+        lib/
+```
+In .bashrc or .zshrc, add the following:
+```
+# For home installations
+export PATH=$HOME/.local/bin:$PATH
+export C_INCLUDE_PATH=$HOME/.local/include/:$C_INCLUDE_PATH
+export CPLUS_INCLUDE_PATH=$HOME/.local/include/:$CPLUS_INCLUDE_PATH
+export LD_LIBRARY_PATH=$HOME/.local/lib/:$LD_LIBRARY_PATH
+```
+
+### Compile and install hardware_interface to the local path
+Note that all install targets in hardware_interfaces are written with `CMAKE_INSTALL_PREFIX` like this:
+```
+install(TARGETS Utilities
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${PROJECT_NAME}
+    )
+```
+
+To install to the local path we specified before, just change the line
+``` sh
+cmake ..
+```
+to
+``` sh
+cmake -DCMAKE_INSTALL_PREFIX=$HOME/.local ..
+```
+in the instructions above, then `make`, `make install` as usual.
+
