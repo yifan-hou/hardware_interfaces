@@ -126,7 +126,7 @@ class JSInterfaces {
     /**
      * Safety zone.
      */
-    RUT::Vector2d safe_zone;
+    RUT::VectorXd safe_zone;
 
     bool deserialize(const YAML::Node& node) {
       try {
@@ -136,7 +136,7 @@ class JSInterfaces {
         incre_safety_mode = string_to_enum<RobotSafetyMode>(
             node["incre_safety_mode"].as<std::string>());
         max_incre = node["max_incre"].as<double>();
-        safe_zone = RUT::deserialize_vector<RUT::Vector2d>(node["safe_zone"]);
+        safe_zone = RUT::deserialize_vector<RUT::VectorXd>(node["safe_zone"]);
       } catch (const std::exception& e) {
         std::cerr << "Failed to load the config file: " << e.what()
                   << std::endl;
