@@ -24,6 +24,8 @@ PYBIND11_MODULE(manip_server_pybind, m)
                 py::arg(), py::arg("sensor_id") = 0)
         .def("get_wrench_filtered", &ManipServer::get_wrench_filtered,
                 py::arg(), py::arg("sensor_id") = 0)
+        .def("get_robot_wrench", &ManipServer::get_robot_wrench,
+                py::arg(), py::arg("robot_id") = 0)
         .def("get_pose", &ManipServer::get_pose,
                 py::arg(), py::arg("robot_id") = 0)
         .def("get_test", &ManipServer::get_test)

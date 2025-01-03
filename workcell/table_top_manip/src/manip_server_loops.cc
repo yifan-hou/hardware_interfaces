@@ -69,6 +69,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       t_start = urrtde_ptr->rtde_init_period();
       urrtde_ptr->getCartesian(pose_fb);
       urrtde_ptr->getCartesianVelocity(vel_fb);
+      urrtde_ptr->getWrenchTool(wrench_fb_ur);
       time_now_ms = timer.toc_ms();
       loop_profiler.stop("compute");
       loop_profiler.start();
@@ -78,8 +79,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       }
       loop_profiler.stop("lock");
       loop_profiler.start();
-      urrtde_ptr->getWrenchTool(
-          wrench_fb_ur);  // not used outside this loop, so no need to lock
+
     } else {
       // mock hardware
       time_now_ms = timer.toc_ms();
@@ -99,6 +99,11 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       std::lock_guard<std::mutex> lock(_vel_buffer_mtxs[id]);
       _vel_buffers[id].put(vel_fb);
       _vel_timestamp_ms_buffers[id].put(time_now_ms);
+    }
+    {
+      std::lock_guard<std::mutex> lock(_robot_wrench_buffer_mtxs[id]);
+      _robot_wrench_buffers[id].put(wrench_fb_ur);
+      _robot_wrench_timestamp_ms_buffers[id].put(time_now_ms);
     }
     loop_profiler.stop("lock");
     loop_profiler.start();
@@ -184,7 +189,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
     //           << ", wrench_fb_ur: " << wrench_fb_ur.transpose()
     //           << ", wrench_WTr: " << wrench_WTr.transpose() << std::endl;
 
-    // Update the controller
+    // Update the compliance controller
     {
       std::lock_guard<std::mutex> lock(_controller_mtxs[id]);
       loop_profiler.stop("controller_lock");
@@ -205,6 +210,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       loop_profiler.start();
     }
 
+    // Send control command to the robot
     if ((!_config.mock_hardware) &&
         (!urrtde_ptr->streamCartesian(pose_rdte_cmd))) {
       std::cout << header << "streamCartesian failed. Ending thread."
@@ -259,6 +265,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
     loop_profiler.stop("logging");
     loop_profiler.start();
 
+    // loop control
     {
       std::lock_guard<std::mutex> lock(_ctrl_mtx);
       if (!_ctrl_flag_running) {
@@ -271,6 +278,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
 
     loop_profiler.stop("lock");
 
+    // loop timing and overrun check
     if (_config.mock_hardware) {
       mock_loop_timer.sleep_till_next();
     } else {
