@@ -42,6 +42,8 @@ add_subdirectory(workcell/table_top_manip)
 add_subdirectory(workcell/test)
 
 # Application to build
+file(GLOB WORKCELL_INCLUDE_DIRS "workcell/*/include")
+include_directories(${WORKCELL_INCLUDE_DIRS})
 add_subdirectory(applications/force_control_demo)
 add_subdirectory(applications/ft_calibration)
 add_subdirectory(applications/manipulation_data_collection)

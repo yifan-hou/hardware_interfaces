@@ -56,7 +56,6 @@ class WSGGripper : public JSInterfaces {
    * @return     True if success.
    */
   bool init(RUT::TimePoint time0, const WSGGripperConfig& config);
-  bool checkJointTarget(RUT::VectorXd& pose_xyzq_set);
 
   // only read the stored feedback
   bool getJoints(RUT::VectorXd& joints) override;
@@ -66,17 +65,8 @@ class WSGGripper : public JSInterfaces {
                          const RUT::VectorXd& forces) override;
 
  private:
-  RUT::TimePoint _time0;
-  WSGGripperConfig _config;
-  std::shared_ptr<WSGGripperDriver> _wsg_ptr;
-
-  // internal variables
-  Eigen::VectorXd _joints_set_prev;
-  Eigen::VectorXd _joints_set_truncated;
-  Eigen::VectorXd _joints_set_processed;
-
-  // feedback
-  WSGState _wsg_state;
+  struct Implementation;
+  std::unique_ptr<Implementation> m_impl;
 };
 
 #endif
