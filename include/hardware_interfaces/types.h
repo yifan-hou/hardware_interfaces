@@ -22,6 +22,9 @@ enum class RobotOperationMode {
   OPERATION_MODE_JOINT
 };
 
+/**
+ * Force sensing mode: specifies what sensor does the wrench loop use.
+ */
 enum class ForceSensingMode {
   NONE,
   FORCE_MODE_ATI,

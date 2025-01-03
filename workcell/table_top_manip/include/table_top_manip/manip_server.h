@@ -39,7 +39,7 @@ struct ManipServerConfig {
   bool run_rgb_thread{false};
   bool plot_rgb{false};
   int rgb_buffer_size{5};
-  int pose_buffer_size{100};
+  int robot_buffer_size{100};
   int eoat_buffer_size{100};
   int wrench_buffer_size{100};
   bool mock_hardware{false};
@@ -58,7 +58,7 @@ struct ManipServerConfig {
       run_rgb_thread = node["run_rgb_thread"].as<bool>();
       plot_rgb = node["plot_rgb"].as<bool>();
       rgb_buffer_size = node["rgb_buffer_size"].as<int>();
-      pose_buffer_size = node["pose_buffer_size"].as<int>();
+      robot_buffer_size = node["robot_buffer_size"].as<int>();
       eoat_buffer_size = node["eoat_buffer_size"].as<int>();
       wrench_buffer_size = node["wrench_buffer_size"].as<int>();
       mock_hardware = node["mock_hardware"].as<bool>();
@@ -117,6 +117,7 @@ class ManipServer {
   // getters: get the most recent k data points in the buffer
   const Eigen::MatrixXd get_camera_rgb(int k, int camera_id = 0);
   const Eigen::MatrixXd get_wrench(int k, int sensor_id = 0);
+  const Eigen::MatrixXd get_robot_wrench(int k, int robot_id = 0);
   const Eigen::MatrixXd get_pose(int k, int robot_id = 0);
   const Eigen::MatrixXd get_vel(int k, int robot_id = 0);
   const int get_test();
@@ -127,6 +128,7 @@ class ManipServer {
   //  So size is already know
   const Eigen::VectorXd get_camera_rgb_timestamps_ms(int id = 0);
   const Eigen::VectorXd get_wrench_timestamps_ms(int id = 0);
+  const Eigen::VectorXd get_robot_wrench_timestamps_ms(int id = 0);
   const Eigen::VectorXd get_pose_timestamps_ms(int id = 0);
   const Eigen::VectorXd get_vel_timestamps_ms(int id = 0);
   const double get_test_timestamp_ms();
@@ -164,53 +166,69 @@ class ManipServer {
   // config
   ManipServerConfig _config;
 
-  // list of id
-  std::vector<int> _id_list;
-
-  // data buffer
-  std::vector<RUT::DataBuffer<Eigen::MatrixXd>> _camera_rgb_buffers;
-  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _pose_buffers;
-  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _vel_buffers;
-  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _eoat_buffers;
-  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _wrench_buffers;
-  // action buffer
-  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _eoat_waypoints_buffers;
-  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _waypoints_buffers;
-  std::vector<RUT::DataBuffer<Eigen::MatrixXd>> _stiffness_buffers;
-
-  std::vector<RUT::DataBuffer<double>> _camera_rgb_timestamp_ms_buffers;
-  std::vector<RUT::DataBuffer<double>> _pose_timestamp_ms_buffers;
-  std::vector<RUT::DataBuffer<double>> _vel_timestamp_ms_buffers;
-  std::vector<RUT::DataBuffer<double>> _eoat_timestamp_ms_buffers;
-  std::vector<RUT::DataBuffer<double>> _wrench_timestamp_ms_buffers;
-  std::vector<RUT::DataBuffer<double>> _waypoints_timestamp_ms_buffers;
-  std::vector<RUT::DataBuffer<double>> _eoat_waypoints_timestamp_ms_buffers;
-  std::vector<RUT::DataBuffer<double>> _stiffness_timestamp_ms_buffers;
-  double _test_timestamp_ms;
-
-  std::deque<std::mutex> _camera_rgb_buffer_mtxs;
-  std::deque<std::mutex> _pose_buffer_mtxs;
-  std::deque<std::mutex> _vel_buffer_mtxs;
-  std::deque<std::mutex> _eoat_buffer_mtxs;
-  std::deque<std::mutex> _wrench_buffer_mtxs;
-  std::deque<std::mutex> _waypoints_buffer_mtxs;
-  std::deque<std::mutex> _eoat_waypoints_buffer_mtxs;
-  std::deque<std::mutex> _stiffness_buffer_mtxs;
-
-  // timing
-  RUT::Timer _timer;
-
   // additional configs as local variables
   std::vector<RUT::Matrix6d> _stiffnesses_high{};
   std::vector<RUT::Matrix6d> _stiffnesses_low{};
   std::vector<RUT::Matrix6d> _dampings_high{};
   std::vector<RUT::Matrix6d> _dampings_low{};
 
+  // list of id
+  std::vector<int> _id_list;
+
+  // data buffers
+  std::vector<RUT::DataBuffer<Eigen::MatrixXd>> _camera_rgb_buffers;
+  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _pose_buffers;
+  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _vel_buffers;
+  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _eoat_buffers;
+  std::vector<RUT::DataBuffer<Eigen::VectorXd>>
+      _wrench_buffers;  // wrench from external sensors
+  std::vector<RUT::DataBuffer<Eigen::VectorXd>>
+      _robot_wrench_buffers;  // wrench from the robot itself
+  // data buffer mutexes
+  std::deque<std::mutex> _camera_rgb_buffer_mtxs;
+  std::deque<std::mutex> _pose_buffer_mtxs;
+  std::deque<std::mutex> _vel_buffer_mtxs;
+  std::deque<std::mutex> _eoat_buffer_mtxs;
+  std::deque<std::mutex> _wrench_buffer_mtxs;
+  std::deque<std::mutex> _robot_wrench_buffer_mtxs;
+  // data buffer timestamps
+  std::vector<RUT::DataBuffer<double>> _camera_rgb_timestamp_ms_buffers;
+  std::vector<RUT::DataBuffer<double>> _pose_timestamp_ms_buffers;
+  std::vector<RUT::DataBuffer<double>> _vel_timestamp_ms_buffers;
+  std::vector<RUT::DataBuffer<double>> _eoat_timestamp_ms_buffers;
+  std::vector<RUT::DataBuffer<double>> _wrench_timestamp_ms_buffers;
+  std::vector<RUT::DataBuffer<double>> _robot_wrench_timestamp_ms_buffers;
+  // data buffer timestamps just being fetched
+  std::vector<Eigen::VectorXd> _camera_rgb_timestamps_ms;
+  std::vector<Eigen::VectorXd> _pose_timestamps_ms;
+  std::vector<Eigen::VectorXd> _vel_timestamps_ms;
+  std::vector<Eigen::VectorXd> _eoat_timestamps_ms;
+  std::vector<Eigen::VectorXd> _wrench_timestamps_ms;
+  std::vector<Eigen::VectorXd> _robot_wrench_timestamps_ms;
+
+  // action buffers
+  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _eoat_waypoints_buffers;
+  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _waypoints_buffers;
+  std::vector<RUT::DataBuffer<Eigen::MatrixXd>> _stiffness_buffers;
+  // action buffer mutexes
+  std::deque<std::mutex> _waypoints_buffer_mtxs;
+  std::deque<std::mutex> _eoat_waypoints_buffer_mtxs;
+  std::deque<std::mutex> _stiffness_buffer_mtxs;
+  // action buffer timestamps
+  std::vector<RUT::DataBuffer<double>> _waypoints_timestamp_ms_buffers;
+  std::vector<RUT::DataBuffer<double>> _eoat_waypoints_timestamp_ms_buffers;
+  std::vector<RUT::DataBuffer<double>> _stiffness_timestamp_ms_buffers;
+  double _test_timestamp_ms;
+
+  // timing
+  RUT::Timer _timer;
+
   //  hardware interfaces
   std::vector<std::shared_ptr<CameraInterfaces>> camera_ptrs;
   std::vector<std::shared_ptr<FTInterfaces>> force_sensor_ptrs;
   std::vector<std::shared_ptr<RobotInterfaces>> robot_ptrs;
   std::vector<std::shared_ptr<JSInterfaces>> eoat_ptrs;
+
   // controllers
   std::vector<AdmittanceController> _controllers;
   std::deque<std::mutex> _controller_mtxs;
@@ -260,13 +278,7 @@ class ManipServer {
   std::vector<Eigen::VectorXd> _wrench_fb;
   std::deque<std::mutex> _wrench_fb_mtxs;
 
-  // temp variables storing timestamps of data just being fetched
-  std::vector<Eigen::VectorXd> _camera_rgb_timestamps_ms;
-  std::vector<Eigen::VectorXd> _pose_timestamps_ms;
-  std::vector<Eigen::VectorXd> _vel_timestamps_ms;
-  std::vector<Eigen::VectorXd> _eoat_timestamps_ms;
-  std::vector<Eigen::VectorXd> _wrench_timestamps_ms;
-
+  // loop functions
   void robot_loop(const RUT::TimePoint& time0, int robot_id);
   void eoat_loop(const RUT::TimePoint& time0, int robot_id);
   void rgb_loop(const RUT::TimePoint& time0, int camera_id);
