@@ -2,6 +2,7 @@
 #include <RobotUtilities/timer_linux.h>
 #include <force_control/admittance_controller.h>
 #include <force_control/config_deserialize.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <ur_rtde/ur_rtde.h>
 #include <yaml-cpp/yaml.h>
@@ -30,9 +31,10 @@ int main() {
   AdmittanceController::AdmittanceControllerConfig admittance_config;
 
   // open file
-  const std::string CONFIG_PATH =
-      "/path/to/hardware_interfaces/applications/force_control_demo/"
-      "config/force_control_demo.yaml";
+  std::string HW_PATH = getenv("HARDWARE_INTERFACES_SOURCE");
+  const std::string CONFIG_PATH = HW_PATH +
+                                  "/applications/force_control_demo/"
+                                  "config/force_control_demo.yaml";
   YAML::Node config{};
   try {
     config = YAML::LoadFile(CONFIG_PATH);
@@ -117,8 +119,10 @@ int main() {
     }
 
     double dt = timer.toc_ms();
-    printf("t = %f, wrench: %f %f %f %f %f %f\n", dt, wrench[0], wrench[1],
-           wrench[2], wrench[3], wrench[4], wrench[5]);
+    // printf("t = %f, wrench: %f %f %f %f %f %f\n", dt, wrench[0], wrench[1],
+    //        wrench[2], wrench[3], wrench[4], wrench[5]);
+    printf("t = %f, pose: %f %f %f %f %f %f %f\n", dt, pose[0], pose[1],
+           pose[2], pose[3], pose[4], pose[5], pose[6]);
 
     if (dt > 50000)
       break;

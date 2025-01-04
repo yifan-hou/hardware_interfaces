@@ -83,7 +83,7 @@ function process()
        
         -- command
         mc.speed(vel_cmd);
-        printf("force:%f\n", force);
+        printf("cmd_pos:%f\n", cmd_pos);
     end
 
     
