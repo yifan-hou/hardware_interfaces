@@ -45,6 +45,8 @@ class WSGGripperDriver {
   virtual ~WSGGripperDriver(void);
 
   unsigned char disconnect();
+  unsigned char homing();
+  unsigned char ackFastStop();
 
   unsigned char setPDControl(float pos, float kp, float kd, float force_limit);
 
@@ -57,7 +59,14 @@ class WSGGripperDriver {
   unsigned char setVelResolvedControl(float pos_target,
                                       float force_target_feedback, float kp,
                                       float kf);
-  unsigned char setEmpty();  // just to trigger a feedback package
+  unsigned char askForState();  // just to trigger a feedback package
+
+  /// @brief Read a package with a specific id. Must be called after homing(), ackFastStop().
+  /// @param expected_id expected command id
+  void getAck(unsigned char expected_id);
+  /// @brief Read states from a package with a specific id. Must be called after setPDControl(), setVelResolvedControl(), askForState().
+  /// @param expected_id
+  /// @return
   WSGState getState(unsigned char expected_id);
 
   static void printState(const WSGState& state);

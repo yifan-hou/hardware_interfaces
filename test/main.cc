@@ -63,7 +63,7 @@ int main() {
 
   // get gripper states
   std::cout << "[main] Getting gripper state" << std::endl;
-  unsigned char cmd_id = wsg.setEmpty();
+  unsigned char cmd_id = wsg.askForState();
   WSGState state = wsg.getState(cmd_id);
   wsg.printState(state);
 

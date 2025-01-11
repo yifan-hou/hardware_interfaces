@@ -28,7 +28,10 @@
 /*!
  * Commands
  */
+static short _HOMING = 0x20;      // homing movement
 static short _DISCONNECT = 0x07;  // announce Disconnect -> stops every movement
+static short _ACKFASTSTOP = 0x24;  // Acknowledgement FastStop
+
 static short _EMPTY = 0xBA;   // Customized: do nothing, just trigger a feedback
 static short _PDCTRL = 0xBB;  // Customized: PD control with force limit
 static short _VELRESCTRL =
@@ -406,6 +409,42 @@ unsigned char WSGGripperDriver::disconnect() {
   return sendMsg(&_msg);
 }
 
+unsigned char WSGGripperDriver::homing() {
+#define DATA_SIZE_HOMING 1
+  int i;
+  unsigned char data[DATA_SIZE_HOMING];
+
+  // data[0] = 0x00;  // homing in the default direction
+  data[0] = 0x01;  // homing in the positive direction
+  data[0] = 0x02;  // homing in the negative direction
+
+  // create Message
+  //
+  _msg.id = _HOMING;
+  _msg.length = DATA_SIZE_HOMING;
+  _msg.data = data;
+
+  return sendMsg(&_msg);
+}
+
+unsigned char WSGGripperDriver::ackFastStop() {
+#define DATA_SIZE_ACK 3
+  int i;
+  unsigned char data[DATA_SIZE_ACK];
+
+  data[0] = 0x61;  // 'a'
+  data[1] = 0x63;  // 'c'
+  data[2] = 0x6B;  // 'k'
+
+  // create Message
+  //
+  _msg.id = _ACKFASTSTOP;
+  _msg.length = DATA_SIZE_ACK;
+  _msg.data = data;
+
+  return sendMsg(&_msg);
+}
+
 unsigned char WSGGripperDriver::setPDControl(float pos, float kp, float kd,
                                              float force_limit) {
 #define DATA_SIZE_PDC 20
@@ -491,7 +530,7 @@ unsigned char WSGGripperDriver::setVelResolvedControl(
   return sendMsg(&_msg);
 }
 
-unsigned char WSGGripperDriver::setEmpty() {
+unsigned char WSGGripperDriver::askForState() {
 #define DATA_SIZE_EMPTY 4
   int i;
   unsigned char data[DATA_SIZE_EMPTY];
@@ -510,6 +549,14 @@ unsigned char WSGGripperDriver::setEmpty() {
   _msg.data = data;
 
   return sendMsg(&_msg);
+}
+
+void WSGGripperDriver::getAck(unsigned char expected_id) {
+  _fbmsg = msg_receive();
+  if (_fbmsg.command_id != expected_id) {
+    throw std::runtime_error("Received unexpected command ID: " +
+                             std::to_string(_fbmsg.command_id));
+  }
 }
 
 WSGState WSGGripperDriver::getState(unsigned char expected_id) {

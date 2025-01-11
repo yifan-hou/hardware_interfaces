@@ -67,10 +67,22 @@ bool WSGGripper::Implementation::initialize(
   std::cout << "[WSGGripper] Connecting to gripper at " << _config.robot_ip
             << ", port " << _config.port << std::endl;
   _wsg_ptr = std::make_shared<WSGGripperDriver>(_config.robot_ip, _config.port);
-  std::cout << "[WSGGripper] Connection established." << std::endl;
+  std::cout << "[WSGGripper] Connection established. Clearing up error state."
+            << std::endl;
 
+  // initialize
+  unsigned char cmd_id = _wsg_ptr->ackFastStop();
+  _wsg_ptr->getAck(cmd_id);
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  // TODO (Yifan): After Homing, the next command does not work.
+  //    Could be that homing generates a certain nonempty response.
+  // std::cout << "[WSGGripper] Homing the gripper." << std::endl;
+  // cmd_id = _wsg_ptr->homing();
+  // _wsg_ptr->getAck(cmd_id);
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  std::cout << "[WSGGripper] Read gripper state." << std::endl;
   // read current state, initialize _joints_set_prev
-  unsigned char cmd_id = _wsg_ptr->setEmpty();
+  cmd_id = _wsg_ptr->askForState();
   _wsg_state = _wsg_ptr->getState(cmd_id);
   _joints_set_prev[0] = static_cast<double>(_wsg_state.position);
   _cmd_pos = _joints_set_prev;

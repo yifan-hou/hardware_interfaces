@@ -39,7 +39,6 @@ int main() {
 
   wsg_gripper.getJoints(fb_pos);
 
-
   wsg_gripper.setJointsPosForce(target_pos, target_force);
   std::this_thread::sleep_for(std::chrono::milliseconds(10000));
   // for (int i = 0; i < 200; i++) {
@@ -48,7 +47,6 @@ int main() {
   // }
 
   std::cout << "Done" << std::endl;
-
 
   return 0;
 }
@@ -69,7 +67,7 @@ int main() {
 
 //   // get states
 //   std::cout << "[main] Getting state" << std::endl;
-//   unsigned char cmd_id = wsg.setEmpty();
+//   unsigned char cmd_id = wsg.askForState();
 //   WSGState state = wsg.getState(cmd_id);
 //   wsg.printState(state);
 
