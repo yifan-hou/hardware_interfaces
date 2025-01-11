@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
     std::cout << "CoinFT object created." << std::endl;
 
     // Main loop
-    RUT::VectorXd wrench;
+    RUT::VectorXd wrench = RUT::VectorXd::Zero(6);
     while (timer.toc_ms() < run_duration_ms) {
       if (!sensor.is_data_ready()) {
         std::cout << "Waiting for data..." << std::endl;
@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
         continue;
       }
 
-      sensor.getWrenchSensor(wrench);
+      sensor.getWrenchSensor(wrench, 1);
       std::cout << "Time: " << timer.toc_ms() << " ms, Wrench: " << wrench
                 << std::endl;
 

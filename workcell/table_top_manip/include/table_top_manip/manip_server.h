@@ -130,8 +130,8 @@ class ManipServer {
   const Eigen::MatrixXd get_robot_wrench(int k, int robot_id = 0);
   const Eigen::MatrixXd get_pose(int k, int robot_id = 0);
   const Eigen::MatrixXd get_vel(int k, int robot_id = 0);
-  const int get_test();
   const Eigen::MatrixXd get_eoat(int k, int robot_id = 0);
+  const int get_test();
 
   // the following functions return the timestamps of
   //  the most recent getter call of the corresponding feedback
@@ -142,8 +142,8 @@ class ManipServer {
   const Eigen::VectorXd get_robot_wrench_timestamps_ms(int id = 0);
   const Eigen::VectorXd get_pose_timestamps_ms(int id = 0);
   const Eigen::VectorXd get_vel_timestamps_ms(int id = 0);
-  const double get_test_timestamp_ms();
   const Eigen::VectorXd get_eoat_timestamps_ms(int id = 0);
+  const double get_test_timestamp_ms();
 
   double get_timestamp_now_ms();  // access the current hardware time
 
@@ -222,8 +222,8 @@ class ManipServer {
   std::vector<Eigen::VectorXd> _robot_wrench_timestamps_ms;
 
   // action buffers
-  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _eoat_waypoints_buffers;
   std::vector<RUT::DataBuffer<Eigen::VectorXd>> _waypoints_buffers;
+  std::vector<RUT::DataBuffer<Eigen::VectorXd>> _eoat_waypoints_buffers;
   std::vector<RUT::DataBuffer<Eigen::MatrixXd>> _stiffness_buffers;
   // action buffer mutexes
   std::deque<std::mutex> _waypoints_buffer_mtxs;

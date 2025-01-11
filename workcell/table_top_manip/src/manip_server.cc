@@ -56,6 +56,8 @@ bool ManipServer::initialize(const std::string& config_path) {
         std::cerr << "Failed to initialize UR RTDE for id " << id
                   << ". Exiting." << std::endl;
         return false;
+      } else {
+        std::cout << "[ManipServer] Robot " << id << " initialized.\n";
       }
 
       // EoAT
@@ -76,108 +78,118 @@ bool ManipServer::initialize(const std::string& config_path) {
           std::cerr << "Failed to initialize WSGGripper for id " << id
                     << ". Exiting." << std::endl;
           return false;
+        } else {
+          std::cout << "[ManipServer] EoAT " << id << " initialized.\n";
         }
       }
 
       // Camera
-      if (_config.camera_selection == CameraSelection::GOPRO) {
-        GoPro::GoProConfig gopro_config;
-        try {
-          gopro_config.deserialize(config["gopro" + std::to_string(id)]);
-        } catch (const std::exception& e) {
-          std::cerr << "Failed to load the GoPro config file: " << e.what()
-                    << std::endl;
+      if (_config.run_rgb_thread) {
+        if (_config.camera_selection == CameraSelection::GOPRO) {
+          GoPro::GoProConfig gopro_config;
+          try {
+            gopro_config.deserialize(config["gopro" + std::to_string(id)]);
+          } catch (const std::exception& e) {
+            std::cerr << "Failed to load the GoPro config file: " << e.what()
+                      << std::endl;
+            return false;
+          }
+          camera_ptrs.emplace_back(new GoPro);
+          GoPro* gopro_ptr = static_cast<GoPro*>(camera_ptrs[id].get());
+          if (!gopro_ptr->init(time0, gopro_config)) {
+            std::cerr << "Failed to initialize GoPro for id " << id
+                      << ". Exiting." << std::endl;
+            return false;
+          }
+        } else if (_config.camera_selection == CameraSelection::REALSENSE) {
+          Realsense::RealsenseConfig realsense_config;
+          try {
+            realsense_config.deserialize(
+                config["realsense" + std::to_string(id)]);
+          } catch (const std::exception& e) {
+            std::cerr << "Failed to load the Realsense config file: "
+                      << e.what() << std::endl;
+            return false;
+          }
+          camera_ptrs.emplace_back(new Realsense);
+          Realsense* realsense_ptr =
+              static_cast<Realsense*>(camera_ptrs[id].get());
+          if (!realsense_ptr->init(time0, realsense_config)) {
+            std::cerr << "Failed to initialize realsense for id " << id
+                      << ". Exiting." << std::endl;
+            return false;
+          }
+        } else {
+          std::cerr << "Invalid camera selection. Exiting." << std::endl;
           return false;
         }
-        camera_ptrs.emplace_back(new GoPro);
-        GoPro* gopro_ptr = static_cast<GoPro*>(camera_ptrs[id].get());
-        if (!gopro_ptr->init(time0, gopro_config)) {
-          std::cerr << "Failed to initialize GoPro for id " << id
-                    << ". Exiting." << std::endl;
-          return false;
-        }
-      } else if (_config.camera_selection == CameraSelection::REALSENSE) {
-        Realsense::RealsenseConfig realsense_config;
-        try {
-          realsense_config.deserialize(
-              config["realsense" + std::to_string(id)]);
-        } catch (const std::exception& e) {
-          std::cerr << "Failed to load the Realsense config file: " << e.what()
-                    << std::endl;
-          return false;
-        }
-        camera_ptrs.emplace_back(new Realsense);
-        Realsense* realsense_ptr =
-            static_cast<Realsense*>(camera_ptrs[id].get());
-        if (!realsense_ptr->init(time0, realsense_config)) {
-          std::cerr << "Failed to initialize realsense for id " << id
-                    << ". Exiting." << std::endl;
-          return false;
-        }
-      } else {
-        std::cerr << "Invalid camera selection. Exiting." << std::endl;
-        return false;
+        std::cout << "[ManipServer] Camera " << id << " initialized.\n";
       }
 
-      // force sensor
-      if (_config.force_sensing_mode == ForceSensingMode::FORCE_MODE_ATI) {
-        ATINetft::ATINetftConfig ati_config;
-        try {
-          ati_config.deserialize(config["ati_netft" + std::to_string(id)]);
-        } catch (const std::exception& e) {
-          std::cerr << "Failed to load the ATI Netft config file: " << e.what()
-                    << std::endl;
+      if (_config.run_wrench_thread) {
+        // force sensor
+        if (_config.force_sensing_mode == ForceSensingMode::FORCE_MODE_ATI) {
+          ATINetft::ATINetftConfig ati_config;
+          try {
+            ati_config.deserialize(config["ati_netft" + std::to_string(id)]);
+          } catch (const std::exception& e) {
+            std::cerr << "Failed to load the ATI Netft config file: "
+                      << e.what() << std::endl;
+            return false;
+          }
+          force_sensor_ptrs.emplace_back(new ATINetft);
+          ATINetft* ati_ptr =
+              static_cast<ATINetft*>(force_sensor_ptrs[id].get());
+          if (!ati_ptr->init(time0, ati_config)) {
+            std::cerr << "Failed to initialize ATI Netft for id " << id
+                      << ". Exiting." << std::endl;
+            return false;
+          }
+          wrench_publish_rate.push_back(ati_config.publish_rate);
+        } else if (_config.force_sensing_mode ==
+                   ForceSensingMode::FORCE_MODE_ROBOTIQ) {
+          RobotiqFTModbus::RobotiqFTModbusConfig robotiq_config;
+          try {
+            robotiq_config.deserialize(
+                config["robotiq_ft_modbus" + std::to_string(id)]);
+          } catch (const std::exception& e) {
+            std::cerr << "Failed to load the Robotiq FT Modbus config file: "
+                      << e.what() << std::endl;
+            return false;
+          }
+          force_sensor_ptrs.emplace_back(new RobotiqFTModbus);
+          RobotiqFTModbus* robotiq_ptr =
+              static_cast<RobotiqFTModbus*>(force_sensor_ptrs[id].get());
+          if (!robotiq_ptr->init(time0, robotiq_config)) {
+            std::cerr << "Failed to initialize Robotiq FT Modbus for id " << id
+                      << ". Exiting." << std::endl;
+            return false;
+          }
+          wrench_publish_rate.push_back(robotiq_config.publish_rate);
+        } else if (_config.force_sensing_mode ==
+                   ForceSensingMode::FORCE_MODE_COINFT) {
+          CoinFT::CoinFTConfig coinft_config;
+          try {
+            coinft_config.deserialize(config["coinft" + std::to_string(id)]);
+          } catch (const std::exception& e) {
+            std::cerr << "Failed to load the CoinFT config file: " << e.what()
+                      << std::endl;
+            return false;
+          }
+          force_sensor_ptrs.emplace_back(new CoinFT);
+          CoinFT* coinft_ptr =
+              static_cast<CoinFT*>(force_sensor_ptrs[id].get());
+          if (!coinft_ptr->init(time0, coinft_config)) {
+            std::cerr << "Failed to initialize CoinFT for id " << id
+                      << ". Exiting." << std::endl;
+            return false;
+          }
+          wrench_publish_rate.push_back(coinft_config.publish_rate);
+        } else {
+          std::cerr << "Invalid force sensing mode. Exiting." << std::endl;
           return false;
         }
-        force_sensor_ptrs.emplace_back(new ATINetft);
-        ATINetft* ati_ptr = static_cast<ATINetft*>(force_sensor_ptrs[id].get());
-        if (!ati_ptr->init(time0, ati_config)) {
-          std::cerr << "Failed to initialize ATI Netft for id " << id
-                    << ". Exiting." << std::endl;
-          return false;
-        }
-        wrench_publish_rate.push_back(ati_config.publish_rate);
-      } else if (_config.force_sensing_mode ==
-                 ForceSensingMode::FORCE_MODE_ROBOTIQ) {
-        RobotiqFTModbus::RobotiqFTModbusConfig robotiq_config;
-        try {
-          robotiq_config.deserialize(
-              config["robotiq_ft_modbus" + std::to_string(id)]);
-        } catch (const std::exception& e) {
-          std::cerr << "Failed to load the Robotiq FT Modbus config file: "
-                    << e.what() << std::endl;
-          return false;
-        }
-        force_sensor_ptrs.emplace_back(new RobotiqFTModbus);
-        RobotiqFTModbus* robotiq_ptr =
-            static_cast<RobotiqFTModbus*>(force_sensor_ptrs[id].get());
-        if (!robotiq_ptr->init(time0, robotiq_config)) {
-          std::cerr << "Failed to initialize Robotiq FT Modbus for id " << id
-                    << ". Exiting." << std::endl;
-          return false;
-        }
-        wrench_publish_rate.push_back(robotiq_config.publish_rate);
-      } else if (_config.force_sensing_mode ==
-                 ForceSensingMode::FORCE_MODE_COINFT) {
-        CoinFT::CoinFTConfig coinft_config;
-        try {
-          coinft_config.deserialize(config["coinft" + std::to_string(id)]);
-        } catch (const std::exception& e) {
-          std::cerr << "Failed to load the CoinFT config file: " << e.what()
-                    << std::endl;
-          return false;
-        }
-        force_sensor_ptrs.emplace_back(new CoinFT);
-        CoinFT* coinft_ptr = static_cast<CoinFT*>(force_sensor_ptrs[id].get());
-        if (!coinft_ptr->init(time0, coinft_config)) {
-          std::cerr << "Failed to initialize CoinFT for id " << id
-                    << ". Exiting." << std::endl;
-          return false;
-        }
-        wrench_publish_rate.push_back(coinft_config.publish_rate);
-      } else {
-        std::cerr << "Invalid force sensing mode. Exiting." << std::endl;
-        return false;
+        std::cout << "[ManipServer] Force sensor " << id << " initialized.\n";
       }
     }
   } else {
@@ -188,6 +200,7 @@ bool ManipServer::initialize(const std::string& config_path) {
   }
 
   // initialize wrench filter
+  std::cout << "[ManipServer] Initializing wrench filters.\n";
   for (int id : _id_list) {
     // same parameter for all filters
     _wrench_filters.emplace_back(_config.wrench_filter_parameters[0],
@@ -196,6 +209,7 @@ bool ManipServer::initialize(const std::string& config_path) {
   }
 
   // initialize Admittance controller and perturbation generator
+  std::cout << "[ManipServer] Initializing Admittance controllers.\n";
   for (int id : _id_list) {
     AdmittanceController::AdmittanceControllerConfig admittance_config;
     try {
@@ -243,119 +257,157 @@ bool ManipServer::initialize(const std::string& config_path) {
     _dampings_low.push_back(_config.low_damping);
   }
 
-  // create the data buffers
-  std::cout << "[ManipServer] Creating data buffers.\n";
-  for (int id : _id_list) {
-    int num_ft_sensors = force_sensor_ptrs[id]->getNumSensors();
-    _camera_rgb_buffers.push_back(RUT::DataBuffer<Eigen::MatrixXd>());
-    _pose_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
-    _vel_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
-    _eoat_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
-    _wrench_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
-    _wrench_filtered_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
-    _robot_wrench_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
-    _waypoints_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
-    _eoat_waypoints_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
-    _stiffness_buffers.push_back(RUT::DataBuffer<Eigen::MatrixXd>());
+  // Initialize the data buffers
+  //   For each of camera, wrench sensor, eoat, eoat action, robot, robot action
+  //   Do the following:
+  //     1. Create the data buffer
+  //     2. Create the timestamp buffer
+  //     3. Initialize the data buffer
+  //     4. Initialize the timestamp buffer
+  //     5. Create the mutex for the buffer
 
-    _camera_rgb_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
-    _pose_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
-    _vel_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
-    _eoat_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
-    _wrench_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
-    _wrench_filtered_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
-    _robot_wrench_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
-    _waypoints_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
-    _eoat_waypoints_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
-    _stiffness_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
+  std::cout << "[ManipServer] Initializing data buffers.\n";
 
-    _camera_rgb_buffers[id].initialize(
-        _config.rgb_buffer_size, 3 * _config.output_rgb_hw[0],
-        _config.output_rgb_hw[1], "camera_rgb" + std::to_string(id));
+  // camera
+  if (_config.run_rgb_thread) {
+    for (int id : _id_list) {
+      _states_rgb_thread_ready.push_back(false);
+      _states_rgb_thread_saving.push_back(false);
+      _states_rgb_seq_id.push_back(0);
 
-    _pose_buffers[id].initialize(_config.robot_buffer_size, 7,
-                                 1,  //xyz qwqxqyqz
-                                 "pose" + std::to_string(id));
-    _vel_buffers[id].initialize(_config.robot_buffer_size, 6, 1,  // xyz rxryrz
-                                "vel" + std::to_string(id));
-    _eoat_buffers[id].initialize(_config.eoat_buffer_size, 2, 1,  // pos, force
-                                 "eoat" + std::to_string(id));
-    _wrench_buffers[id].initialize(_config.wrench_buffer_size,
-                                   6 * num_ft_sensors, 1,
-                                   "wrench" + std::to_string(id));
-    _wrench_filtered_buffers[id].initialize(
-        _config.wrench_buffer_size, 6, 1,
-        "wrench_filtered" + std::to_string(id));
-    _robot_wrench_buffers[id].initialize(_config.robot_buffer_size, 6, 1,
-                                         "robot_wrench" + std::to_string(id));
-
-    _waypoints_buffers[id].initialize(-1, 7, 1,
-                                      "waypoints" + std::to_string(id));
-    _eoat_waypoints_buffers[id].initialize(
-        -1, 2, 1, "eoat_waypoints" + std::to_string(id));
-    _stiffness_buffers[id].initialize(-1, 6, 6,
-                                      "stiffness" + std::to_string(id));
-
-    _camera_rgb_timestamp_ms_buffers[id].initialize(
-        _config.rgb_buffer_size, 1, 1,
-        "camera_rgb" + std::to_string(id) + "_timestamp_ms");
-    _pose_timestamp_ms_buffers[id].initialize(
-        _config.robot_buffer_size, 1, 1,
-        "pose" + std::to_string(id) + "_timestamp_ms");
-    _vel_timestamp_ms_buffers[id].initialize(
-        _config.robot_buffer_size, 1, 1,  // pose/vel buffers have the same size
-        "vel" + std::to_string(id) + "_timestamp_ms");
-    _eoat_timestamp_ms_buffers[id].initialize(
-        _config.eoat_buffer_size, 1, 1,
-        "eoat" + std::to_string(id) + "_timestamp_ms");
-    _wrench_timestamp_ms_buffers[id].initialize(
-        _config.wrench_buffer_size, 1, 1,
-        "wrench" + std::to_string(id) + "_timestamp_ms");
-    _wrench_filtered_timestamp_ms_buffers[id].initialize(
-        _config.wrench_buffer_size, 1, 1,
-        "wrench_filtered" + std::to_string(id) + "_timestamp_ms");
-    _robot_wrench_timestamp_ms_buffers[id].initialize(
-        _config.robot_buffer_size, 1, 1,
-        "robot_wrench" + std::to_string(id) + "_timestamp_ms");
-    _waypoints_timestamp_ms_buffers[id].initialize(
-        -1, 1, 1, "waypoints" + std::to_string(id) + "_timestamp_ms");
-    _eoat_waypoints_timestamp_ms_buffers[id].initialize(
-        -1, 1, 1, "eoat_waypoints" + std::to_string(id) + "_timestamp_ms");
-    _stiffness_timestamp_ms_buffers[id].initialize(
-        -1, 1, 1, "stiffness" + std::to_string(id) + "_timestamp_ms");
+      _camera_rgb_buffers.push_back(RUT::DataBuffer<Eigen::MatrixXd>());
+      _camera_rgb_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
+      _camera_rgb_buffers[id].initialize(
+          _config.rgb_buffer_size, 3 * _config.output_rgb_hw[0],
+          _config.output_rgb_hw[1], "camera_rgb" + std::to_string(id));
+      _camera_rgb_timestamp_ms_buffers[id].initialize(
+          _config.rgb_buffer_size, 1, 1,
+          "camera_rgb" + std::to_string(id) + "_timestamp_ms");
+      _camera_rgb_buffer_mtxs.emplace_back();
+    }
   }
 
-  // initialize the buffer mutexes
-  for (int id : _id_list) {
-    _camera_rgb_buffer_mtxs.emplace_back();
-    _pose_buffer_mtxs.emplace_back();
-    _vel_buffer_mtxs.emplace_back();
-    _eoat_buffer_mtxs.emplace_back();
-    _wrench_buffer_mtxs.emplace_back();
-    _wrench_filtered_buffer_mtxs.emplace_back();
-    _robot_wrench_buffer_mtxs.emplace_back();
-    _waypoints_buffer_mtxs.emplace_back();
-    _eoat_waypoints_buffer_mtxs.emplace_back();
-    _stiffness_buffer_mtxs.emplace_back();
+  // wrench sensors
+  if (_config.run_wrench_thread) {
+    for (int id : _id_list) {
+      _states_wrench_thread_ready.push_back(false);
+      _states_wrench_thread_saving.push_back(false);
+      _states_wrench_seq_id.push_back(0);
+
+      int num_ft_sensors = force_sensor_ptrs[id]->getNumSensors();
+
+      _wrench_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
+      _wrench_filtered_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
+
+      _wrench_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
+      _wrench_filtered_timestamp_ms_buffers.push_back(
+          RUT::DataBuffer<double>());
+
+      _wrench_buffers[id].initialize(_config.wrench_buffer_size,
+                                     6 * num_ft_sensors, 1,
+                                     "wrench" + std::to_string(id));
+      _wrench_filtered_buffers[id].initialize(
+          _config.wrench_buffer_size, 6, 1,
+          "wrench_filtered" + std::to_string(id));
+      _wrench_timestamp_ms_buffers[id].initialize(
+          _config.wrench_buffer_size, 1, 1,
+          "wrench" + std::to_string(id) + "_timestamp_ms");
+      _wrench_filtered_timestamp_ms_buffers[id].initialize(
+          _config.wrench_buffer_size, 1, 1,
+          "wrench_filtered" + std::to_string(id) + "_timestamp_ms");
+      _wrench_buffer_mtxs.emplace_back();
+      _wrench_filtered_buffer_mtxs.emplace_back();
+    }
   }
 
-  // initialize thread status variables
-  for (int id : _id_list) {
-    _states_robot_thread_ready.push_back(false);
-    _states_eoat_thread_ready.push_back(false);
-    _states_rgb_thread_ready.push_back(false);
-    _states_wrench_thread_ready.push_back(false);
-    _states_robot_thread_saving.push_back(false);
-    _states_eoat_thread_saving.push_back(false);
-    _states_rgb_thread_saving.push_back(false);
-    _states_wrench_thread_saving.push_back(false);
-    _states_robot_seq_id.push_back(0);
-    _states_eoat_seq_id.push_back(0);
-    _states_rgb_seq_id.push_back(0);
-    _states_wrench_seq_id.push_back(0);
+  // eoat
+  if (_config.run_eoat_thread) {
+    for (int id : _id_list) {
+      _states_eoat_thread_ready.push_back(false);
+      _states_eoat_thread_saving.push_back(false);
+      _states_eoat_seq_id.push_back(0);
+
+      _eoat_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
+      _eoat_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
+
+      _eoat_buffers[id].initialize(_config.eoat_buffer_size, 1,
+                                   1,  // pos
+                                   "eoat" + std::to_string(id));
+      _eoat_timestamp_ms_buffers[id].initialize(
+          _config.eoat_buffer_size, 1, 1,
+          "eoat" + std::to_string(id) + "_timestamp_ms");
+      _eoat_buffer_mtxs.emplace_back();
+
+      // eoat action
+      _eoat_waypoints_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
+      _eoat_waypoints_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
+      _eoat_waypoints_buffers[id].initialize(
+          -1, 2, 1, "eoat_waypoints" + std::to_string(id));
+      _eoat_waypoints_timestamp_ms_buffers[id].initialize(
+          -1, 1, 1, "eoat_waypoints" + std::to_string(id) + "_timestamp_ms");
+      _eoat_waypoints_buffer_mtxs.emplace_back();
+    }
+  }
+
+  // robot
+  if (_config.run_robot_thread) {
+    for (int id : _id_list) {
+      _states_robot_thread_ready.push_back(false);
+      _states_robot_thread_saving.push_back(false);
+      _states_robot_seq_id.push_back(0);
+
+      _pose_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
+      _vel_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
+      _robot_wrench_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
+
+      _pose_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
+      _vel_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
+      _robot_wrench_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
+
+      _pose_buffers[id].initialize(_config.robot_buffer_size, 7,
+                                   1,  //xyz qwqxqyqz
+                                   "pose" + std::to_string(id));
+      _vel_buffers[id].initialize(_config.robot_buffer_size, 6,
+                                  1,  // xyz rxryrz
+                                  "vel" + std::to_string(id));
+      _robot_wrench_buffers[id].initialize(_config.robot_buffer_size, 6, 1,
+                                           "robot_wrench" + std::to_string(id));
+
+      _pose_timestamp_ms_buffers[id].initialize(
+          _config.robot_buffer_size, 1, 1,
+          "pose" + std::to_string(id) + "_timestamp_ms");
+      _vel_timestamp_ms_buffers[id].initialize(
+          _config.robot_buffer_size, 1,
+          1,  // pose/vel buffers have the same size
+          "vel" + std::to_string(id) + "_timestamp_ms");
+      _robot_wrench_timestamp_ms_buffers[id].initialize(
+          _config.robot_buffer_size, 1, 1,
+          "robot_wrench" + std::to_string(id) + "_timestamp_ms");
+
+      _pose_buffer_mtxs.emplace_back();
+      _vel_buffer_mtxs.emplace_back();
+      _robot_wrench_buffer_mtxs.emplace_back();
+
+      // robot action
+      _waypoints_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
+      _stiffness_buffers.push_back(RUT::DataBuffer<Eigen::MatrixXd>());
+      _waypoints_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
+      _stiffness_timestamp_ms_buffers.push_back(RUT::DataBuffer<double>());
+      _waypoints_buffers[id].initialize(-1, 7, 1,
+                                        "waypoints" + std::to_string(id));
+      _stiffness_buffers[id].initialize(-1, 6, 6,
+                                        "stiffness" + std::to_string(id));
+      _waypoints_timestamp_ms_buffers[id].initialize(
+          -1, 1, 1, "waypoints" + std::to_string(id) + "_timestamp_ms");
+      _stiffness_timestamp_ms_buffers[id].initialize(
+          -1, 1, 1, "stiffness" + std::to_string(id) + "_timestamp_ms");
+      _waypoints_buffer_mtxs.emplace_back();
+      _stiffness_buffer_mtxs.emplace_back();
+    }
   }
 
   // initialize additional shared variables
+  std::cout << "[ManipServer] Initializing shared variables.\n";
   for (int id : _id_list) {
     _ctrl_rgb_folders.push_back("");
     _ctrl_robot_data_streams.push_back(std::ofstream());
@@ -367,7 +419,7 @@ bool ManipServer::initialize(const std::string& config_path) {
     _poses_fb_mtxs.emplace_back();
     _perturbation.push_back(Eigen::VectorXd::Zero(6));
     _perturbation_mtxs.emplace_back();
-    _wrench_fb.push_back(Eigen::VectorXd());
+    _wrench_fb.push_back(Eigen::VectorXd::Zero(6));
     _wrench_fb_mtxs.emplace_back();
     _camera_rgb_timestamps_ms.push_back(Eigen::VectorXd());
     _pose_timestamps_ms.push_back(Eigen::VectorXd());
@@ -567,6 +619,18 @@ const Eigen::MatrixXd ManipServer::get_vel(int k, int id) {
   std::lock_guard<std::mutex> lock(_vel_buffer_mtxs[id]);
   _vel_timestamps_ms[id] = _vel_timestamp_ms_buffers[id].get_last_k(k);
   return _vel_buffers[id].get_last_k(k);
+}
+
+const Eigen::MatrixXd ManipServer::get_eoat(int k, int id) {
+  std::lock_guard<std::mutex> lock(_eoat_buffer_mtxs[id]);
+  if (k > _eoat_buffers[id].size()) {
+    std::cout << "k: " << k
+              << " _eoat_buffers[id].size(): " << _eoat_buffers[id].size()
+              << std::endl;
+    throw std::runtime_error("k is greater than the buffer size");
+  }
+  _eoat_timestamps_ms[id] = _eoat_timestamp_ms_buffers[id].get_last_k(k);
+  return _eoat_buffers[id].get_last_k(k);
 }
 
 const int ManipServer::get_test() {

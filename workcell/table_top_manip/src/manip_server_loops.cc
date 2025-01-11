@@ -43,7 +43,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
   bool perturbation_is_applied = false;
   RUT::VectorXd perturbation = RUT::VectorXd::Zero(6);
 
-  RUT::InterpolationController intp_controller;
+  RUT::TaskSpaceInterpolationController intp_controller;
   intp_controller.initialize(pose_fb, timer.toc_ms());
   std::cout << header << "intp_controller initialized with pose_fb: "
             << pose_fb.transpose() << std::endl;
@@ -314,14 +314,15 @@ void ManipServer::eoat_loop(const RUT::TimePoint& time0, int id) {
   RUT::VectorXd pos_fb = RUT::VectorXd::Zero(1);
   RUT::Vector2d eoat_target_waypoint;
   RUT::Vector2d eoat_cmd;
+
   if (!_config.mock_hardware) {
     eoat_ptrs[id]->getJoints(pos_fb);
   }
-  eoat_cmd << pos_fb, 0;
+  eoat_cmd << pos_fb[0], 0;
 
   bool ctrl_flag_saving = false;  // local copy
 
-  RUT::InterpolationController intp_controller;
+  RUT::JointSpaceInterpolationController intp_controller;
   intp_controller.initialize(eoat_cmd, timer.toc_ms());
   std::cout << header
             << "intp_controller initialized with pos_fb: " << pos_fb.transpose()

@@ -327,6 +327,9 @@ FBMessage WSGGripperDriver::msg_receive() {
     _socket_ptr->recv_k_bytes(payload_bytes.data(), size);
   }
   unsigned short status_code = payload_bytes[0] | (payload_bytes[1] << 8);
+  // std::cout << "Received status code: " << status_code
+  //           << ", payload_bytes[0]: " << int(payload_bytes[0])
+  //           << ", payload_bytes[1]: " << int(payload_bytes[1]) << std::endl;
 
   // Read checksum
   unsigned short checksum;

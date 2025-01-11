@@ -9,12 +9,12 @@
 #include <wsg_gripper/wsg_gripper_driver.h>
 
 int main() {
-  std::string robot_ip = "192.168.1.101";
+  std::string robot_ip = "192.168.2.111";
   std::string port = "1000";
   float pos_target = 30;
   float force_target = 0;
   float velResControl_kp = 3;
-  float velResControl_kf = 10;
+  float velResControl_kf = 20;
   float PDControl_kp = 10.0;
   float PDControl_kd = 0.001;
 
@@ -25,18 +25,29 @@ int main() {
   RUT::Timer timer;
   RUT::TimePoint time0 = timer.tic();
 
-  CoinFT::CoinFTConfig config;
-  config.port = "/dev/ttyACM0";
-  config.baud_rate = 115200;
-  config.calibration_file =
-      "/home/yifanhou/git/hardware_interfaces/hardware/coinft/config/"
-      "calMat_UFT6.csv";
-
-  std::cout << "Creating CoinFT object..." << std::endl;
-  CoinFT sensor;
+  const std::string CONFIG_PATH =
+      "/home/yifanhou/git/hardware_interfaces/workcell/table_top_manip/config/"
+      "right_arm_coinft.yaml";
+  YAML::Node config_node;
   try {
-    // Provide the serial port, baud rate, and calibration matrix file name
-    sensor.init(time0, config);
+    config_node = YAML::LoadFile(CONFIG_PATH);
+  } catch (const std::exception& e) {
+    std::cerr << "Failed to load the config file: " << e.what() << std::endl;
+    return false;
+  }
+
+  CoinFT sensor;
+  CoinFT::CoinFTConfig coinft_config;
+  try {
+    coinft_config.deserialize(config_node["coinft0"]);
+  } catch (const std::exception& e) {
+    std::cerr << "Failed to load the CoinFT config file: " << e.what()
+              << std::endl;
+    return false;
+  }
+  std::cout << "Creating CoinFT object..." << std::endl;
+  try {
+    sensor.init(time0, coinft_config);
     std::cout << "CoinFT object created." << std::endl;
 
     while (!sensor.is_data_ready()) {
@@ -48,7 +59,7 @@ int main() {
     return -1;
   }
 
-  RUT::VectorXd wrench;
+  RUT::VectorXd wrench = RUT::VectorXd::Zero(6);
 
   // get gripper states
   std::cout << "[main] Getting gripper state" << std::endl;
@@ -60,9 +71,10 @@ int main() {
   int count = 0;
   while (timer.toc_ms() < 10000) {
     // read force feedback
-    sensor.getWrenchSensor(wrench);
-    std::cout << "Time: " << timer.toc_ms() << " ms, Wrench: " << wrench
-              << std::endl;
+    sensor.getWrenchSensor(wrench, 1);
+    std::cout << "Time: " << timer.toc_ms()
+              << " ms, Wrench: " << wrench.transpose() << std::endl;
+    force_target = wrench(2);
 
     // send command to gripper
     cmd_id = wsg.setVelResolvedControl(pos_target, force_target,
@@ -70,10 +82,10 @@ int main() {
     state = wsg.getState(cmd_id);
     // wsg.printState(state);
 
-    std::cout << "Count: " << ++count << ", Time: " << timer.toc_ms()
-              << ", State: " << state.state << ", Pos: " << state.position
-              << ", Vel: " << state.velocity << ", Force: " << state.force_motor
-              << std::endl;
+    // std::cout << "Count: " << ++count << ", Time: " << timer.toc_ms()
+    //           << ", State: " << state.state << ", Pos: " << state.position
+    //           << ", Vel: " << state.velocity << ", Force: " << state.force_motor
+    //           << std::endl;
   }
 
   std::cout << "Done" << std::endl;

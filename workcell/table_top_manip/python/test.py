@@ -1,3 +1,10 @@
+import os
+import sys
+
+SCRIPT_PATH = os.path.abspath(os.path.dirname(__file__))
+PACKAGE_PATH = os.path.join(SCRIPT_PATH, "../../")
+sys.path.append(os.path.join(SCRIPT_PATH, "../../../"))
+
 import manip_server_pybind as ms
 import numpy as np
 from time import sleep
@@ -5,13 +12,17 @@ import cv2
 import copy
 import matplotlib.pyplot as plt
 
+from PyriteUtility.umi_utils.usb_util import reset_all_elgato_devices
+
 print("[python] creating manip server")
 
+reset_all_elgato_devices()
 server = ms.ManipServer()
-server.initialize(
-    "/home/yifanhou/git/RobotTestBench/applications/ur_test_bench/config/ur_1.yaml"
-    # "/home/yifanhou/git/RobotTestBench/applications/ur_test_bench/config/ur_test_bench.yaml"
-)
+if not server.initialize(
+    "/home/yifanhou/git/hardware_interfaces/workcell/table_top_manip/config/single_arm_wsg.yaml"
+):
+    raise RuntimeError("Failed to initialize server")
+server.set_high_level_maintain_position()
 
 print("[python] server created")
 while not server.is_ready():
@@ -42,7 +53,7 @@ log_pose_cmd_z = []
 
 deltas = np.array([0.01, -0.01])
 for i in range(2):
-    wrench = server.get_wrench(1)
+    wrench = server.get_robot_wrench(1)
     pose_fb = server.get_pose(1)
 
     # rgb_row_combined = server.get_camera_rgb()

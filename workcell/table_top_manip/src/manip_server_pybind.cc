@@ -28,9 +28,11 @@ PYBIND11_MODULE(manip_server_pybind, m)
                 py::arg(), py::arg("robot_id") = 0)
         .def("get_pose", &ManipServer::get_pose,
                 py::arg(), py::arg("robot_id") = 0)
-        .def("get_test", &ManipServer::get_test)
         .def("get_vel", &ManipServer::get_vel,
                 py::arg(), py::arg("robot_id") = 0)
+        .def("get_eoat", &ManipServer::get_eoat,
+                py::arg(), py::arg("robot_id") = 0)
+        .def("get_test", &ManipServer::get_test)
         .def("get_camera_rgb_timestamps_ms", &ManipServer::get_camera_rgb_timestamps_ms,
                 py::arg("id") = 0)
         .def("get_wrench_timestamps_ms", &ManipServer::get_wrench_timestamps_ms,
@@ -38,6 +40,8 @@ PYBIND11_MODULE(manip_server_pybind, m)
         .def("get_wrench_filtered_timestamps_ms", &ManipServer::get_wrench_filtered_timestamps_ms,
                 py::arg("id") = 0)
         .def("get_pose_timestamps_ms", &ManipServer::get_pose_timestamps_ms,
+                py::arg("id") = 0)
+        .def("get_eoat_timestamps_ms", &ManipServer::get_eoat_timestamps_ms,
                 py::arg("id") = 0)
         .def("get_test_timestamp_ms", &ManipServer::get_test_timestamp_ms)
         .def("get_timestamp_now_ms", &ManipServer::get_timestamp_now_ms)
@@ -50,6 +54,8 @@ PYBIND11_MODULE(manip_server_pybind, m)
         .def("set_stiffness_matrix", &ManipServer::set_stiffness_matrix,
                 py::arg(), py::arg("robot_id") = 0)
         .def("schedule_waypoints", &ManipServer::schedule_waypoints,
+                py::arg(), py::arg(), py::arg("robot_id") = 0)
+        .def("schedule_eoat_waypoints", &ManipServer::schedule_eoat_waypoints,
                 py::arg(), py::arg(), py::arg("robot_id") = 0)
         .def("schedule_stiffness", &ManipServer::schedule_stiffness,
                 py::arg(), py::arg(), py::arg("robot_id") = 0);
