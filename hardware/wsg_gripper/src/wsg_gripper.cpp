@@ -163,6 +163,8 @@ void WSGGripper::Implementation::controlLoop() {
   int count = 0;
   RUT::Timer timer;
   timer.tic();
+  timer.set_loop_rate_hz(30);
+  timer.start_timed_loop();
   while (true) {
     {
       std::lock_guard<std::mutex> lock(_thread_should_be_running_mtx);
@@ -186,6 +188,8 @@ void WSGGripper::Implementation::controlLoop() {
         static_cast<float>(cmd_pos[0]), static_cast<float>(cmd_force[0]),
         static_cast<float>(_config.velResControl_kp),
         static_cast<float>(_config.velResControl_kf));
+
+    timer.sleep_till_next();
 
     // Step two: get state
     new_state = _wsg_ptr->getState(cmd_id);
