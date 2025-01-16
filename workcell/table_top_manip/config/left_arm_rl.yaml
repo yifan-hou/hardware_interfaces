@@ -41,9 +41,9 @@ ur_rtde0:
   servoL_gain: 600
   robot_interface_config:
     zone_safety_mode: "SAFETY_MODE_TRUNCATE"
-    incre_safety_mode: "SAFETY_MODE_STOP"
+    incre_safety_mode: "SAFETY_MODE_TRUNCATE"
     operation_mode: "OPERATION_MODE_CARTESIAN"
-    max_incre_m: 0.03
+    max_incre_m: 0.1
     max_incre_rad: 0.2
     max_incre_joint_rad: 0.0628
     safe_zone: [-0.5, 0.7, -0.05, 0.9, 0.2, 0.8]
@@ -76,7 +76,7 @@ gopro0:
   fps: 60
 
 wsg_gripper0:
-  robot_ip: "192.168.2.110"
+  robot_ip: "192.168.2.112"
   port: "1000"
   velResControl_kp: 3.0
   velResControl_kf: 10.0
@@ -86,8 +86,8 @@ wsg_gripper0:
     num_joints: 1
     range_safety_mode: "SAFETY_MODE_TRUNCATE"
     incre_safety_mode: "SAFETY_MODE_TRUNCATE"
-    max_incre: 100.0 # mm
-    safe_zone: [0, 100] # mm
+    max_incre: 110.0 # mm
+    safe_zone: [0, 110] # mm
 
 admittance_controller0:
   dt: 0.002
