@@ -62,11 +62,12 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
   while (true) {
     // Update robot status
     loop_profiler.start();
+    mock_loop_timer.tic();
     RUT::TimePoint t_start;
     double time_now_ms;
     if (!_config.mock_hardware) {
       // real hardware
-      t_start = urrtde_ptr->rtde_init_period();
+      // t_start = urrtde_ptr->rtde_init_period();
       urrtde_ptr->getCartesian(pose_fb);
       urrtde_ptr->getCartesianVelocity(vel_fb);
       urrtde_ptr->getWrenchTool(wrench_fb_ur);
@@ -277,21 +278,31 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
     }
 
     loop_profiler.stop("lock");
+    loop_profiler.start();
 
     // loop timing and overrun check
     if (_config.mock_hardware) {
-      mock_loop_timer.sleep_till_next();
     } else {
       double overrun_ms = mock_loop_timer.check_for_overrun_ms(false);
-      if (overrun_ms > 0) {
-        std::cout << "\033[33m";  // set color to bold yellow
-        std::cout << header << "Overrun: " << overrun_ms << "ms" << std::endl;
-        std::cout << "\033[0m";  // reset color to default
-        loop_profiler.show();
-      }
-      urrtde_ptr->rtde_wait_period(t_start);
+      // TODO: this overrun check does not work. Needs to debug
+      // if (overrun_ms > 0) {
+      //   std::cout << "\033[33m";  // set color to bold yellow
+      //   std::cout << header << "Overrun: " << overrun_ms << "ms" << std::endl;
+      //   std::cout << "\033[0m";  // reset color to default
+      //   loop_profiler.show();
+      // }
       mock_loop_timer.check_for_overrun_ms(
           false);  // just call it to reset the timer
+    }
+    mock_loop_timer.sleep_till_next();
+
+    loop_profiler.stop("spin time");
+    if (mock_loop_timer.toc_ms() > 20.0) {
+      std::cout << "\033[33m";  // set color to bold yellow
+      std::cout << header << "This loop takes: " << mock_loop_timer.toc_ms()
+                << "ms" << std::endl;
+      std::cout << "\033[0m";  // reset color to default
+      loop_profiler.show();
     }
     loop_profiler.clear();
   }  // end of while loop
@@ -406,7 +417,7 @@ void ManipServer::eoat_loop(const RUT::TimePoint& time0, int id) {
       break;
     }
 
-    // std::cout << "t = " << timer.toc_ms()
+    // std::cout << "deubg: t = " << timer.toc_ms()
     //           << ", eoat_cmd: " << eoat_cmd.transpose() << std::endl;
 
     // logging
