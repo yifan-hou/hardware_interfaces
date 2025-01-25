@@ -7,7 +7,7 @@
 #    damping: low damping
 #    max_spring_force_magnitude: 15
 # always check the first few parameters:
-data_folder: "/home/yifanhou/data/raw/temp"
+data_folder: "/home/xuxm/data/real/demonstration"
 mock_hardware: false
 bimanual: false
 use_perturbation_generator: false

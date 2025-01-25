@@ -10,6 +10,7 @@ Current implementations includes (see `robots/`):
 * ATI force torque sensor via netft;
 * Robotiq FT series force torque sensor via modbus
 * Realsense cameras via USB.
+* Oak camera via USB.
 
 Author: Yifan Hou
 yifanhou@stanford.edu
@@ -25,6 +26,7 @@ Additionally, each hardware interface has there own dependencies. You can disabl
 * The realsense module is dependent on the [official lib realsense package](https://github.com/IntelRealSense/librealsense/blob/master/examples/readme.md)
 * The GoPro module is dependent on opencv.
 * The ati_netft and robotiq_ft_modbus module contains a copy of the respective drivers and thus do not have additional dependencies. 
+* The Oak camera is dependent on [depthai-core](https://github.com/luxonis/depthai-core).
 
 Example installation procedure with CMake:
 
@@ -53,6 +55,15 @@ git clone https://gitlab.com/sdurobotics/ur_rtde.git
 cd ur_rtde
 mkdir build && cd build
 cmake ..
+make -j
+make install
+
+# install depthai-core
+cd ../..
+git clone https://github.com/luxonis/depthai-core.git
+cd depthai-core
+mkdir build && cd build
+cmake -DCMAKE_INSTALL_PREFIX=$HOME/.local -DDEPTHAI_BUILD_EXAMPLES=ON -DBUILD_SHARED_LIBS=ON ..
 make -j
 make install
 

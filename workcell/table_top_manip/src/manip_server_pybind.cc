@@ -63,7 +63,8 @@ PYBIND11_MODULE(manip_server_pybind, m)
         .def("schedule_stiffness", &ManipServer::schedule_stiffness,
                 py::arg(), py::arg(), py::arg("robot_id") = 0)
         .def("start_saving_data_for_a_new_episode", &ManipServer::start_saving_data_for_a_new_episode)
-        .def("stop_saving_data", &ManipServer::stop_saving_data);
+        .def("stop_saving_data", &ManipServer::stop_saving_data)
+        .def("get_episode_folder", &ManipServer::get_episode_folder);
 
 }
 // clang-format on
