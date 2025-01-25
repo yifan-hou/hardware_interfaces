@@ -58,7 +58,7 @@ PYBIND11_MODULE(manip_server_pybind, m)
         .def("schedule_eoat_waypoints", &ManipServer::schedule_eoat_waypoints,
                 py::arg(), py::arg(), py::arg("robot_id") = 0)
         .def("schedule_stiffness", &ManipServer::schedule_stiffness,
-                py::arg(), py::arg(), py::arg("robot_id") = 0);
+                py::arg(), py::arg(), py::arg("robot_id") = 0)
         .def("set_episode_start", &ManipServer::set_episode_start, py::arg("start"))
         .def("set_episode_end", &ManipServer::set_episode_end, py::arg("end"))
         .def("is_episode_active", &ManipServer::is_episode_active);               

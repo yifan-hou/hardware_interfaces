@@ -40,6 +40,7 @@ struct ManipServerConfig {
   bool run_wrench_thread{false};
   bool run_rgb_thread{false};
   bool plot_rgb{false};
+  bool run_data_saving_thread{false};
   int rgb_buffer_size{5};
   int robot_buffer_size{100};
   int eoat_buffer_size{100};
