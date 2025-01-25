@@ -172,6 +172,9 @@ class ManipServer {
   void start_saving_data_for_a_new_episode();
   void stop_saving_data();
   bool is_saving_data();
+  void set_episode_start(bool start);
+  void set_episode_end(bool end);
+  bool is_episode_active();
 
  private:
   // config
@@ -238,6 +241,12 @@ class ManipServer {
   // timing
   RUT::Timer _timer;
 
+  // episode start and end flags
+  bool _start_episode = false;
+  bool _end_episode = false;
+  std::mutex _flag_mtx;
+  std::condition_variable _flag_cv;
+
   //  hardware interfaces
   std::vector<std::shared_ptr<CameraInterfaces>> camera_ptrs;
   std::vector<std::shared_ptr<FTInterfaces>> force_sensor_ptrs;
@@ -258,6 +267,7 @@ class ManipServer {
   std::vector<std::thread> _wrench_threads;
   std::vector<std::thread> _rgb_threads;
   std::thread _rgb_plot_thread;
+  std::thread _data_saving_thread;
 
   // control variables to control the threads
   std::vector<std::string> _ctrl_rgb_folders;
@@ -274,6 +284,7 @@ class ManipServer {
   std::vector<bool> _states_rgb_thread_ready{};
   std::vector<bool> _states_wrench_thread_ready{};
   bool _state_plot_thread_ready{false};
+  bool _state_data_saving_thread_ready{false};
 
   std::vector<bool> _states_robot_thread_saving{};
   std::vector<bool> _states_eoat_thread_saving{};
@@ -299,6 +310,10 @@ class ManipServer {
   std::vector<Eigen::VectorXd> _wrench_fb;
   std::deque<std::mutex> _wrench_fb_mtxs;
 
+  // variables for data saving
+  std::string _current_episode_folder;
+  std::vector<std::ofstream> _data_streams;
+
   // loop functions
   void robot_loop(const RUT::TimePoint& time0, int robot_id);
   void eoat_loop(const RUT::TimePoint& time0, int robot_id);
@@ -306,4 +321,5 @@ class ManipServer {
   void wrench_loop(const RUT::TimePoint& time0, int publish_rate,
                    int sensor_id);
   void rgb_plot_loop();  // opencv plotting does not support multi-threading
+  void data_saving_loop();
 };

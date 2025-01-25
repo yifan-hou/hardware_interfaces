@@ -17,6 +17,7 @@ run_eoat_thread: false
 run_wrench_thread: true
 run_rgb_thread: true
 plot_rgb: false
+run_data_saving_thread: true
 
 rgb_buffer_size: 11
 robot_buffer_size: 600
