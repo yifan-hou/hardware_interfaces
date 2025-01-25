@@ -177,6 +177,7 @@ class ManipServer {
   void start_saving_data_for_a_new_episode();
   void stop_saving_data();
   bool is_saving_data();
+  std::string get_episode_folder() const;
 
  private:
   // config
@@ -265,6 +266,7 @@ class ManipServer {
   std::thread _rgb_plot_thread;
 
   // control variables to control the threads
+  std::string _episode_folder;
   std::vector<std::string> _ctrl_rgb_folders;
   std::vector<std::ofstream> _ctrl_robot_data_streams;
   std::vector<std::ofstream> _ctrl_eoat_data_streams;

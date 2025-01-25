@@ -1099,10 +1099,9 @@ void ManipServer::start_saving_data_for_a_new_episode() {
   std::vector<std::string> robot_json_file_names;
   std::vector<std::string> eoat_json_file_names;
   std::vector<std::string> wrench_json_file_names;
-  create_folder_for_new_episode(_config.data_folder, _id_list,
+  _episode_folder = create_folder_for_new_episode(_config.data_folder, _id_list,
                                 _ctrl_rgb_folders, robot_json_file_names,
                                 eoat_json_file_names, wrench_json_file_names);
-
   std::cout << "[main] New episode. rgb_folder_name: " << _ctrl_rgb_folders[0]
             << std::endl;
 
@@ -1141,4 +1140,8 @@ bool ManipServer::is_saving_data() {
     }
   }
   return is_saving;
+}
+
+std::string ManipServer::get_episode_folder() const{
+  return _episode_folder;
 }

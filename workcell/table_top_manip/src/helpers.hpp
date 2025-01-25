@@ -15,7 +15,7 @@ inline std::string makeFixedLength(const int i, const int length) {
   return ostr.str();
 }
 
-inline void create_folder_for_new_episode(
+inline std::string create_folder_for_new_episode(
     const std::string& data_folder, std::vector<int> id_list,
     std::vector<std::string>& rgb_folders,
     std::vector<std::string>& robot_json_files,
@@ -60,6 +60,7 @@ inline void create_folder_for_new_episode(
     std::cout << "[create_folder_for_new_episode] generated wrench file: "
               << wrench_json_file << std::endl;
   }
+  return episode_folder;
 }
 
 inline bool save_robot_data_json(std::ostream& os, int seq_id,
