@@ -191,11 +191,6 @@ bool ManipServer::initialize(const std::string& config_path) {
         }
         std::cout << "[ManipServer] Force sensor " << id << " initialized.\n";
       }
-
-      if (_config.run_data_saving_thread) {
-        std::cout << "[ManipServer] Data saving thread is running.\n";
-        _data_saving_thread = std::thread(&ManipServer::data_saving_loop, this);
-      }
     }
   } else {
     // mock hardware
@@ -536,11 +531,6 @@ void ManipServer::join_threads() {
     std::cout << "[ManipServer]: Waiting for plotting thread to join."
               << std::endl;
     _rgb_plot_thread.join();
-  }
-  if (_config.run_data_saving_thread) {
-    std::cout << "[ManipServer]: Waiting for data saving thread to join."
-              << std::endl;
-    _data_saving_thread.join();
   }
 
   std::cout << "[ManipServer]: Threads have joined. Exiting." << std::endl;
@@ -1072,61 +1062,4 @@ bool ManipServer::is_saving_data() {
                 _states_wrench_thread_saving[id];
   }
   return is_saving;
-}
-
-void ManipServer::set_episode_start(bool start) {
-  {
-    std::lock_guard<std::mutex> lock(_flag_mtx);
-    _start_episode = start;
-  }
-  _flag_cv.notify_all();
-}
-
-void ManipServer::set_episode_end(bool end) {
-  {
-    std::lock_guard<std::mutex> lock(_flag_mtx);
-    _end_episode = end;
-  }
-  _flag_cv.notify_all();
-}
-
-bool ManipServer::is_episode_active() {
-  std::lock_guard<std::mutex> lock(_flag_mtx);
-  return _start_episode && !_end_episode;
-}
-
-void ManipServer::data_saving_loop() {
-  std::string header = "[ManipServer][Data Saving Thread]: ";
-  std::cout << header << "Starting thread." << std::endl;
-  {
-    std::lock_guard<std::mutex> lock(_ctrl_mtx);
-    _state_data_saving_thread_ready = true;
-  }
-  while (true) {
-    {
-      std::unique_lock<std::mutex> lock(_flag_mtx);
-      _flag_cv.wait(lock, [this]() { return _start_episode; });
-    }
-
-    start_saving_data_for_a_new_episode();
-
-    while (true) {
-      {
-        std::lock_guard<std::mutex> lock(_flag_mtx);
-        if (_end_episode) break;
-      }
-
-      // Continue saving other data as required
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-
-    stop_saving_data();
-    {
-      std::lock_guard<std::mutex> lock(_flag_mtx);
-      _start_episode = false;
-      _end_episode = false;
-    }
-    std::cout << header << "All threads have stopped saving data." << std::endl;
-  }
-  std::cout << header << "Thread exited." << std::endl;
 }

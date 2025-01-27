@@ -40,7 +40,6 @@ struct ManipServerConfig {
   bool run_wrench_thread{false};
   bool run_rgb_thread{false};
   bool plot_rgb{false};
-  bool run_data_saving_thread{false};
   int rgb_buffer_size{5};
   int robot_buffer_size{100};
   int eoat_buffer_size{100};
@@ -173,9 +172,6 @@ class ManipServer {
   void start_saving_data_for_a_new_episode();
   void stop_saving_data();
   bool is_saving_data();
-  void set_episode_start(bool start);
-  void set_episode_end(bool end);
-  bool is_episode_active();
 
  private:
   // config
@@ -322,5 +318,4 @@ class ManipServer {
   void wrench_loop(const RUT::TimePoint& time0, int publish_rate,
                    int sensor_id);
   void rgb_plot_loop();  // opencv plotting does not support multi-threading
-  void data_saving_loop();
 };
