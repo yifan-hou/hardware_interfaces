@@ -13,9 +13,9 @@ bimanual: false
 use_perturbation_generator: false
 
 run_robot_thread: true
+run_eoat_thread: true
 run_wrench_thread: false
 run_rgb_thread: true
-run_eoat_thread: true
 plot_rgb: false
 
 rgb_buffer_size: 11
@@ -49,21 +49,22 @@ ur_rtde0:
     safe_zone: [-0.5, 0.7, -0.05, 0.9, 0.2, 0.8]
 
 ati_netft0:
-    ip_address: "192.168.2.101"
-    counts_per_force: 1000000
-    counts_per_torque: 1000000
-    sensor_name: "netft0"
-    print_flag: false
-    fullpath: "/tmp/netft0_data.txt"
-    publish_rate: 7000
-    noise_level: 0.0
-    stall_threshold: 100
-    Foffset: [1.88304, -15.861, 11.4758]
-    Toffset: [0.576757, 0.054351, -0.0933367]
-    Gravity: [-0.0512774, 0.0304736, -0.804662]
-    Pcom: [0.000241627, 0.000264568, 0.0835715]
-    WrenchSafety: [40.0, 40.0, 60.0, 3, 3, 3]
-    PoseSensorTool: [0, 0, -0.079, -0.25882,  0,  0,  0.9659258]
+  ip_address: "192.168.2.101"
+  counts_per_force: 1000000
+  counts_per_torque: 1000000
+  sensor_name: "netft0"
+  print_flag: false
+  fullpath: "/tmp/netft0_data.txt"
+  publish_rate: 7000
+  noise_level: 0.0
+  stall_threshold: 100
+  Foffset: [12.8997, -11.2638, 9.94988]
+  Toffset: [0.217999, 0.0990484, -0.253111]
+  Gravity: [0.0421691, -0.0229882, -1.37641]
+  Pcom: [-0.000674891, -0.0304953, -0.00424491]
+  WrenchSafety: [40.0, 40.0, 60.0, 3, 3, 3]
+  # PoseSensorTool: [0, 0, -0.079, -0.25882,  0,  0,  0.9659258]
+  PoseSensorTool: [0.00, 0, -0.02, 0.5,  -0.5,  -0.5,  0.5]
 
 gopro0:
   # device_name: "/dev/video1"
@@ -95,8 +96,8 @@ admittance_controller0:
   log_file_path: "/tmp/admittance0_controller.log"
   alert_overrun: false
   compliance6d:
-    stiffness: [200, 200, 300, 2, 2, 2] 
-    damping: [3.1, 3.1, 3.1, 0.3, 0.3, 0.3] # for data collection
+    stiffness: [1500, 1500, 1500, 2, 2, 2] 
+    damping: [5.1, 5.1, 5.1, 0.5, 0.5, 0.5] # for data collection
     inertia: [0.1, 0.1, 0.1, 0.001, 0.001, 0.001]
     stiction: [0, 0, 0, 0, 0, 0]
   max_spring_force_magnitude: 30

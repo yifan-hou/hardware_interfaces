@@ -708,6 +708,17 @@ void ManipServer::set_high_level_free_jogging() {
   }
 }
 
+void ManipServer::calibrate_robot_wrench(int NSamples) {
+  if (!_config.run_robot_thread) {
+    return;
+  }
+  for (int id : _id_list) {
+    URRTDE* urrtde_ptr;
+    urrtde_ptr = static_cast<URRTDE*>(robot_ptrs[id].get());
+    urrtde_ptr->calibrateFTSensor(NSamples);
+  }
+}
+
 void ManipServer::set_target_pose(const Eigen::Ref<RUT::Vector7d> pose,
                                   double dt_in_future_ms, int robot_id) {
   std::lock_guard<std::mutex> lock(_waypoints_buffer_mtxs[robot_id]);
@@ -729,20 +740,24 @@ void ManipServer::set_stiffness_matrix(const RUT::Matrix6d& stiffness,
 }
 
 void ManipServer::clear_cmd_buffer() {
-  for (int id : _id_list) {
-    std::lock_guard<std::mutex> lock(_waypoints_buffer_mtxs[id]);
-    _waypoints_buffers[id].clear();
-    _waypoints_timestamp_ms_buffers[id].clear();
+  if (_config.run_robot_thread) {
+    for (int id : _id_list) {
+      std::lock_guard<std::mutex> lock(_waypoints_buffer_mtxs[id]);
+      _waypoints_buffers[id].clear();
+      _waypoints_timestamp_ms_buffers[id].clear();
+    }
+    for (int id : _id_list) {
+      std::lock_guard<std::mutex> lock(_stiffness_buffer_mtxs[id]);
+      _stiffness_buffers[id].clear();
+      _stiffness_timestamp_ms_buffers[id].clear();
+    }
   }
-  for (int id : _id_list) {
-    std::lock_guard<std::mutex> lock(_eoat_waypoints_buffer_mtxs[id]);
-    _eoat_waypoints_buffers[id].clear();
-    _eoat_waypoints_timestamp_ms_buffers[id].clear();
-  }
-  for (int id : _id_list) {
-    std::lock_guard<std::mutex> lock(_stiffness_buffer_mtxs[id]);
-    _stiffness_buffers[id].clear();
-    _stiffness_timestamp_ms_buffers[id].clear();
+  if (_config.run_eoat_thread) {
+    for (int id : _id_list) {
+      std::lock_guard<std::mutex> lock(_eoat_waypoints_buffer_mtxs[id]);
+      _eoat_waypoints_buffers[id].clear();
+      _eoat_waypoints_timestamp_ms_buffers[id].clear();
+    }
   }
 }
 
@@ -1029,10 +1044,11 @@ void ManipServer::schedule_stiffness(const Eigen::MatrixXd& stiffnesses,
 void ManipServer::start_saving_data_for_a_new_episode() {
   // create episode folders
   std::vector<std::string> robot_json_file_names;
+  std::vector<std::string> eoat_json_file_names;
   std::vector<std::string> wrench_json_file_names;
   create_folder_for_new_episode(_config.data_folder, _id_list,
                                 _ctrl_rgb_folders, robot_json_file_names,
-                                wrench_json_file_names);
+                                eoat_json_file_names, wrench_json_file_names);
 
   std::cout << "[main] New episode. rgb_folder_name: " << _ctrl_rgb_folders[0]
             << std::endl;
@@ -1040,6 +1056,7 @@ void ManipServer::start_saving_data_for_a_new_episode() {
   // get rgb folder and low dim json file for saving data
   for (int id : _id_list) {
     _ctrl_robot_data_streams[id].open(robot_json_file_names[id]);
+    _ctrl_eoat_data_streams[id].open(eoat_json_file_names[id]);
     _ctrl_wrench_data_streams[id].open(wrench_json_file_names[id]);
   }
 
@@ -1057,9 +1074,18 @@ void ManipServer::stop_saving_data() {
 bool ManipServer::is_saving_data() {
   bool is_saving = false;
   for (int id : _id_list) {
-    is_saving = is_saving || _states_robot_thread_saving[id] ||
-                _states_rgb_thread_saving[id] ||
-                _states_wrench_thread_saving[id];
+    if (_config.run_rgb_thread) {
+      is_saving = is_saving || _states_rgb_thread_saving[id];
+    }
+    if (_config.run_robot_thread) {
+      is_saving = is_saving || _states_robot_thread_saving[id];
+    }
+    if (_config.run_eoat_thread) {
+      is_saving = is_saving || _states_eoat_thread_saving[id];
+    }
+    if (_config.run_wrench_thread) {
+      is_saving = is_saving || _states_wrench_thread_saving[id];
+    }
   }
   return is_saving;
 }

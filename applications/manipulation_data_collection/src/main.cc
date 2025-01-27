@@ -30,7 +30,7 @@ void main_print(const std::string& msg) {
 int main() {
   // read config files
   const std::string config_path =
-      "/path/to/hardware_interfaces/workcell/"
+      "/home/yifanhou/git/hardware_interfaces/workcell/"
       "table_top_manip/"
       "config/single_arm_data_collection.yaml";
 
@@ -56,7 +56,13 @@ int main() {
   // Main loop
   RUT::Timer duration_timer;
   while (true) {
-    main_print("Press Enter to start a new episode.");
+    server.set_high_level_maintain_position();
+    main_print(
+        "Release the robot now. Robot wrench calibration will start in 1s.");
+    sleep(1);
+    server.calibrate_robot_wrench(100);
+
+    main_print("Hold the robot now. Press Enter to start a new episode.");
     std::getchar();
     duration_timer.tic();
 
@@ -85,7 +91,8 @@ int main() {
 
     std::cout << "[main] What to do:\n";
     std::cout << "[main]    q to quit\n";
-    std::cout << "[main]    others to save and continue.\n";
+    std::cout << "[main]    others to save and continue. (Move to a neutral "
+                 "pose first)\n";
     char c = std::getchar();
 
     if (c == 'q') {

@@ -12,6 +12,9 @@
 #include <robotiq_ft_modbus/robotiq_ft_modbus.h>
 #include <ur_rtde/ur_rtde.h>
 
+Eigen::IOFormat MatlabFmt(Eigen::StreamPrecision, 0, ", ", ";\n", "", "", "[",
+                          "]");
+
 class StaticCalibration {
  public:
   StaticCalibration(int n_samples = 1000) {
@@ -118,7 +121,7 @@ int main() {
 
   // open file
   const std::string CONFIG_PATH =
-      "/path/to/hardware_interfaces/applications/ft_calibration/"
+      "/home/yifanhou/git/hardware_interfaces/applications/ft_calibration/"
       "config/ft_calibration.yaml";
   YAML::Node config{};
   try {
@@ -140,7 +143,7 @@ int main() {
   RUT::TimePoint time0 = timer.tic();
   RUT::Vector7d pose, pose_ref, pose_cmd;
   RUT::Vector6d wrench_6d, wrench_WTr;
-  RUT::VectorXd wrench;
+  RUT::VectorXd wrench = RUT::VectorXd::Zero(6);
 
   robot.init(time0, robot_config);
   robot.getCartesian(pose);
@@ -191,6 +194,7 @@ int main() {
     robot.getCartesian(pose);
     robot.getWrenchTool(wrench_6d);
     controller.setRobotStatus(pose, wrench_6d);
+    // std::cout << "pose_cmd: " << pose_cmd.transpose() << std::endl;
 
     // Update robot reference
     controller.setRobotReference(pose_ref, wrench_WTr);
@@ -204,8 +208,9 @@ int main() {
       force_sensor_ptr->getWrenchTool(wrench);
       calibrator.addData(wrench, pose);
       t_last_collect_ms = dt;
-      printf("t = %f, recorded wrench: %f %f %f %f %f %f\n", dt, wrench[0],
-             wrench[1], wrench[2], wrench[3], wrench[4], wrench[5]);
+      printf(
+          "t =\t%.1f, recorded wrench:\t%.1f\t%.1f\t%.1f\t%.2f\t%.2f\t%.2f\n",
+          dt, wrench[0], wrench[1], wrench[2], wrench[3], wrench[4], wrench[5]);
     }
 
     if (!robot.streamCartesian(pose_cmd)) {

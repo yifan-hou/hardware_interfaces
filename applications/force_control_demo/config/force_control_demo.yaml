@@ -75,11 +75,12 @@ admittance_controller:
   dt: 0.002
   log_to_file: false
   log_file_path: "/tmp/admittance_controller.log"
+  alert_overrun: false
   compliance6d:
     stiffness: [0, 0, 0, 0, 0, 0]
-    damping: [2, 2, 2, 0.1, 0.1, 0.1] # for data collection
-    inertia: [0.1, 0.1, 0.1, 0.0005, 0.0005, 0.0005]
-    stiction: [10, 10, 10, 0.1, 0.1, 0.1]
+    damping: [5, 5, 5, 0.1, 0.1, 0.1]
+    inertia: [0.5, 0.5, 0.5, 0.001, 0.001, 0.001]
+    stiction: [0, 0, 0, 0, 0, 0]
   max_spring_force_magnitude: 20
   direct_force_control_gains:
     P_trans: 0

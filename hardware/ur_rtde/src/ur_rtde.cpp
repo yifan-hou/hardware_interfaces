@@ -20,6 +20,7 @@ struct URRTDE::Implementation {
       tcp_speed_feedback{};  // std vector to be compatible with ur_rtde lib
   std::vector<double> tcp_pose_command{};
   RUT::Vector7d pose_xyzq_set_prev{};
+  RUT::Vector6d wrench0{};
 
   // pre-allocated variables that are always assigned before use
   RUT::Vector3d v_axis_receive{};
@@ -50,6 +51,7 @@ URRTDE::Implementation::Implementation() {
   tcp_pose_feedback.resize(6);
   tcp_speed_feedback.resize(6);
   tcp_pose_command.resize(6);
+  wrench0.setZero();
 }
 
 URRTDE::Implementation::~Implementation() {
@@ -307,6 +309,12 @@ bool URRTDE::getWrenchTool(RUT::Vector6d& wrench) {
   return m_impl->getWrenchTool(wrench);
 }
 
+bool URRTDE::getWrenchToolCalibrated(RUT::Vector6d& wrench) {
+  bool result = m_impl->getWrenchTool(wrench);
+  wrench -= m_impl->wrench0;
+  return result;
+}
+
 bool URRTDE::setCartesian(const RUT::Vector7d& pose_xyzq) {
   return m_impl->setCartesian(pose_xyzq);
 }
@@ -321,6 +329,19 @@ RUT::TimePoint URRTDE::rtde_init_period() {
 
 void URRTDE::rtde_wait_period(RUT::TimePoint time_point) {
   m_impl->rtde_wait_period(time_point);
+}
+
+void URRTDE::calibrateFTSensor(int Nsamples) {
+  RUT::Vector6d wrench_temp = RUT::Vector6d::Zero();
+  RUT::Vector6d wrench_sum = RUT::Vector6d::Zero();
+  for (int i = 0; i < Nsamples; ++i) {
+    m_impl->getWrenchTool(wrench_temp);
+    wrench_sum += wrench_temp;
+    // sleep for 10 ms
+    usleep(10000);
+  }
+  wrench_sum /= Nsamples;
+  m_impl->wrench0 = wrench_sum;
 }
 
 bool URRTDE::getJoints(RUT::VectorXd& joints) {

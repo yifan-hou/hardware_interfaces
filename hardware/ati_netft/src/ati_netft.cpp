@@ -61,6 +61,7 @@ void* ATI_Monitor(void* pParam) {
 }
 
 ATINetft::ATINetft() {
+  _wrench_sensor_temp = RUT::VectorXd::Zero(6);
   _force = RUT::Vector3d::Zero();
   _force_old = RUT::Vector3d::Zero();
   _torque = RUT::Vector3d::Zero();
@@ -106,7 +107,12 @@ bool ATINetft::init(RUT::TimePoint time0, const ATINetftConfig& config) {
 }
 
 int ATINetft::getWrenchSensor(RUT::VectorXd& wrench, int num_of_sensors) {
+
   assert(num_of_sensors == 1);
+  if (wrench.size() != 6) {
+    std::cout << "\033[1;31m[ATINetft] wrench size is not 6\033[0m\n";
+    std::cout << "  wrench size: " << wrench.size() << std::endl;
+  }
   assert(wrench.size() == 6);
   wrench.head(3) = _force;
   wrench.tail(3) = _torque;
@@ -151,6 +157,17 @@ int ATINetft::getWrenchTool(RUT::VectorXd& wrench_T, int num_of_sensors) {
 int ATINetft::getWrenchNetTool(const RUT::Vector7d& pose,
                                RUT::VectorXd& wrench_net_T,
                                int num_of_sensors) {
+  if (wrench_net_T.size() != 6) {
+    std::cout << "\033[1;31m[ATINetft] [getWrenchNetTool] wrench_net_T size is "
+                 "not 6!\033[0m\n";
+    std::cout << "\033[1;31m[ATINetft] [getWrenchNetTool] wrench_net_T size "
+                 "is: \033[0m"
+              << wrench_net_T.size() << std::endl;
+    std::cout << "\033[1;31m[ATINetft] [getWrenchNetTool] make sure you "
+                 "initialized wrench_net_T size "
+                 "to something like VectorXd::Zero(6).\033[0m\n";
+    throw std::runtime_error("Output argument not properly initialized.");
+  }
   int flag = this->getWrenchTool(_wrench_tool_temp);
 
   // compensate for the weight of object

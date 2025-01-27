@@ -60,6 +60,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
   mock_loop_timer.set_loop_rate_hz(500);
   mock_loop_timer.start_timed_loop();
   while (true) {
+
     // Update robot status
     loop_profiler.start();
     mock_loop_timer.tic();
@@ -70,7 +71,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       // t_start = urrtde_ptr->rtde_init_period();
       urrtde_ptr->getCartesian(pose_fb);
       urrtde_ptr->getCartesianVelocity(vel_fb);
-      urrtde_ptr->getWrenchTool(wrench_fb_ur);
+      urrtde_ptr->getWrenchToolCalibrated(wrench_fb_ur);
       time_now_ms = timer.toc_ms();
       loop_profiler.stop("compute");
       loop_profiler.start();
@@ -244,7 +245,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       _states_robot_thread_saving[id] = true;
       save_robot_data_json(_ctrl_robot_data_streams[id],
                            _states_robot_seq_id[id], timer.toc_ms(), pose_fb,
-                           perturbation_is_applied);
+                           wrench_fb_ur, perturbation_is_applied);
       json_frame_ending(_ctrl_robot_data_streams[id]);
       _states_robot_seq_id[id]++;
     } else {
@@ -255,11 +256,12 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
         // save one last frame, so we can do the correct different frame ending
         save_robot_data_json(_ctrl_robot_data_streams[id],
                              _states_robot_seq_id[id], timer.toc_ms(), pose_fb,
-                             perturbation_is_applied);
+                             wrench_fb_ur, perturbation_is_applied);
         json_file_ending(_ctrl_robot_data_streams[id]);
         _ctrl_robot_data_streams[id].close();
         ctrl_flag_saving = false;
         _states_robot_thread_saving[id] = false;
+        std::cout << "[robot thread] Low dim data saved." << std::endl;
       }
     }
 
@@ -305,6 +307,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       loop_profiler.show();
     }
     loop_profiler.clear();
+
   }  // end of while loop
 
   {
@@ -481,8 +484,8 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
   RUT::Timer timer;
   timer.tic(time0);  // so this timer is synced with the main timer
 
-  RUT::VectorXd wrench_fb;
-  RUT::VectorXd wrench_fb_filtered;
+  RUT::VectorXd wrench_fb = RUT::VectorXd::Zero(6);
+  RUT::VectorXd wrench_fb_filtered = RUT::VectorXd::Zero(6);
   int num_ft_sensors = force_sensor_ptrs[id]->getNumSensors();
 
   if (!_config.mock_hardware) {
