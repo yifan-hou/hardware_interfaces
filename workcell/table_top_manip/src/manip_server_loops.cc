@@ -60,7 +60,6 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
   mock_loop_timer.set_loop_rate_hz(500);
   mock_loop_timer.start_timed_loop();
   while (true) {
-
     // Update robot status
     loop_profiler.start();
     mock_loop_timer.tic();
@@ -280,34 +279,18 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
     }
 
     loop_profiler.stop("lock");
-    loop_profiler.start();
 
     // loop timing and overrun check
-    if (_config.mock_hardware) {
-    } else {
-      double overrun_ms = mock_loop_timer.check_for_overrun_ms(false);
-      // TODO: this overrun check does not work. Needs to debug
-      // if (overrun_ms > 0) {
-      //   std::cout << "\033[33m";  // set color to bold yellow
-      //   std::cout << header << "Overrun: " << overrun_ms << "ms" << std::endl;
-      //   std::cout << "\033[0m";  // reset color to default
-      //   loop_profiler.show();
-      // }
-      mock_loop_timer.check_for_overrun_ms(
-          false);  // just call it to reset the timer
-    }
-    mock_loop_timer.sleep_till_next();
-
-    loop_profiler.stop("spin time");
-    if (mock_loop_timer.toc_ms() > 20.0) {
+    double overrun_ms = mock_loop_timer.check_for_overrun_ms(false);
+    // TODO: this overrun check does not work. Needs to debug
+    if (overrun_ms > 0) {
       std::cout << "\033[33m";  // set color to bold yellow
-      std::cout << header << "This loop takes: " << mock_loop_timer.toc_ms()
-                << "ms" << std::endl;
+      std::cout << header << "Overrun: " << overrun_ms << "ms" << std::endl;
       std::cout << "\033[0m";  // reset color to default
       loop_profiler.show();
     }
     loop_profiler.clear();
-
+    mock_loop_timer.sleep_till_next();
   }  // end of while loop
 
   {

@@ -58,11 +58,14 @@ int main() {
   while (true) {
     server.set_high_level_maintain_position();
     main_print(
-        "Release the robot now. Robot wrench calibration will start in 1s.");
+        "Robot should be release now. Robot wrench calibration will start in "
+        "1s.");
     sleep(1);
+    main_print("Calibrating ....");
     server.calibrate_robot_wrench(100);
-
-    main_print("Hold the robot now. Press Enter to start a new episode.");
+    main_print(
+        "Done calibration. Hold the robot and press Enter to start a new "
+        "episode.");
     std::getchar();
     duration_timer.tic();
 
@@ -70,10 +73,9 @@ int main() {
     server.set_high_level_free_jogging();
 
     // start saving data
+    server.start_saving_data_for_a_new_episode();
     main_print(
         "[main] Recording in progress. Press Enter to finish the episode.");
-    server.start_saving_data_for_a_new_episode();
-
     // wait for user to stop the episode
     std::getchar();
 
@@ -90,9 +92,11 @@ int main() {
     std::cout << "[main] All threads have stopped saving data." << std::endl;
 
     std::cout << "[main] What to do:\n";
-    std::cout << "[main]    q to quit\n";
-    std::cout << "[main]    others to save and continue. (Move to a neutral "
-                 "pose first)\n";
+    std::cout << "[main]    to quit: q + ENTER\n";
+    std::cout << "[main]    to save and continue:\n";
+    std::cout << "[main]      1. Move the robot to a neutral pose.\n";
+    std::cout << "[main]      2. Press Enter, then release the robot for force "
+                 "calibration.\n";
     char c = std::getchar();
 
     if (c == 'q') {
