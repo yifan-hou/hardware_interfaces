@@ -92,6 +92,12 @@ class URRTDE : public RobotInterfaces {
    * transforms the result to the tool frame.
    */
   bool getWrenchTool(RUT::Vector6d& wrench);
+  /**
+   * Get calibrated wrench measurement from the UR internal FT sensor.
+   * The wrench is described in the tool frame.
+   * This function calls getWrenchTool() internally and subtracts an offset from it.
+   */
+  bool getWrenchToolCalibrated(RUT::Vector6d& wrench);
   bool streamCartesian(const RUT::Vector7d& pose);
   /**
    * rtde_init_period and rtde_wait_period are used together to maintain a timed loop.
@@ -106,6 +112,17 @@ class URRTDE : public RobotInterfaces {
    */
   RUT::TimePoint rtde_init_period();
   void rtde_wait_period(RUT::TimePoint time_point);
+
+  /**
+   * Calibrate the UR internal FT sensor, assuming zero external load.
+   * The robot will record the average wrench measurement over N samples,
+   * and use it as the zero offset.
+   * 
+   * Sampling is taken at 100Hz. This function will block for N/100 seconds.
+   *
+   * @param[in]  Nsamples  Number of samples to average.
+   */
+  void calibrateFTSensor(int Nsamples = 100);
 
   /**
    * Not implemented yet. Keep empty implementation to not make an abstract

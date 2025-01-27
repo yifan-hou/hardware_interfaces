@@ -72,18 +72,20 @@ ati_netft:
     Gravity: [0.0, 0.0, 0.0]
     Pcom: [0.0, 0.0, 0.0]
     WrenchSafety: [80.0, 80.0, 100.0, 4, 4, 4]
-    PoseSensorTool: [0, 0, -0.079, -0.25882,  0,  0,  0.9659258]
+    PoseSensorTool: [0.0, 0, -0.02, 0.5,  -0.5,  -0.5,  0.5]
 
 
 admittance_controller:
   dt: 0.002
   log_to_file: false
   log_file_path: "/tmp/admittance_controller.log"
+  alert_overrun: false
   compliance6d:
     stiffness: [1, 1, 1, 0.1, 0.1, 0.1] # [100, 100, 100, 1, 1, 1] 
     damping: [1.6, 1.6, 1.6, 0.03, 0.03, 0.03]
     inertia: [0.1, 0.1, 0.1, 0.001, 0.001, 0.001]
     stiction: [5, 5, 5, 0, 0, 0]
+  max_spring_force_magnitude: 20
   direct_force_control_gains:
     P_trans: 0
     I_trans: 0
@@ -92,4 +94,3 @@ admittance_controller:
     I_rot: 0
     D_rot: 0
   direct_force_control_I_limit: [0, 0, 0, 0, 0, 0]
-  max_spring_force_magnitude: 20

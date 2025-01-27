@@ -149,6 +149,7 @@ class ManipServer {
 
   void set_high_level_maintain_position();
   void set_high_level_free_jogging();
+  void calibrate_robot_wrench(int NSamples = 100);
 
   void set_target_pose(const Eigen::Ref<RUT::Vector7d> pose,
                        double dt_in_future_ms = 1000, int robot_id = 0);

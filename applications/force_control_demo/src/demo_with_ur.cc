@@ -50,26 +50,17 @@ int main() {
   RUT::Timer timer;
   RUT::TimePoint time0 = timer.tic();
   RUT::Vector7d pose, pose_ref, pose_cmd;
-  RUT::Vector6d wrench, wrench0, wrench_WTr;
+  RUT::Vector6d wrench, wrench_WTr;
 
   robot.init(time0, robot_config);
   robot.getCartesian(pose);
-  robot.getWrenchTool(wrench0);
 
   // get average wrench
-  std::cout << "wrench0: " << wrench0.transpose() << std::endl;
-  std::cout << "Starting in 2 seconds ..." << std::endl;
-  wrench0.setZero();
+  robot.calibrateFTSensor(200);
+  std::cout << "Press Enter to start the control loop in 2 seconds..."
+            << std::endl;
+  std::cin.ignore();
   sleep(2.0);
-  // int N = 200;
-  // for (int i = 0; i < N; ++i) {
-  //   RUT::Vector6d wrench_temp;
-  //   robot.getWrenchTool(wrench_temp);
-  //   wrench0 += wrench_temp;
-  //   usleep(10000);
-  // }
-  // wrench0 /= N;
-  // std::cout << "wrench0: " << wrench0.transpose() << std::endl;
 
   controller.init(time0, admittance_config, pose);
 
@@ -95,8 +86,8 @@ int main() {
     RUT::TimePoint t_start = robot.rtde_init_period();
     // Update robot status
     robot.getCartesian(pose);
-    robot.getWrenchTool(wrench);
-    controller.setRobotStatus(pose, wrench - wrench0);
+    robot.getWrenchToolCalibrated(wrench);
+    controller.setRobotStatus(pose, wrench);
 
     // // generate wrench reference as a 1Hz sinusoidal signal
     // double t = timer.toc_ms() / 1000.0;
@@ -119,10 +110,10 @@ int main() {
     }
 
     double dt = timer.toc_ms();
-    // printf("t = %f, wrench: %f %f %f %f %f %f\n", dt, wrench[0], wrench[1],
-    //        wrench[2], wrench[3], wrench[4], wrench[5]);
-    printf("t = %f, pose: %f %f %f %f %f %f %f\n", dt, pose[0], pose[1],
-           pose[2], pose[3], pose[4], pose[5], pose[6]);
+    printf("t = %.1f,\twrench:\t%.1f\t%.1f\t%.1f\t%.3f\t%.3f\t%.3f\n", dt,
+           wrench[0], wrench[1], wrench[2], wrench[3], wrench[4], wrench[5]);
+    // printf("t = %f, pose: %f %f %f %f %f %f %f\n", dt, pose[0], pose[1],
+    //        pose[2], pose[3], pose[4], pose[5], pose[6]);
 
     if (dt > 50000)
       break;
