@@ -7,7 +7,7 @@
 #    damping: low damping
 #    max_spring_force_magnitude: 15
 # always check the first few parameters:
-data_folder: "/home/yifanhou/data/raw/stow_test"
+data_folder: "/home/yifanhou/data/raw/temp"
 mock_hardware: false
 bimanual: false
 use_perturbation_generator: false
@@ -21,10 +21,10 @@ plot_rgb: true
 rgb_buffer_size: 11
 robot_buffer_size: 100
 eoat_buffer_size: 100
-wrench_buffer_size: 8000
-camera_selection: "GOPRO"
+wrench_buffer_size: 1000
+camera_selection: "OAK"
 force_sensing_mode: "FORCE_MODE_ATI"
-low_damping: [2.0, 2.0, 2.0, 0.1, 0.1, 0.1]
+low_damping: [2.0, 2.0, 2.0, 0.05, 0.05, 0.05]
 output_rgb_hw: [224, 224]
 wrench_filter_parameters: [5, 0.000143, 5] # cutoff frequency, sampling time, order
 
@@ -55,13 +55,13 @@ ati_netft0:
   sensor_name: "netft0"
   print_flag: false
   fullpath: "/tmp/netft0_data.txt"
-  publish_rate: 7000
+  publish_rate: 500
   noise_level: 0.0
   stall_threshold: 100
-  Foffset: [12.8997, -11.2638, 9.94988]
-  Toffset: [0.217999, 0.0990484, -0.253111]
-  Gravity: [0.0421691, -0.0229882, -1.37641]
-  Pcom: [-0.000674891, -0.0304953, -0.00424491]
+  Foffset: [13.0343, -11.5254, 9.69087]
+  Toffset: [0.232815, 0.0920253, -0.261519]
+  Gravity: [0.40441, -0.194274, -1.17646]
+  Pcom: [0.00117057, -0.0137756, -0.00873851]
   WrenchSafety: [60.0, 60.0, 80.0, 4, 4, 4]
   PoseSensorTool: [0.00, 0, -0.02, 0.5,  -0.5,  -0.5,  0.5]
 
@@ -74,6 +74,17 @@ gopro0:
   crop_rows: [0, 1080] # set to negative to disable cropping
   crop_cols: [420, 1500]
   fps: 60
+  cv_num_threads: 8
+
+oak0:
+  frame_width: 1280
+  frame_height: 800
+  crop_rows: [-1, -1] # set to negative to disable cropping
+  crop_cols: [-1, -1]
+  fps: 60
+  cv_num_threads: 8
+  exposure_time: 2500
+  iso: 350
 
 admittance_controller0:
   dt: 0.002

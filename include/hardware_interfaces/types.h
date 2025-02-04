@@ -32,7 +32,7 @@ enum class ForceSensingMode {
   FORCE_MODE_COINFT
 };
 
-enum class CameraSelection { NONE, GOPRO, REALSENSE };
+enum class CameraSelection { NONE, GOPRO, REALSENSE, OAK };
 
 enum class RandomType {
   NONE,

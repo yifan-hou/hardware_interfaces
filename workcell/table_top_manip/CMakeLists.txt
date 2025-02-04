@@ -27,6 +27,7 @@ target_link_libraries(ManipServer
   REALSENSE
   ATI_NETFT
   GoPro
+  OAK
   ROBOTIQ_FT_HW
   RQSensorLinux
   UR_RTDE

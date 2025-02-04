@@ -119,6 +119,22 @@ bool ManipServer::initialize(const std::string& config_path) {
                       << ". Exiting." << std::endl;
             return false;
           }
+        } else if (_config.camera_selection == CameraSelection::OAK) {
+          OAK::OAKConfig oak_config;
+          try {
+            oak_config.deserialize(config["oak" + std::to_string(id)]);
+          } catch (const std::exception& e) {
+            std::cerr << "Failed to load the OAK config file: " << e.what()
+                      << std::endl;
+            return false;
+          }
+          camera_ptrs.emplace_back(new OAK);
+          OAK* oak_ptr = static_cast<OAK*>(camera_ptrs[id].get());
+          if (!oak_ptr->init(time0, oak_config)) {
+            std::cerr << "Failed to initialize OAK camera for id " << id
+                      << ". Exiting." << std::endl;
+            return false;
+          }
         } else {
           std::cerr << "Invalid camera selection. Exiting." << std::endl;
           return false;
