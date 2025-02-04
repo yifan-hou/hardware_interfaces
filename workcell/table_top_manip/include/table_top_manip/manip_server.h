@@ -25,6 +25,7 @@
 #include <ati_netft/ati_netft.h>
 #include <coinft/coin_ft.h>
 #include <gopro/gopro.h>
+#include <oak/oak.h>
 #include <realsense/realsense.h>
 #include <robotiq_ft_modbus/robotiq_ft_modbus.h>
 #include <table_top_manip/perturbation_generator.h>

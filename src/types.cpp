@@ -26,7 +26,7 @@ const std::vector<ForceSensingMode>& all_force_sensing_modes() {
 
 const std::vector<CameraSelection>& all_camera_selections() {
   static const std::vector<CameraSelection> modes = {
-      CameraSelection::NONE, CameraSelection::GOPRO,
+      CameraSelection::NONE, CameraSelection::GOPRO, CameraSelection::OAK,
       CameraSelection::REALSENSE};
   return modes;
 }
@@ -91,6 +91,8 @@ const char* to_string(const CameraSelection e) {
       return "NONE";
     case CameraSelection::GOPRO:
       return "GOPRO";
+    case CameraSelection::OAK:
+      return "OAK";
     case CameraSelection::REALSENSE:
       return "REALSENSE";
     default:
