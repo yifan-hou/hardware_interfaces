@@ -476,6 +476,8 @@ bool ManipServer::initialize(const std::string& config_path) {
 
   // wait for threads to be ready
   std::cout << "[ManipServer] Waiting for threads to be ready.\n";
+  RUT::Timer timeout_timer;
+  timeout_timer.tic();
   while (true) {
     bool all_ready = true;
     {
@@ -500,6 +502,13 @@ bool ManipServer::initialize(const std::string& config_path) {
     }
     if (all_ready) {
       break;
+    }
+    if (timeout_timer.toc_ms() > 20000) {
+      // print error message to cerr with red color
+      std::cerr << "\033[1;31m"
+                << "[ManipServer] Timeout waiting for threads to be ready."
+                << "\033[0m" << std::endl;
+      exit(1);
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
   }

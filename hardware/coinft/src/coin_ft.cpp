@@ -52,6 +52,8 @@ CoinFT::CoinFT() {
   _force_old = RUT::Vector3d::Zero();
   _torque = RUT::Vector3d::Zero();
   _torque_old = RUT::Vector3d::Zero();
+  _wrench_tool_temp = RUT::VectorXd::Zero(6);
+  _wrench_sensor_temp = RUT::VectorXd::Zero(6);
   _stall_counts = 0;
 }
 
@@ -313,7 +315,9 @@ void CoinFT::dataAcquisitionLoop() {
       reading_counter.fetch_add(1, std::memory_order_relaxed);
       _flag_started = true;
     } catch (const std::exception& e) {
-      std::cerr << "Error in data acquisition loop: " << e.what() << std::endl;
+      // print in red color
+      std::cerr << "\033[1;31m[CoinFT] Error in data acquisition loop: "
+                << e.what() << "\033[0m\n";
       running = false;
     }
   }

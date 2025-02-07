@@ -467,6 +467,7 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
   RUT::Timer timer;
   timer.tic(time0);  // so this timer is synced with the main timer
 
+  // TODO: initialize wrench vector based on number of sensors
   RUT::VectorXd wrench_fb = RUT::VectorXd::Zero(6);
   RUT::VectorXd wrench_fb_filtered = RUT::VectorXd::Zero(6);
   int num_ft_sensors = force_sensor_ptrs[id]->getNumSensors();

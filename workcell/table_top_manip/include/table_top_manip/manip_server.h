@@ -123,6 +123,7 @@ class ManipServer {
   bool is_ready();  // check if all buffers are full
   bool is_running();
   bool is_bimanual() { return _config.bimanual; }
+  bool has_eoat() { return _config.run_eoat_thread; }
 
   // getters: get the most recent k data points in the buffer
   const Eigen::MatrixXd get_camera_rgb(int k, int camera_id = 0);
