@@ -200,7 +200,9 @@ bool ManipServer::initialize(const std::string& config_path) {
                       << ". Exiting." << std::endl;
             return false;
           }
-          wrench_publish_rate.push_back(coinft_config.publish_rate);
+          // CoinFT is blocking and don't need a timed loop.
+          // so the loop rate in manipserver can be anything faster than 360hz
+          wrench_publish_rate.push_back(1000);
         } else {
           std::cerr << "Invalid force sensing mode. Exiting." << std::endl;
           return false;

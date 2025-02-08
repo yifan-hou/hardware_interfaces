@@ -17,6 +17,10 @@ find_library(YAMLLib yaml-cpp HINTS /usr/local/lib)
 find_library(RUT Utilities HINTS ${CMAKE_INSTALL_PREFIX}/lib/RobotUtilities)
 find_library(FORCE_CONTROLLERS FORCE_CONTROLLERS HINTS ${CMAKE_INSTALL_PREFIX}/lib/)
 
+# TODO: really only CoinFT should need to include this
+set(ONNXRUNTIME_ROOT "/opt/onnxruntime")
+include_directories(${ONNXRUNTIME_ROOT}/include)
+
 include_directories(
   include/
   ${EIGEN3_INCLUDE_DIRS}
@@ -48,6 +52,7 @@ include_directories(${WORKCELL_INCLUDE_DIRS})
 add_subdirectory(applications/force_control_demo)
 add_subdirectory(applications/ft_calibration)
 add_subdirectory(applications/manipulation_data_collection)
+
 
 # install common
 install(DIRECTORY include/
