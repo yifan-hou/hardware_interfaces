@@ -25,6 +25,7 @@
 #include <thread>
 #include <vector>
 
+#include "CoinFTBus.h"
 #include "hardware_interfaces/ft_interfaces.h"
 
 typedef std::chrono::high_resolution_clock Clock;
@@ -32,11 +33,10 @@ typedef std::chrono::high_resolution_clock Clock;
 class CoinFT : public FTInterfaces {
  public:
   struct CoinFTConfig {
-    std::string port{"/dev/ttyACM0"};
+    std::string port{"/dev/tty.usbmodem101"};
     unsigned int baud_rate{115200};
-    std::string calibration_file{"netft"};
-    int num_sensors{1};
-    int publish_rate{360};
+    std::string left_calibration_file{"netft"};
+    std::string right_calibration_file{"netft"};
     // If the force change is smaller than noise_level for more than stall_threshold frames,
     // the stream is considered dead.
     double noise_level{0.0};
@@ -46,15 +46,16 @@ class CoinFT : public FTInterfaces {
     RUT::Vector3d Gravity{};
     RUT::Vector3d Pcom{};
     RUT::Vector6d WrenchSafety{};
-    RUT::Vector7d PoseSensorTool{};
+    RUT::Vector7d PoseSensorToolLeft{};
+    RUT::Vector7d PoseSensorToolRight{};
 
     bool deserialize(const YAML::Node& node) {
       try {
         port = node["port"].as<std::string>();
         baud_rate = node["baud_rate"].as<unsigned int>();
-        calibration_file = node["calibration_file"].as<std::string>();
-        num_sensors = node["num_sensors"].as<int>();
-        publish_rate = node["publish_rate"].as<int>();
+        left_calibration_file = node["left_calibration_file"].as<std::string>();
+        right_calibration_file =
+            node["right_calibration_file"].as<std::string>();
         noise_level = node["noise_level"].as<double>();
         stall_threshold = node["stall_threshold"].as<int>();
         Foffset = RUT::deserialize_vector<RUT::Vector3d>(node["Foffset"]);
@@ -63,8 +64,10 @@ class CoinFT : public FTInterfaces {
         Pcom = RUT::deserialize_vector<RUT::Vector3d>(node["Pcom"]);
         WrenchSafety =
             RUT::deserialize_vector<RUT::Vector6d>(node["WrenchSafety"]);
-        PoseSensorTool =
-            RUT::deserialize_vector<RUT::Vector7d>(node["PoseSensorTool"]);
+        PoseSensorToolLeft =
+            RUT::deserialize_vector<RUT::Vector7d>(node["PoseSensorToolLeft"]);
+        PoseSensorToolRight =
+            RUT::deserialize_vector<RUT::Vector7d>(node["PoseSensorToolRight"]);
       } catch (const std::exception& e) {
         std::cerr << "Failed to load the config file: " << e.what()
                   << std::endl;
@@ -106,54 +109,19 @@ class CoinFT : public FTInterfaces {
   int getWrenchNetTool(const RUT::Vector7d& pose, RUT::VectorXd& wrench_net_T,
                        int num_of_sensors = 1) override;
 
-  int getNumSensors() override { return _config.num_sensors; }
-
-  void startStreaming();
-  void stopStreaming();
-  void closePort();
-  void tare();
+  int getNumSensors() override { return 2; }
 
  private:
   RUT::TimePoint _time0;
   CoinFTConfig _config;
 
-  // CoinFT internal variables
-  enum Commands {
-    IDLE = 0x69,    // 'i'
-    QUERY = 0x71,   // 'q'
-    STREAM = 0x73,  // 's'
-  };
-  std::atomic<uint64_t> reading_counter;
+  std::vector<double> _latest_data_left;
+  std::vector<double> _latest_data_right;
 
-  static const uint8_t STX = 0x02;
-  static const uint8_t ETX = 0x03;
+  RUT::Matrix6d _adj_sensor_tool_left;
+  RUT::Matrix6d _adj_sensor_tool_right;
 
-  std::vector<double> getLatestData();
-  void initializeSensor();
-  void sendChar(uint8_t cmd);
-  std::vector<uint8_t> readData(size_t length);
-  bool readRawData(std::vector<uint16_t>& rawData);
-  void dataAcquisitionLoop();  // The function run by the background thread
-
-  std::shared_ptr<boost::asio::io_service> io_ptr;
-  std::shared_ptr<boost::asio::serial_port> serial_ptr;
-  int packet_size;
-  int num_sensor_units;  // CoinFT internal parameter
-
-  std::thread data_thread;
-  std::mutex data_mutex;
-  std::vector<double> latest_data;
-  std::atomic<bool> running;
-  std::condition_variable data_cond;
-
-  std::atomic<bool> tareFlag;
-  std::vector<Eigen::VectorXd> tareSamples;
-
-  size_t tareSampleCount;
-  size_t tareSampleTarget;
-
-  Eigen::MatrixXd calibrationMatrix;
-  Eigen::VectorXd tareOffset;
+  std::shared_ptr<CoinFTBus> _coinft_bus_ptr;
 };
 
 #endif  // COINFT_H

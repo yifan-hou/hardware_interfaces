@@ -129,7 +129,6 @@ int main() {
   }
   std::cout << "Main loop stopped ..." << std::endl;
 
-  sensor.stopStreaming();
   std::cout << "Done." << std::endl;
 
   return 0;

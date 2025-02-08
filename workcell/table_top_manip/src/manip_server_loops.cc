@@ -467,11 +467,12 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
   RUT::Timer timer;
   timer.tic(time0);  // so this timer is synced with the main timer
 
-  // TODO: initialize wrench vector based on number of sensors
-  RUT::VectorXd wrench_fb = RUT::VectorXd::Zero(6);
-  RUT::VectorXd wrench_fb_filtered = RUT::VectorXd::Zero(6);
   int num_ft_sensors = force_sensor_ptrs[id]->getNumSensors();
+  RUT::VectorXd wrench_fb = RUT::VectorXd::Zero(6 * num_ft_sensors);
+  RUT::VectorXd wrench_fb_filtered = RUT::VectorXd::Zero(6 * num_ft_sensors);
 
+  std::cout << header << "Number of FT sensors: " << num_ft_sensors
+            << std::endl;
   if (!_config.mock_hardware) {
     // wait for force sensor to be ready
     std::cout << header
@@ -516,7 +517,7 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
     double time_now_ms;
 
     // read perturbations
-    {
+    if (num_ft_sensors == 1) {
       std::lock_guard<std::mutex> lock(_perturbation_mtxs[id]);
       perturbation = _perturbation[id];
     }
@@ -527,15 +528,17 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
         std::lock_guard<std::mutex> lock(_poses_fb_mtxs[id]);
         pose_fb = _poses_fb[id];
       }
-      int safety_flag =
-          force_sensor_ptrs[id]->getWrenchNetTool(pose_fb, wrench_fb);
+      int safety_flag = force_sensor_ptrs[id]->getWrenchNetTool(
+          pose_fb, wrench_fb, num_ft_sensors);
       if (safety_flag < 0) {
         std::cout << header
                   << "Wrench is above safety threshold. Ending thread."
                   << std::endl;
         break;
       }
-      wrench_fb += perturbation;  // apply perturbation
+      if (num_ft_sensors == 1) {
+        wrench_fb += perturbation;  // apply perturbation
+      }
       time_now_ms = timer.toc_ms();
       {
         std::lock_guard<std::mutex> lock(_wrench_buffer_mtxs[id]);
@@ -545,7 +548,11 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
       time_now_ms = timer.toc_ms();
       {
         std::lock_guard<std::mutex> lock(_wrench_filtered_buffer_mtxs[id]);
-        wrench_fb_filtered = _wrench_filters[id].step(wrench_fb);
+        if (num_ft_sensors == 1) {
+          wrench_fb_filtered = _wrench_filters[id].step(wrench_fb);
+        } else {
+          wrench_fb_filtered = wrench_fb;
+        }
         _wrench_filtered_buffers[id].put(wrench_fb_filtered);
         _wrench_filtered_timestamp_ms_buffers[id].put(time_now_ms);
       }
@@ -556,7 +563,9 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
     } else {
       // mock hardware
       wrench_fb.setZero(num_ft_sensors * 6);
-      wrench_fb += perturbation;  // apply perturbation
+      if (num_ft_sensors == 1) {
+        wrench_fb += perturbation;  // apply perturbation
+      }
       time_now_ms = timer.toc_ms();
       {
         std::lock_guard<std::mutex> lock(_wrench_buffer_mtxs[id]);
@@ -567,7 +576,11 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
       wrench_fb_filtered.setZero();
       {
         std::lock_guard<std::mutex> lock(_wrench_filtered_buffer_mtxs[id]);
-        wrench_fb_filtered = _wrench_filters[id].step(wrench_fb);
+        if (num_ft_sensors == 1) {
+          wrench_fb_filtered = _wrench_filters[id].step(wrench_fb);
+        } else {
+          wrench_fb_filtered = wrench_fb;
+        }
         _wrench_filtered_buffers[id].put(wrench_fb_filtered);
         _wrench_filtered_timestamp_ms_buffers[id].put(time_now_ms);
       }

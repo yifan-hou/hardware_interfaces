@@ -94,8 +94,8 @@ inline bool save_eoat_data_json(std::ostream& os, int seq_id,
 
 inline bool save_wrench_data_json(std::ostream& os, int seq_id,
                                   double timestamp_ms,
-                                  const RUT::Vector6d& wrench,
-                                  const RUT::Vector6d& wrench_filtered) {
+                                  const RUT::VectorXd& wrench,
+                                  const RUT::VectorXd& wrench_filtered) {
   Eigen::IOFormat good_looking_fmt(Eigen::StreamPrecision, Eigen::DontAlignCols,
                                    ", ", ", ", "", "", "", "");
   os << "\t{\n";

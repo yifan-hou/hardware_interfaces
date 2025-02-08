@@ -33,9 +33,13 @@ int main(int argc, char* argv[]) {
   RUT::TimePoint time0 = timer.tic();
 
   CoinFT::CoinFTConfig config;
+  // todo: fix this test for two coinft
   config.port = "/dev/ttyACM0";
   config.baud_rate = 115200;
-  config.calibration_file =
+  config.left_calibration_file =
+      "/home/yifanhou/git/hardware_interfaces/hardware/coinft/config/"
+      "calMat_UFT6.csv";
+  config.right_calibration_file =
       "/home/yifanhou/git/hardware_interfaces/hardware/coinft/config/"
       "calMat_UFT6.csv";
 
