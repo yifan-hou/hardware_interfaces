@@ -19,7 +19,7 @@ run_rgb_thread: true
 plot_rgb: false
 
 rgb_buffer_size: 11
-robot_buffer_size: 200
+robot_buffer_size: 600
 eoat_buffer_size: 100
 wrench_buffer_size: 8000
 camera_selection: "GOPRO"
@@ -27,6 +27,7 @@ force_sensing_mode: "FORCE_MODE_ATI"
 low_damping: [2.0, 2.0, 2.0, 0.1, 0.1, 0.1]
 output_rgb_hw: [224, 224]
 wrench_filter_parameters: [5, 0.000143, 5] # cutoff frequency, sampling time, order
+check_robot_loop_overrun: false
 
 ur_rtde0:
   robot_ip: "192.168.2.105"
@@ -76,10 +77,10 @@ ati_netft0:
     publish_rate: 7000
     noise_level: 0.0
     stall_threshold: 100
-    Foffset: [1.75977, -15.7202, 11.796]
-    Toffset: [0.568241, 0.0393391, -0.0971978]
-    Gravity: [-0.0428787, -0.00588047, -1.4547]
-    Pcom: [-0.00219259, 0.00318527, 0.110859]
+    Foffset: [2.52333, -16.3823, 8.7712]
+    Toffset: [0.599433, 0.137722, -0.0994299]
+    Gravity: [-0.882725, -0.463113, -0.418929]
+    Pcom: [-0.0016689, 0.00213282, 0.103474]
     WrenchSafety: [80.0, 80.0, 100.0, 4, 4, 4]
     PoseSensorTool: [0, 0, -0.079, -0.25882,  0,  0,  0.9659258]
 
@@ -93,10 +94,10 @@ ati_netft1:
     publish_rate: 7000
     noise_level: 0.0
     stall_threshold: 100
-    Foffset: [8.84652, -32.1008, 6.99603]
-    Toffset: [1.40613, 0.398585, 0.0327958]
-    Gravity: [-0.0985681, 0.0387578, -1.39927]
-    Pcom: [0.000927347, 0.0053171, 0.10987]
+    Foffset: [9.56833, -32.9126, 6.78874]
+    Toffset: [1.43527, 0.446264, 0.0345864]
+    Gravity: [-0.252131, 0.0252968, -1.41911]
+    Pcom: [0.000195437, 0.00165525, 0.102504]
     WrenchSafety: [80.0, 80.0, 100.0, 4, 4, 4]
     PoseSensorTool: [0, 0, -0.079, -0.25882,  0,  0,  0.9659258]
 
@@ -122,6 +123,7 @@ admittance_controller0:
   dt: 0.002
   log_to_file: false
   log_file_path: "/tmp/admittance0_controller.log"
+  alert_overrun: false
   compliance6d:
     stiffness: [200, 200, 300, 2, 2, 2] 
     damping: [20, 20, 20, 0.3, 0.3, 0.3]
@@ -141,6 +143,7 @@ admittance_controller1:
   dt: 0.002
   log_to_file: false
   log_file_path: "/tmp/admittance1_controller.log"
+  alert_overrun: false
   compliance6d:
     stiffness: [200, 200, 300, 2, 2, 2] 
     damping: [20, 20, 20, 0.3, 0.3, 0.3]

@@ -13,8 +13,8 @@ bimanual: false
 use_perturbation_generator: false
 
 run_robot_thread: true
-run_eoat_thread: true
-run_wrench_thread: false
+run_eoat_thread: false
+run_wrench_thread: true
 run_rgb_thread: true
 plot_rgb: false
 
@@ -22,11 +22,12 @@ rgb_buffer_size: 11
 robot_buffer_size: 600
 eoat_buffer_size: 100
 wrench_buffer_size: 8000
-camera_selection: "GOPRO"
+camera_selection: "OAK"
 force_sensing_mode: "FORCE_MODE_ATI"
 low_damping: [2.0, 2.0, 2.0, 0.1, 0.1, 0.1]
 output_rgb_hw: [224, 224]
 wrench_filter_parameters: [5, 0.000143, 5] # cutoff frequency, sampling time, order
+check_robot_loop_overrun: false
 
 
 ur_rtde0:
@@ -75,6 +76,16 @@ gopro0:
   crop_rows: [0, 1080] # set to negative to disable cropping
   crop_cols: [420, 1500]
   fps: 60
+
+oak0:
+  frame_width: 1280
+  frame_height: 800
+  crop_rows: [-1, -1] # set to negative to disable cropping
+  crop_cols: [-1, -1]
+  fps: 60
+  cv_num_threads: 8
+  exposure_time: 2500
+  iso: 350
 
 wsg_gripper0:
   robot_ip: "192.168.2.112"
