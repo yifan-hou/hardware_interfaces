@@ -283,7 +283,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
     // loop timing and overrun check
     double overrun_ms = mock_loop_timer.check_for_overrun_ms(false);
     // TODO: this overrun check does not work. Needs to debug
-    if (overrun_ms > 0) {
+    if (_config.check_robot_loop_overrun && (overrun_ms > 0)) {
       std::cout << "\033[33m";  // set color to bold yellow
       std::cout << header << "Overrun: " << overrun_ms << "ms" << std::endl;
       std::cout << "\033[0m";  // reset color to default

@@ -27,6 +27,7 @@ force_sensing_mode: "FORCE_MODE_COINFT"
 low_damping: [2.0, 2.0, 2.0, 0.1, 0.1, 0.1]
 output_rgb_hw: [224, 224]
 wrench_filter_parameters: [5, 0.000143, 5] # cutoff frequency, sampling time, order
+check_robot_loop_overrun: false
 
 
 ur_rtde0:

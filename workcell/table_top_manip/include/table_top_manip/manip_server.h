@@ -54,6 +54,7 @@ struct ManipServerConfig {
   std::vector<int> output_rgb_hw{};
   std::vector<double>
       wrench_filter_parameters{};  // cutoff frequency, sampling time, order
+  bool check_robot_loop_overrun{false};
 
   bool deserialize(const YAML::Node& node) {
     try {
@@ -81,6 +82,7 @@ struct ManipServerConfig {
       output_rgb_hw = node["output_rgb_hw"].as<std::vector<int>>();
       wrench_filter_parameters =
           node["wrench_filter_parameters"].as<std::vector<double>>();
+      check_robot_loop_overrun = node["check_robot_loop_overrun"].as<bool>();
 
     } catch (const std::exception& e) {
       std::cerr << "Failed to load the config file: " << e.what() << std::endl;
