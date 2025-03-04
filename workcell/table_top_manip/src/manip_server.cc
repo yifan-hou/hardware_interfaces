@@ -610,54 +610,80 @@ bool ManipServer::is_running() {
 }
 
 const Eigen::MatrixXd ManipServer::get_camera_rgb(int k, int id) {
-  std::lock_guard<std::mutex> lock(_camera_rgb_buffer_mtxs[id]);
-  _camera_rgb_timestamps_ms[id] =
-      _camera_rgb_timestamp_ms_buffers[id].get_last_k(k);
-  return _camera_rgb_buffers[id].get_last_k(k);
+  try {
+    std::lock_guard<std::mutex> lock(_camera_rgb_buffer_mtxs[id]);
+    _camera_rgb_timestamps_ms[id] =
+        _camera_rgb_timestamp_ms_buffers[id].get_last_k(k);
+    return _camera_rgb_buffers[id].get_last_k(k);
+  } catch (const std::exception& e) {
+    std::cerr << "[ManipServer] Failed to get camera rgb: " << e.what()
+              << std::endl;
+  }
 }
 
 const Eigen::MatrixXd ManipServer::get_wrench(int k, int id) {
-  std::lock_guard<std::mutex> lock(_wrench_buffer_mtxs[id]);
-  _wrench_timestamps_ms[id] = _wrench_timestamp_ms_buffers[id].get_last_k(k);
-  return _wrench_buffers[id].get_last_k(k);
+  try {
+    std::lock_guard<std::mutex> lock(_wrench_buffer_mtxs[id]);
+    _wrench_timestamps_ms[id] = _wrench_timestamp_ms_buffers[id].get_last_k(k);
+    return _wrench_buffers[id].get_last_k(k);
+  } catch (const std::exception& e) {
+    std::cerr << "[ManipServer] Failed to get wrench: " << e.what()
+              << std::endl;
+  }
 }
 
 const Eigen::MatrixXd ManipServer::get_wrench_filtered(int k, int id) {
-  std::lock_guard<std::mutex> lock(_wrench_filtered_buffer_mtxs[id]);
-  _wrench_filtered_timestamps_ms[id] =
-      _wrench_filtered_timestamp_ms_buffers[id].get_last_k(k);
-  return _wrench_filtered_buffers[id].get_last_k(k);
+  try {
+    std::lock_guard<std::mutex> lock(_wrench_filtered_buffer_mtxs[id]);
+    _wrench_filtered_timestamps_ms[id] =
+        _wrench_filtered_timestamp_ms_buffers[id].get_last_k(k);
+    return _wrench_filtered_buffers[id].get_last_k(k);
+  } catch (const std::exception& e) {
+    std::cerr << "[ManipServer] Failed to get filtered wrench: " << e.what()
+              << std::endl;
+  }
 }
 
 const Eigen::MatrixXd ManipServer::get_robot_wrench(int k, int id) {
-  std::lock_guard<std::mutex> lock(_robot_wrench_buffer_mtxs[id]);
-  _robot_wrench_timestamps_ms[id] =
-      _robot_wrench_timestamp_ms_buffers[id].get_last_k(k);
-  return _robot_wrench_buffers[id].get_last_k(k);
+  try {
+    std::lock_guard<std::mutex> lock(_robot_wrench_buffer_mtxs[id]);
+    _robot_wrench_timestamps_ms[id] =
+        _robot_wrench_timestamp_ms_buffers[id].get_last_k(k);
+    return _robot_wrench_buffers[id].get_last_k(k);
+  } catch (const std::exception& e) {
+    std::cerr << "[ManipServer] Failed to get robot wrench: " << e.what()
+              << std::endl;
+  }
 }
 
 const Eigen::MatrixXd ManipServer::get_pose(int k, int id) {
-  std::lock_guard<std::mutex> lock(_pose_buffer_mtxs[id]);
-  _pose_timestamps_ms[id] = _pose_timestamp_ms_buffers[id].get_last_k(k);
-  return _pose_buffers[id].get_last_k(k);
+  try {
+    std::lock_guard<std::mutex> lock(_pose_buffer_mtxs[id]);
+    _pose_timestamps_ms[id] = _pose_timestamp_ms_buffers[id].get_last_k(k);
+    return _pose_buffers[id].get_last_k(k);
+  } catch (const std::exception& e) {
+    std::cerr << "[ManipServer] Failed to get pose: " << e.what() << std::endl;
+  }
 }
 
 const Eigen::MatrixXd ManipServer::get_vel(int k, int id) {
-  std::lock_guard<std::mutex> lock(_vel_buffer_mtxs[id]);
-  _vel_timestamps_ms[id] = _vel_timestamp_ms_buffers[id].get_last_k(k);
-  return _vel_buffers[id].get_last_k(k);
+  try {
+    std::lock_guard<std::mutex> lock(_vel_buffer_mtxs[id]);
+    _vel_timestamps_ms[id] = _vel_timestamp_ms_buffers[id].get_last_k(k);
+    return _vel_buffers[id].get_last_k(k);
+  } catch (const std::exception& e) {
+    std::cerr << "[ManipServer] Failed to get vel: " << e.what() << std::endl;
+  }
 }
 
 const Eigen::MatrixXd ManipServer::get_eoat(int k, int id) {
-  std::lock_guard<std::mutex> lock(_eoat_buffer_mtxs[id]);
-  if (k > _eoat_buffers[id].size()) {
-    std::cout << "k: " << k
-              << " _eoat_buffers[id].size(): " << _eoat_buffers[id].size()
-              << std::endl;
-    throw std::runtime_error("k is greater than the buffer size");
+  try {
+    std::lock_guard<std::mutex> lock(_eoat_buffer_mtxs[id]);
+    _eoat_timestamps_ms[id] = _eoat_timestamp_ms_buffers[id].get_last_k(k);
+    return _eoat_buffers[id].get_last_k(k);
+  } catch (const std::exception& e) {
+    std::cerr << "[ManipServer] Failed to get eoat: " << e.what() << std::endl;
   }
-  _eoat_timestamps_ms[id] = _eoat_timestamp_ms_buffers[id].get_last_k(k);
-  return _eoat_buffers[id].get_last_k(k);
 }
 
 const int ManipServer::get_test() {
