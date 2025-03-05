@@ -50,6 +50,7 @@ PYBIND11_MODULE(manip_server_pybind, m)
         .def("get_timestamp_now_ms", &ManipServer::get_timestamp_now_ms)
         .def("set_high_level_maintain_position", &ManipServer::set_high_level_maintain_position)
         .def("set_high_level_free_jogging", &ManipServer::set_high_level_free_jogging)
+        .def("calibrate_robot_wrench", &ManipServer::calibrate_robot_wrench)
         .def("set_target_pose", &ManipServer::set_target_pose,
                 py::arg(), py::arg(), py::arg("robot_id") = 0)
         .def("set_force_controlled_axis", &ManipServer::set_force_controlled_axis,
