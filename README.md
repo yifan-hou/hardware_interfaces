@@ -116,3 +116,13 @@ cmake -DCMAKE_INSTALL_PREFIX=$HOME/.local ..
 ```
 in the instructions above, then `make`, `make install` as usual.
 
+
+## Troubleshooting
+### cmake failed with wrong python interp version
+```
+CMake Error at cmake/FindPythonLibsNew.cmake:96 (message): Python config failure: <string>:1: DeprecationWarning: The distutils package is deprecated and slated for removal in Python 3.12. Use setuptools or check PEP 632 for potential alternatives
+```
+Solution: explicitly specify the full path to the python interp you want to use.
+```
+cmake .. -DPYTHON_EXECUTABLE=$(which python)
+```
