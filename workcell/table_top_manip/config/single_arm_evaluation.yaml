@@ -7,7 +7,7 @@
 #    damping: low damping
 #    max_spring_force_magnitude: 15
 # always check the first few parameters:
-data_folder: "/home/xuxm/data/real/correction"
+data_folder: "/shared_local/data/raw/stow_test"
 mock_hardware: false
 bimanual: false
 use_perturbation_generator: false
@@ -58,10 +58,10 @@ ati_netft0:
     publish_rate: 500
     noise_level: 0.0
     stall_threshold: 100
-    Foffset: [13.0343, -11.5254, 9.69087]
-    Toffset: [0.232815, 0.0920253, -0.261519]
-    Gravity: [0.40441, -0.194274, -1.17646]
-    Pcom: [0.00117057, -0.0137756, -0.00873851]
+    Foffset: [12.8997, -11.2638, 9.94988]
+    Toffset: [0.217999, 0.0990484, -0.253111]
+    Gravity: [0.0421691, -0.0229882, -1.37641]
+    Pcom: [-0.000674891, -0.0304953, -0.00424491]
     WrenchSafety: [60.0, 60.0, 80.0, 4, 4, 4]
     PoseSensorTool: [0.00, 0, -0.02, 0.5,  -0.5,  -0.5,  0.5]
 
