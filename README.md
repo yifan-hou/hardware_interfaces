@@ -17,7 +17,10 @@ yifanhou@stanford.edu
 
 # Install
 ## Dependency
-This package depends on [cpplibrary](https://github.com/yifan-hou/cpplibrary) and [yaml-cpp](https://github.com/jbeder/yaml-cpp).
+This package depends on
+* [cpplibrary](https://github.com/yifan-hou/cpplibrary)
+* [force_control](https://github.com/yifan-hou/force_control)
+* [yaml-cpp](https://github.com/jbeder/yaml-cpp).
 
 
 Additionally, each hardware interface has there own dependencies. You can disable the hardware that you don't need by comment out the corresponding "add_subdirectory" lines in the base CMakeLists.txt.
@@ -49,7 +52,16 @@ cmake ..
 make -j
 make install
 
-# install ur-rtde
+# install force_control
+cd ../..
+git clone git@github.com:yifan-hou/force_control.git
+cd force_control
+mkdir build && cd build
+cmake ..
+make -j
+make install
+
+# install ur-rtde (Needed by UR)
 cd ../..
 git clone https://gitlab.com/sdurobotics/ur_rtde.git
 cd ur_rtde
@@ -58,7 +70,7 @@ cmake ..
 make -j
 make install
 
-# install depthai-core
+# install depthai-core (Needed by OAK)
 cd ../..
 git clone https://github.com/luxonis/depthai-core.git
 cd depthai-core
@@ -67,6 +79,16 @@ cmake -DCMAKE_INSTALL_PREFIX=$HOME/.local -DDEPTHAI_BUILD_EXAMPLES=ON -DBUILD_SH
 make -j
 make install
 
+# Install Realsense dev (Needed by realsense)
+# Checkout their official documentation
+
+# Install onnx runtime (Needed by CoinFT)
+# Download the latest version with the right architecture here:
+#    https://github.com/microsoft/onnxruntime/releases
+# Extract file, and place it in /opt/onnxruntime
+# You can change the path from CMakeLists.txt
+
+
 # build hardware_interface
 git clone git@github.com:yifan-hou/hardware_interfaces.git
 cd hardware_interfaces
@@ -74,6 +96,10 @@ mkdir build && cd build
 cmake ..
 make -j
 make install
+
+# Install the python bindings for ManipServer
+cd hardware_interfaces
+pip install -e .
 ```
 
 ## Install to a local path
