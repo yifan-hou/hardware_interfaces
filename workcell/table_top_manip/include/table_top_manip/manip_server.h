@@ -174,7 +174,14 @@ class ManipServer {
   void clear_cmd_buffer();
 
   // data logging
-  void start_saving_data_for_a_new_episode();
+
+  /***
+   * @brief Start saving data for a new episode.
+   * The default data folder path is specified in the config file.
+   * In order to avoid confusion, the data folder in the config file must be empty if @p data_folder is specified.
+   * @param data_folder The data folder path. If not specified, the default data folder path is used.
+   */
+  void start_saving_data_for_a_new_episode(const std::string& data_folder = "");
   void stop_saving_data();
   bool is_saving_data();
   std::string get_episode_folder() const;
