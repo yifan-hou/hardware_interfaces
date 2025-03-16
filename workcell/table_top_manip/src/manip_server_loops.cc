@@ -463,17 +463,16 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
   std::string header =
       "[ManipServer][Wrench thread] " + std::to_string(id) + ": ";
   std::cout << header << "thread starting." << std::endl;
-  std::cout << header << "Rate at" << publish_rate << "Hz." << std::endl;
+  std::cout << header << "Rate at " << publish_rate << "Hz." << std::endl;
   RUT::Timer timer;
   timer.tic(time0);  // so this timer is synced with the main timer
 
-  int num_ft_sensors = force_sensor_ptrs[id]->getNumSensors();
-  RUT::VectorXd wrench_fb = RUT::VectorXd::Zero(6 * num_ft_sensors);
-  RUT::VectorXd wrench_fb_filtered = RUT::VectorXd::Zero(6 * num_ft_sensors);
-
-  std::cout << header << "Number of FT sensors: " << num_ft_sensors
-            << std::endl;
+  int num_ft_sensors = 1;
   if (!_config.mock_hardware) {
+    num_ft_sensors = force_sensor_ptrs[id]->getNumSensors();
+
+    std::cout << header << "Number of FT sensors: " << num_ft_sensors
+              << std::endl;
     // wait for force sensor to be ready
     std::cout << header
               << "Waiting for force sensor to start "
@@ -482,6 +481,9 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
       usleep(100000);
     }
   }
+
+  RUT::VectorXd wrench_fb = RUT::VectorXd::Zero(6 * num_ft_sensors);
+  RUT::VectorXd wrench_fb_filtered = RUT::VectorXd::Zero(6 * num_ft_sensors);
 
   // wait for pose_fb to be ready
   std::cout << header

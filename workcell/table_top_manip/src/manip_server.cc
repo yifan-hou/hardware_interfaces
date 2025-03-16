@@ -308,11 +308,14 @@ bool ManipServer::initialize(const std::string& config_path) {
   // wrench sensors
   if (_config.run_wrench_thread) {
     for (int id : _id_list) {
+
       _states_wrench_thread_ready.push_back(false);
       _states_wrench_thread_saving.push_back(false);
       _states_wrench_seq_id.push_back(0);
 
-      int num_ft_sensors = force_sensor_ptrs[id]->getNumSensors();
+      int num_ft_sensors = 1;
+      if (!_config.mock_hardware)
+        num_ft_sensors = force_sensor_ptrs[id]->getNumSensors();
 
       _wrench_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
       _wrench_filtered_buffers.push_back(RUT::DataBuffer<Eigen::VectorXd>());
@@ -1094,14 +1097,29 @@ void ManipServer::schedule_stiffness(const Eigen::MatrixXd& stiffnesses,
   }
 }  // end function schedule_stiffness
 
-void ManipServer::start_saving_data_for_a_new_episode() {
+void ManipServer::start_saving_data_for_a_new_episode(
+    const std::string& data_folder) {
+  // find what data_folder to use
+  std::string data_folder_to_use;
+  if (_config.data_folder.empty()) {
+    assert(!data_folder.empty() &&
+           "[ManipServer] When the default data_folder is empty, you must "
+           "specify a data_folder as input.");
+    data_folder_to_use = data_folder;
+  } else {
+    assert(data_folder.empty() &&
+           "[ManipServer] When the default data_folder is not empty, you must "
+           "NOT specify a data_folder as input.");
+    data_folder_to_use = _config.data_folder;
+  }
+
   // create episode folders
   std::vector<std::string> robot_json_file_names;
   std::vector<std::string> eoat_json_file_names;
   std::vector<std::string> wrench_json_file_names;
-  _episode_folder = create_folder_for_new_episode(_config.data_folder, _id_list,
-                                _ctrl_rgb_folders, robot_json_file_names,
-                                eoat_json_file_names, wrench_json_file_names);
+  _episode_folder = create_folder_for_new_episode(
+      data_folder_to_use, _id_list, _ctrl_rgb_folders, robot_json_file_names,
+      eoat_json_file_names, wrench_json_file_names);
   std::cout << "[main] New episode. rgb_folder_name: " << _ctrl_rgb_folders[0]
             << std::endl;
 
@@ -1142,6 +1160,6 @@ bool ManipServer::is_saving_data() {
   return is_saving;
 }
 
-std::string ManipServer::get_episode_folder() const{
+std::string ManipServer::get_episode_folder() const {
   return _episode_folder;
 }

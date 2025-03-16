@@ -9,7 +9,7 @@ print("[python] creating manip server")
 
 server = ms.ManipServer()
 if not server.initialize(
-    "/home/yifanhou/git/hardware_interfaces/workcell/table_top_manip/config/ur_test_bench.yaml"
+    "/home/yifanhou/git/hardware_interfaces_internal/workcell/table_top_manip/config/single_arm_evaluation.yaml"
 ):
     print("[python] failed to initialize server")
     exit(1)
