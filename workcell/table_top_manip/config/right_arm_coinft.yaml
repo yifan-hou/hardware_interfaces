@@ -69,8 +69,8 @@ ati_netft0:
 coinft0:
     port: "/dev/ttyACM0"
     baud_rate: 115200
-    left_calibration_file: "/shared_local/configs/coinft/UFT3_MLP_4L_scl_1_30.onnx"
-    right_calibration_file: "/shared_local/configs/coinft/UFT3_MLP_4L_scl_1_30.onnx"
+    left_calibration_file: "/shared_local/configs/coinft/UFT9_MLP_4L_scl_1_30.onnx"
+    right_calibration_file: "/shared_local/configs/coinft/UFT10_MLP_4L_scl_1_30.onnx"
     noise_level: 0.0
     stall_threshold: 100
     Foffset: [0, 0, 0]
@@ -93,8 +93,8 @@ gopro0:
 wsg_gripper0:
   robot_ip: "192.168.2.111"
   port: "1000"
-  velResControl_kp: 3.0
-  velResControl_kf: 20.0
+  velResControl_kp: 5.0
+  velResControl_kf: 5.0
   PDControl_kp: 10.0
   PDControl_kd: 0.001
   js_interface_config:
