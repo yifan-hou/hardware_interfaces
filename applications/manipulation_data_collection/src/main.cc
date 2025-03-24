@@ -91,9 +91,9 @@ int main() {
     }
     std::cout << "[main] All threads have stopped saving data." << std::endl;
 
-    std::cout << "[main] What to do:\n";
+    std::cout << "[main] Data has been saved. Next:\n";
     std::cout << "[main]    to quit: q + ENTER\n";
-    std::cout << "[main]    to save and continue:\n";
+    std::cout << "[main]    to continue:\n";
     std::cout << "[main]      1. Move the robot to a neutral pose.\n";
     std::cout << "[main]      2. Press Enter, then release the robot for force "
                  "calibration.\n";
