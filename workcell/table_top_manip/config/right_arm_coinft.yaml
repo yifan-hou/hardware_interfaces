@@ -7,15 +7,15 @@
 #    damping: low damping
 #    max_spring_force_magnitude: 15
 # always check the first few parameters:
-data_folder: "/home/yifanhou/data/raw/umift_test"
+data_folder: "/shared_local/data/raw/umift_debug_playback"
 mock_hardware: false
 bimanual: false
 use_perturbation_generator: false
 
 run_robot_thread: true
-run_wrench_thread: true
+run_wrench_thread: false
 run_rgb_thread: true
-run_eoat_thread: true
+run_eoat_thread: false
 plot_rgb: false
 
 rgb_buffer_size: 11
