@@ -24,6 +24,7 @@ eoat_buffer_size: 20
 wrench_buffer_size: 360
 camera_selection: "GOPRO"
 force_sensing_mode: "FORCE_MODE_COINFT"
+compliance_control_force_source: "COINFT"
 low_damping: [2.0, 2.0, 2.0, 0.1, 0.1, 0.1]
 output_rgb_hw: [202, 270]
 wrench_filter_parameters: [5, 0.000143, 5] # cutoff frequency, sampling time, order
@@ -47,7 +48,7 @@ ur_rtde0:
     max_incre_m: 0.03
     max_incre_rad: 0.1
     max_incre_joint_rad: 0.0628
-    safe_zone: [-0.5, 0.7, -0.9, -0.2, 0.2, 0.8]
+    safe_zone: [-0.5, 0.7, -0.9, -0.2, 0.243, 0.8]
 
 ati_netft0:
   ip_address: "192.168.2.102"
@@ -77,7 +78,7 @@ coinft0:
   Toffset: [0, 0, 0]
   Gravity: [0, 0, 0]
   Pcom: [0, 0, 0]
-  WrenchSafety: [15.0, 15.0, 15.0, 1, 1, 1]
+  WrenchSafety: [20.0, 20.0, 20.0, 1, 1, 1]
   PoseSensorToolLeft: [0.2, -0.086, 0, 0.5, -0.5, -0.5,  0.5]
   PoseSensorToolRight: [0.2, -0.086, 0, 0.5, -0.5, -0.5,  0.5]
 
@@ -94,7 +95,7 @@ wsg_gripper0:
   robot_ip: "192.168.2.111"
   port: "1000"
   velResControl_kp: 5.0
-  velResControl_kf: 5.0
+  velResControl_kf: 3.0
   PDControl_kp: 10.0
   PDControl_kd: 0.001
   js_interface_config:
@@ -110,11 +111,11 @@ admittance_controller0:
   log_file_path: "/tmp/admittance0_controller.log"
   alert_overrun: false
   compliance6d:
-    stiffness: [200, 200, 300, 2, 2, 2] 
-    damping: [15, 15, 15, 0.3, 0.3, 0.3]
+    stiffness: [300, 300, 300, 2, 2, 2] 
+    damping: [5, 5, 5, 0.3, 0.3, 0.3]
     inertia: [0.2, 0.2, 0.2, 0.001, 0.001, 0.001]
     stiction: [0, 0, 0, 0, 0, 0]
-  max_spring_force_magnitude: 50
+  max_spring_force_magnitude: 25
   max_spring_torque_magnitude: 4
   direct_force_control_gains:
     P_trans: 0
