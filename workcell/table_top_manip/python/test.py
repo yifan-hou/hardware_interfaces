@@ -19,7 +19,7 @@ print("[python] creating manip server")
 reset_all_elgato_devices()
 server = ms.ManipServer()
 if not server.initialize(
-    "/home/yifanhou/git/hardware_interfaces/workcell/table_top_manip/config/single_arm_wsg.yaml"
+    "/home/yifan/git/hardware_interfaces_internal/workcell/table_top_manip/config/right_arm_coinft.yaml"
 ):
     raise RuntimeError("Failed to initialize server")
 server.set_high_level_maintain_position()
@@ -37,7 +37,7 @@ print("[python] pose_fb:", pose_fb)
 # bgr = np.zeros((1080, 1080, 3), dtype=np.uint8)
 # cv2.namedWindow("image")
 
-server.set_force_controlled_axis(np.eye(6), 0)
+server.set_force_controlled_axis(np.eye(6), 6)
 print("[python] done set_force_controlled_axis")
 
 pose_cmd = copy.deepcopy(pose_fb)
@@ -51,7 +51,7 @@ log_pose_cmd_x = []
 log_pose_cmd_y = []
 log_pose_cmd_z = []
 
-deltas = np.array([0.01, -0.01])
+deltas = np.array([0.00, -0.00])
 for i in range(2):
     wrench = server.get_robot_wrench(1)
     pose_fb = server.get_pose(1)
@@ -84,7 +84,7 @@ for i in range(2):
     log_pose_cmd_y.append(pose_cmd[1])
     log_pose_cmd_z.append(pose_cmd[2])
 
-    sleep(5)
+    sleep(10)
 
 sleep(0.5)
 server.join_threads()
