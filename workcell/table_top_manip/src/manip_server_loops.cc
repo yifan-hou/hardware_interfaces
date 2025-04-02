@@ -23,7 +23,15 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
   pose_rdte_cmd = pose_fb;
   vel_fb << 0, 0, 0, 0, 0, 0;
 
-  RUT::Vector6d wrench_fb_ur, wrench_WTr;
+  int num_ft_sensors = 1;
+  if (!_config.mock_hardware)
+    num_ft_sensors = force_sensor_ptrs[id]->getNumSensors();
+
+  RUT::Vector6d wrench_fb_ur;  // wrench feedback from ur
+  RUT::VectorXd wrench_fb_sensor =
+      RUT::VectorXd::Zero(6 * num_ft_sensors);  // wrench feedback from sensor
+  RUT::Vector6d wrench_fb;                      // wrench feedback selected
+  RUT::Vector6d wrench_WTr;                     // wrench command
   RUT::Matrix6d stiffness;
 
   // TODO: use base pointer robot_ptr instead of URRTDE
@@ -71,6 +79,25 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       urrtde_ptr->getCartesian(pose_fb);
       urrtde_ptr->getCartesianVelocity(vel_fb);
       urrtde_ptr->getWrenchToolCalibrated(wrench_fb_ur);
+
+      {
+        std::lock_guard<std::mutex> lock(_wrench_fb_mtxs[id]);
+        wrench_fb_sensor = _wrench_fb[id];
+      }
+
+      if (_config.compliance_control_force_source ==
+          ComplianceControlForceSource::UR) {
+        wrench_fb = wrench_fb_ur;
+      } else if (_config.compliance_control_force_source ==
+                 ComplianceControlForceSource::COINFT) {
+        wrench_fb = wrench_fb_sensor.head<6>() + wrench_fb_sensor.tail<6>();
+      } else {
+        std::cerr << header << "Invalid compliance control force source: "
+                  << to_string(_config.compliance_control_force_source)
+                  << std::endl;
+        break;
+      }
+
       time_now_ms = timer.toc_ms();
       loop_profiler.stop("compute");
       loop_profiler.start();
@@ -86,7 +113,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       time_now_ms = timer.toc_ms();
       pose_fb = pose_rdte_cmd;
       vel_fb.setZero();
-      wrench_fb_ur.setZero();
+      wrench_fb.setZero();
     }
     // buffer robot pose
     loop_profiler.stop("compute");
@@ -103,7 +130,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
     }
     {
       std::lock_guard<std::mutex> lock(_robot_wrench_buffer_mtxs[id]);
-      _robot_wrench_buffers[id].put(wrench_fb_ur);
+      _robot_wrench_buffers[id].put(wrench_fb);
       _robot_wrench_timestamp_ms_buffers[id].put(time_now_ms);
     }
     loop_profiler.stop("lock");
@@ -174,7 +201,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
     if (_config.use_perturbation_generator) {
       perturbation_is_applied =
           _perturbation_generators[id].generate_perturbation(perturbation);
-      wrench_fb_ur += perturbation;
+      wrench_fb += perturbation;
     }
     // record perturbation so wrench thread knows it
     {
@@ -187,7 +214,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
 
     wrench_WTr.setZero();
     // std::cout << "[debug] time: " << time_now_ms
-    //           << ", wrench_fb_ur: " << wrench_fb_ur.transpose()
+    //           << ", wrench_fb: " << wrench_fb.transpose()
     //           << ", wrench_WTr: " << wrench_WTr.transpose() << std::endl;
 
     // Update the compliance controller
@@ -195,7 +222,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       std::lock_guard<std::mutex> lock(_controller_mtxs[id]);
       loop_profiler.stop("controller_lock");
       loop_profiler.start();
-      _controllers[id].setRobotStatus(pose_fb, wrench_fb_ur);
+      _controllers[id].setRobotStatus(pose_fb, wrench_fb);
       // Update robot reference
       _controllers[id].setRobotReference(force_control_ref_pose, wrench_WTr);
 
@@ -218,7 +245,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
                 << std::endl;
       std::cout << header << "last pose_fb: " << pose_fb.transpose()
                 << std::endl;
-      std::cout << header << "last wrench_fb_ur: " << wrench_fb_ur.transpose()
+      std::cout << header << "last wrench_fb: " << wrench_fb.transpose()
                 << std::endl;
       std::cout << header << "last force_control_ref_pose: "
                 << force_control_ref_pose.transpose() << std::endl;

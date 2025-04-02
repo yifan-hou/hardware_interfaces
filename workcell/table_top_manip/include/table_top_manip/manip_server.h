@@ -50,6 +50,8 @@ struct ManipServerConfig {
   bool use_perturbation_generator{false};
   CameraSelection camera_selection{CameraSelection::NONE};
   ForceSensingMode force_sensing_mode{ForceSensingMode::NONE};
+  ComplianceControlForceSource compliance_control_force_source{
+      ComplianceControlForceSource::NONE};
   RUT::Matrix6d low_damping{};
   std::vector<int> output_rgb_hw{};
   std::vector<double>
@@ -76,6 +78,9 @@ struct ManipServerConfig {
           node["camera_selection"].as<std::string>());
       force_sensing_mode = string_to_enum<ForceSensingMode>(
           node["force_sensing_mode"].as<std::string>());
+      compliance_control_force_source =
+          string_to_enum<ComplianceControlForceSource>(
+              node["compliance_control_force_source"].as<std::string>());
 
       low_damping = RUT::deserialize_vector<RUT::Vector6d>(node["low_damping"])
                         .asDiagonal();
