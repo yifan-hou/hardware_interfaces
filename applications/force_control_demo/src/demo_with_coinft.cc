@@ -1,11 +1,16 @@
 #include <RobotUtilities/spatial_utilities.h>
 #include <RobotUtilities/timer_linux.h>
 #include <coinft/coin_ft.h>
+#include <fcntl.h>
 #include <force_control/admittance_controller.h>
 #include <force_control/config_deserialize.h>
+#include <termios.h>
 #include <unistd.h>
 #include <ur_rtde/ur_rtde.h>
 #include <yaml-cpp/yaml.h>
+#include <chrono>
+#include <iostream>
+#include <thread>
 
 Eigen::MatrixXd deserialize_matrix(const YAML::Node& node) {
   int nr = node.size();
@@ -17,6 +22,40 @@ Eigen::MatrixXd deserialize_matrix(const YAML::Node& node) {
     }
   }
   return mat;
+}
+
+// Function to initialize terminal for non-blocking input
+void initTerminal() {
+  struct termios term;
+  tcgetattr(STDIN_FILENO, &term);
+  term.c_lflag &= ~(ICANON | ECHO);  // Disable canonical mode and echo
+  tcsetattr(STDIN_FILENO, TCSANOW, &term);
+
+  // Set stdin to non-blocking
+  int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+  fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+}
+
+// Function to restore terminal settings
+void resetTerminal() {
+  struct termios term;
+  tcgetattr(STDIN_FILENO, &term);
+  term.c_lflag |= (ICANON | ECHO);  // Enable canonical mode and echo
+  tcsetattr(STDIN_FILENO, TCSANOW, &term);
+
+  // Restore blocking mode
+  int flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+  fcntl(STDIN_FILENO, F_SETFL, flags & ~O_NONBLOCK);
+}
+
+// Function to check if a key is pressed and return the character
+int kbhit() {
+  unsigned char ch;
+  int nread = read(STDIN_FILENO, &ch, 1);
+  if (nread == 1) {
+    return ch;
+  }
+  return -1;
 }
 
 // load eigen
@@ -33,21 +72,15 @@ int main() {
 
   // open file
   const std::string CONFIG_PATH =
-      "/home/yifanhou/git/hardware_interfaces/applications/force_control_demo/"
+      "/home/yifan/git/hardware_interfaces_internal/applications/"
+      "force_control_demo/"
       "config/force_control_demo.yaml";
   YAML::Node config{};
   // CoinFT configs
-  // TODO: replace with CoinFT config serialization
-  bool ft_use_coinft = false;
-  std::string coinft_port;
-  unsigned int coinft_baud_rate;
-  std::string coinft_calibration_file;
-  std::vector<double> coinft_PoseSensorTool;
-  RUT::Matrix6d adj_sensor_tool = RUT::Matrix6d::Identity();
   try {
     config = YAML::LoadFile(CONFIG_PATH);
     robot_config.deserialize(config["ur_rtde"]);
-    coinft_config.deserialize(config["coin_ft"]);
+    coinft_config.deserialize(config["coinft"]);
     deserialize(config["admittance_controller"], admittance_config);
 
   } catch (const std::exception& e) {
@@ -62,7 +95,8 @@ int main() {
   RUT::TimePoint time0 = timer.tic();
   RUT::Vector7d pose, pose_ref, pose_cmd;
   RUT::VectorXd wrench, wrench_WTr;
-  wrench_WTr.setZero();
+  wrench_WTr = RUT::VectorXd::Zero(6);
+  wrench = RUT::VectorXd::Zero(12);
 
   robot.init(time0, robot_config);
   robot.getCartesian(pose);
@@ -74,17 +108,17 @@ int main() {
 
   controller.init(time0, admittance_config, pose);
 
-  // RUT::Matrix6d Tr = RUT::Matrix6d::Identity();
-  RUT::Matrix6d Tr;
-  // clang-format off
-  Tr <<
-        0, 0, 0, 1, 0, 0,
-        0, 0, 0, 0, 1, 0,
-        0, 0, 0, 0, 0, 1,
-        1, 0, 0, 0, 0, 0,
-        0, 1, 0, 0, 0, 0,
-        0, 0, 1, 0, 0, 0;
-  // clang-format on
+  RUT::Matrix6d Tr = RUT::Matrix6d::Identity();
+  // RUT::Matrix6d Tr;
+  // // clang-format off
+  // Tr <<
+  //       0, 0, 0, 1, 0, 0,
+  //       0, 0, 0, 0, 1, 0,
+  //       0, 0, 0, 0, 0, 1,
+  //       1, 0, 0, 0, 0, 0,
+  //       0, 1, 0, 0, 0, 0,
+  //       0, 0, 1, 0, 0, 0;
+  // // clang-format on
   int n_af = 3;
   controller.setForceControlledAxis(Tr, n_af);
 
@@ -97,15 +131,29 @@ int main() {
 
   timer.tic();
 
-  while (true) {
+  // Initialize terminal for non-blocking input
+  initTerminal();
+
+  std::cout << "Use arrow keys to move. Press q to exit." << std::endl;
+  std::cout << "Current target position: " << pose_ref.head<3>().transpose()
+            << std::endl;
+  bool running = true;
+
+  RUT::Vector6d wrench_fb;
+  while (running) {
     RUT::TimePoint t_start = robot.rtde_init_period();
     // Update robot status
     robot.getCartesian(pose);
 
     // read wrench
-    sensor.getWrenchTool(wrench);
+    sensor.getWrenchTool(wrench, 2);
 
-    controller.setRobotStatus(pose, wrench);
+    wrench_fb = wrench.head<6>();
+
+    wrench_fb[0] = -wrench_fb[1];  // flip x axis
+    wrench_fb[1] = wrench_fb[0];   // flip x axis
+
+    controller.setRobotStatus(pose, wrench_fb);
 
     // Update robot reference
     controller.setRobotReference(pose_ref, wrench_WTr);
@@ -122,14 +170,56 @@ int main() {
     printf("t = %f, wrench: %f %f %f %f %f %f\n", dt, wrench[0], wrench[1],
            wrench[2], wrench[3], wrench[4], wrench[5]);
 
-    if (dt > 3000)
-      break;
+    // Check for keyboard input
+    double delta = 0.005;
+    int key = kbhit();
+    if (key != -1) {
+      // Handle escape sequences for arrow keys
+      if (key == 27) {  // ESC character
+        key = kbhit();
+        if (key == -1) {
+          // Just ESC was pressed
+          running = false;
+          std::cout << "Exiting program..." << std::endl;
+        } else if (key == '[') {
+          // This is an arrow key
+          key = kbhit();
+          switch (key) {
+            case 'A':  // Up arrow
+              pose_ref[2] += delta;
+              std::cout << "Up arrow pressed. Current position: "
+                        << pose_ref.head<3>().transpose() << std::endl;
+              break;
+            case 'B':  // Down arrow
+              pose_ref[2] -= delta;
+              std::cout << "Down arrow pressed. Current position: "
+                        << pose_ref.head<3>().transpose() << std::endl;
+              break;
+            case 'D':  // Left arrow
+              pose_ref[0] -= delta;
+              std::cout << "Left arrow pressed. Current position: "
+                        << pose_ref.head<3>().transpose() << std::endl;
+              break;
+            case 'C':  // Right arrow
+              pose_ref[0] += delta;
+              std::cout << "Right arrow pressed. Current position: "
+                        << pose_ref.head<3>().transpose() << std::endl;
+              break;
+          }
+        }
+      } else if (key == 'q' || key == 'Q') {
+        running = false;
+        std::cout << "Exiting program..." << std::endl;
+      }
+    }
 
     robot.rtde_wait_period(t_start);
   }
-  std::cout << "Main loop stopped ..." << std::endl;
 
+  std::cout << "Main loop stopped ..." << std::endl;
   std::cout << "Done." << std::endl;
 
+  // Restore terminal settings
+  resetTerminal();
   return 0;
 }

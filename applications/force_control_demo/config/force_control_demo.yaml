@@ -1,5 +1,5 @@
 ur_rtde:
-  robot_ip: "192.168.2.105"
+  robot_ip: "192.168.2.106"
   rtde_frequency: 500.0
   rt_receive_priority: 90
   rt_control_priority: 85
@@ -12,10 +12,10 @@ ur_rtde:
     zone_safety_mode: "SAFETY_MODE_TRUNCATE"
     incre_safety_mode: "SAFETY_MODE_STOP"
     operation_mode: "OPERATION_MODE_CARTESIAN"
-    max_incre_m: 0.02
-    max_incre_rad: 0.0628
+    max_incre_m: 0.03
+    max_incre_rad: 0.1
     max_incre_joint_rad: 0.0628
-    safe_zone: [-0.5, 0.7, -0.05, 0.9, 0.2, 0.8]
+    safe_zone: [-0.5, 0.7, -0.9, -0.2, 0.2, 0.8]
 
 # ur_rtde:
 #   robot_ip: "192.168.2.106"
@@ -36,54 +36,34 @@ ur_rtde:
 #     max_incre_joint_rad: 0.0628
 #     safe_zone: [-0.5, 0.7, -0.9, -0.2, 0.2, 0.8]
 
-coin_ft:
+coinft:
   port: "/dev/ttyACM0"
   baud_rate: 115200
-  calibration_file: "/home/yifanhou/git/hardware_interfaces/hardware/coinft/config/calMat_UFT6.csv"
-  num_sensors: 1
-  publish_rate: 360
+  left_calibration_file: "/shared_local/configs/coinft/UFT6_MLP_4L_scl_1_30.onnx"
+  right_calibration_file: "/shared_local/configs/coinft/UFT10_MLP_4L_scl_1_30.onnx"
   noise_level: 0.0
   stall_threshold: 100
-  Foffset: [1.88304, -15.861, 11.4758]
-  Toffset: [0.576757, 0.054351, -0.0933367]
-  Gravity: [-0.0512774, 0.0304736, -0.804662]
-  Pcom: [0.000241627, 0.000264568, 0.0835715]
-  WrenchSafety: [40.0, 40.0, 60.0, 3, 3, 3]
-  PoseSensorTool: [0.2, 0.005, 0.085, 0.5, -0.5, -0.5,  0.5]
+  Foffset: [0, 0, 0]
+  Toffset: [0, 0, 0]
+  Gravity: [0, 0, 0]
+  Pcom: [0, 0, 0]
+  WrenchSafety: [15.0, 15.0, 15.0, 1, 1, 1]
+  PoseSensorToolLeft: [0.2, -0.086, 0, 0.5, -0.5, -0.5,  0.5]
+  PoseSensorToolRight: [0.2, -0.086, 0, 0.5, -0.5, -0.5,  0.5]
 
-
-# admittance_controller:
-#   dt: 0.002
-#   log_to_file: false
-#   log_file_path: "/tmp/admittance_controller.log"
-#   compliance6d:
-#     stiffness: [30, 30, 30, 2, 2, 2]
-#     damping: [1.5, 1.5, 1.5, 0.1, 0.1, 0.1] # for data collection
-#     inertia: [0.1, 0.1, 0.1, 0.0005, 0.0005, 0.0005]
-#     stiction: [5, 5, 5, 0, 0, 0]
-#   max_spring_force_magnitude: 20
-#   max_spring_torque_magnitude: 2
-#   direct_force_control_gains:
-#     P_trans: 0.5
-#     I_trans: 0
-#     D_trans: 0
-#     P_rot: 0.5
-#     I_rot: 0
-#     D_rot: 0
-#   direct_force_control_I_limit: [0, 0, 0, 0, 0, 0]
 
 admittance_controller:
   dt: 0.002
   log_to_file: false
-  log_file_path: "/tmp/admittance_controller.log"
+  log_file_path: "/tmp/admittance0_controller.log"
   alert_overrun: false
   compliance6d:
-    stiffness: [0, 0, 0, 0, 0, 0]
-    damping: [5, 5, 5, 0.1, 0.1, 0.1]
-    inertia: [0.5, 0.5, 0.5, 0.001, 0.001, 0.001]
+    stiffness: [200, 200, 300, 2, 2, 2] 
+    damping: [3, 3, 3, 0.3, 0.3, 0.3]
+    inertia: [0.2, 0.2, 0.2, 0.001, 0.001, 0.001]
     stiction: [0, 0, 0, 0, 0, 0]
-  max_spring_force_magnitude: 20
-  max_spring_torque_magnitude: 2
+  max_spring_force_magnitude: 50
+  max_spring_torque_magnitude: 4
   direct_force_control_gains:
     P_trans: 0
     I_trans: 0
