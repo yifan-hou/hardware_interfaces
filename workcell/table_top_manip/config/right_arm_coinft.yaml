@@ -13,9 +13,9 @@ bimanual: false
 use_perturbation_generator: false
 
 run_robot_thread: true
-run_wrench_thread: false
+run_wrench_thread: true
 run_rgb_thread: true
-run_eoat_thread: false
+run_eoat_thread: true
 plot_rgb: false
 
 rgb_buffer_size: 11
@@ -50,36 +50,36 @@ ur_rtde0:
     safe_zone: [-0.5, 0.7, -0.9, -0.2, 0.2, 0.8]
 
 ati_netft0:
-    ip_address: "192.168.2.102"
-    counts_per_force: 1000000
-    counts_per_torque: 1000000
-    sensor_name: "netft0"
-    print_flag: false
-    fullpath: "/tmp/netft0_data.txt"
-    publish_rate: 7000
-    noise_level: 0.0
-    stall_threshold: 100
-    Foffset: [1.88304, -15.861, 11.4758]
-    Toffset: [0.576757, 0.054351, -0.0933367]
-    Gravity: [-0.0512774, 0.0304736, -0.804662]
-    Pcom: [0.000241627, 0.000264568, 0.0835715]
-    WrenchSafety: [40.0, 40.0, 60.0, 3, 3, 3]
-    PoseSensorTool: [0, 0, -0.079, -0.25882,  0,  0,  0.9659258]
+  ip_address: "192.168.2.102"
+  counts_per_force: 1000000
+  counts_per_torque: 1000000
+  sensor_name: "netft0"
+  print_flag: false
+  fullpath: "/tmp/netft0_data.txt"
+  publish_rate: 7000
+  noise_level: 0.0
+  stall_threshold: 100
+  Foffset: [1.88304, -15.861, 11.4758]
+  Toffset: [0.576757, 0.054351, -0.0933367]
+  Gravity: [-0.0512774, 0.0304736, -0.804662]
+  Pcom: [0.000241627, 0.000264568, 0.0835715]
+  WrenchSafety: [40.0, 40.0, 60.0, 3, 3, 3]
+  PoseSensorTool: [0, 0, -0.079, -0.25882,  0,  0,  0.9659258]
 
 coinft0:
-    port: "/dev/ttyACM0"
-    baud_rate: 115200
-    left_calibration_file: "/shared_local/configs/coinft/UFT9_MLP_4L_scl_1_30.onnx"
-    right_calibration_file: "/shared_local/configs/coinft/UFT10_MLP_4L_scl_1_30.onnx"
-    noise_level: 0.0
-    stall_threshold: 100
-    Foffset: [0, 0, 0]
-    Toffset: [0, 0, 0]
-    Gravity: [0, 0, 0]
-    Pcom: [0, 0, 0]
-    WrenchSafety: [15.0, 15.0, 15.0, 1, 1, 1]
-    PoseSensorToolLeft: [0.2, -0.086, 0, 0.5, -0.5, -0.5,  0.5]
-    PoseSensorToolRight: [0.2, -0.086, 0, 0.5, -0.5, -0.5,  0.5]
+  port: "/dev/ttyACM0"
+  baud_rate: 115200
+  left_calibration_file: "/shared_local/configs/coinft/UFT9_MLP_4L_scl_1_30.onnx"
+  right_calibration_file: "/shared_local/configs/coinft/UFT10_MLP_4L_scl_1_30.onnx"
+  noise_level: 0.0
+  stall_threshold: 100
+  Foffset: [0, 0, 0]
+  Toffset: [0, 0, 0]
+  Gravity: [0, 0, 0]
+  Pcom: [0, 0, 0]
+  WrenchSafety: [15.0, 15.0, 15.0, 1, 1, 1]
+  PoseSensorToolLeft: [0.2, -0.086, 0, 0.5, -0.5, -0.5,  0.5]
+  PoseSensorToolRight: [0.2, -0.086, 0, 0.5, -0.5, -0.5,  0.5]
 
 gopro0:
   device_name: "/dev/v4l/by-id/usb-Elgato_Elgato_HD60_X_A00XB320216MTR-video-index0"
