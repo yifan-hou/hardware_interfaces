@@ -32,6 +32,8 @@ enum class ForceSensingMode {
   FORCE_MODE_COINFT
 };
 
+enum class ComplianceControlForceSource { NONE, UR, ATI, ROBOTIQ, COINFT };
+
 enum class CameraSelection { NONE, GOPRO, REALSENSE, OAK };
 
 enum class RandomType {

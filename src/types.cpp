@@ -24,6 +24,15 @@ const std::vector<ForceSensingMode>& all_force_sensing_modes() {
   return modes;
 }
 
+const std::vector<ComplianceControlForceSource>&
+all_compliance_control_force_sources() {
+  static const std::vector<ComplianceControlForceSource> modes = {
+      ComplianceControlForceSource::NONE, ComplianceControlForceSource::UR,
+      ComplianceControlForceSource::ATI, ComplianceControlForceSource::ROBOTIQ,
+      ComplianceControlForceSource::COINFT};
+  return modes;
+}
+
 const std::vector<CameraSelection>& all_camera_selections() {
   static const std::vector<CameraSelection> modes = {
       CameraSelection::NONE, CameraSelection::GOPRO, CameraSelection::OAK,
@@ -81,6 +90,24 @@ const char* to_string(const ForceSensingMode e) {
       return "FORCE_MODE_COINFT";
     default:
       return "INVALID_FORCE_SENSING_MODE";
+  }
+}
+
+template <>
+const char* to_string(const ComplianceControlForceSource e) {
+  switch (e) {
+    case ComplianceControlForceSource::NONE:
+      return "NONE";
+    case ComplianceControlForceSource::UR:
+      return "UR";
+    case ComplianceControlForceSource::ATI:
+      return "ATI";
+    case ComplianceControlForceSource::ROBOTIQ:
+      return "ROBOTIQ";
+    case ComplianceControlForceSource::COINFT:
+      return "COINFT";
+    default:
+      return "INVALID_COMPLIANCE_CONTROL_FORCE_SOURCE";
   }
 }
 
@@ -147,6 +174,16 @@ ForceSensingMode string_to_enum(const std::string& string) {
   }
 
   return ForceSensingMode::NONE;
+}
+
+template <>
+ComplianceControlForceSource string_to_enum(const std::string& string) {
+  for (const auto& source : all_compliance_control_force_sources()) {
+    if (string == to_string(source)) {
+      return source;
+    }
+  }
+  return ComplianceControlForceSource::NONE;
 }
 
 template <>
