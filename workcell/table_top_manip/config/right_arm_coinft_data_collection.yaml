@@ -24,6 +24,7 @@ eoat_buffer_size: 20
 wrench_buffer_size: 360
 camera_selection: "GOPRO"
 force_sensing_mode: "FORCE_MODE_COINFT"
+compliance_control_force_source: "UR"
 low_damping: [2.0, 2.0, 2.0, 0.1, 0.1, 0.1]
 output_rgb_hw: [202, 270]
 wrench_filter_parameters: [5, 0.000143, 5] # cutoff frequency, sampling time, order
