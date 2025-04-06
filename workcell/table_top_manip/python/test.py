@@ -11,6 +11,7 @@ from time import sleep
 import cv2
 import copy
 import matplotlib.pyplot as plt
+from einops import rearrange
 
 from PyriteUtility.umi_utils.usb_util import reset_all_elgato_devices
 
@@ -19,7 +20,7 @@ print("[python] creating manip server")
 reset_all_elgato_devices()
 server = ms.ManipServer()
 if not server.initialize(
-    "/home/yifan/git/hardware_interfaces_internal/workcell/table_top_manip/config/right_arm_coinft.yaml"
+    "/home/yifanhou/git/hardware_interfaces_internal/workcell/table_top_manip/config/single_arm_evaluation.yaml"
 ):
     raise RuntimeError("Failed to initialize server")
 server.set_high_level_maintain_position()
@@ -50,6 +51,36 @@ log_pose_z = []
 log_pose_cmd_x = []
 log_pose_cmd_y = []
 log_pose_cmd_z = []
+
+
+fake_img = np.zeros((1080, 1080, 3), dtype=np.uint8)
+
+print("test plotting RGB. Press q to continue.")
+while True:
+    # rgb_row_combined = server.get_camera_rgb(1, 0)
+    # rgb = rearrange(
+    #     rgb_row_combined,
+    #     "(c h) (n w)->n h w c",
+    #     c=3,
+    #     n=1,
+    # )
+    # rgb = rgb[0]
+    # print("rgb shape:", rgb.shape)
+
+    # add random noise to fake image
+    fake_img[:, :, 0] = np.random.randint(0, 255, (1080, 1080), dtype=np.uint8)
+
+    # plot the rgb image
+    cv2.imshow("image", fake_img)
+    # bgr = cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)
+    # cv2.imshow("image", bgr)
+    key = cv2.waitKey(10)
+    if key == ord("q"):
+        break
+
+
+
+
 
 deltas = np.array([0.00, -0.00])
 for i in range(2):

@@ -7,7 +7,7 @@
 #    damping: low damping
 #    max_spring_force_magnitude: 15
 # always check the first few parameters:
-data_folder: "/shared_local/data/raw/stow_shallow_bin"
+data_folder: "/shared_local/data/raw/stow_shelf"
 mock_hardware: false
 bimanual: false
 use_perturbation_generator: false
@@ -95,7 +95,7 @@ admittance_controller0:
   alert_overrun: false
   compliance6d:
     stiffness: [200, 200, 300, 0.3, 0.3, 0.3] 
-    damping: [2.1, 2.1, 2.1, 0.2, 0.2, 0.2] # for data collection
+    damping: [2.1, 2.1, 2.1, 0.05, 0.05, 0.05] # for data collection
     inertia: [0.1, 0.1, 0.1, 0.001, 0.001, 0.001]
     stiction: [0, 0, 0, 0, 0, 0]
   max_spring_force_magnitude: 10
