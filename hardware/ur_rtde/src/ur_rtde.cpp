@@ -220,8 +220,11 @@ bool URRTDE::Implementation::checkCartesianTarget(
       return false;
     } else if (config.robot_interface_config.zone_safety_mode ==
                RobotSafetyMode::SAFETY_MODE_TRUNCATE) {
-      std::cerr << "[URRTDE][checkCartesianTarget] Zone safety check failed. "
-                   "Using truncated pose."
+      std::cerr << "[URRTDE][checkCartesianTarget] Zone safety check failed "
+                   "for pose. "
+                << pose_xyzq_set.transpose() << "\nTruncating to safe zone: "
+                << config.robot_interface_config.safe_zone.transpose()
+                << "\nTruncated pose: " << pose_xyzq_set_truncated.transpose()
                 << std::endl;
       pose_xyzq_set = pose_xyzq_set_truncated;
     }

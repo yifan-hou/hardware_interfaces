@@ -3,7 +3,15 @@
 #include <RobotUtilities/interpolation_controller.h>
 #include <opencv2/core/eigen.hpp>
 
+#include <fcntl.h>        // for key loop
+#include <linux/input.h>  // for key loop
+#include <stdlib.h>       // for key loop
+#include <unistd.h>       // for key loop
+
 #include "helpers.hpp"
+
+// Key code for 'a' (use 'a' lowercase)
+#define KEY_CODE_A 30
 
 void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
   std::string header =
@@ -91,6 +99,9 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       } else if (_config.compliance_control_force_source ==
                  ComplianceControlForceSource::COINFT) {
         wrench_fb = wrench_fb_sensor.head<6>() + wrench_fb_sensor.tail<6>();
+      } else if (_config.compliance_control_force_source ==
+                 ComplianceControlForceSource::ATI) {
+        wrench_fb = wrench_fb_sensor.head<6>();
       } else {
         std::cerr << header << "Invalid compliance control force source: "
                   << to_string(_config.compliance_control_force_source)
@@ -258,10 +269,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
     //           << ", pose_rdte_cmd: " << pose_rdte_cmd.transpose() << std::endl;
 
     // logging
-    _ctrl_mtx.lock();
-    if (_ctrl_flag_saving) {
-      _ctrl_mtx.unlock();
-
+    if (std::lock_guard<std::mutex> lock(_ctrl_mtx); _ctrl_flag_saving) {
       if (!ctrl_flag_saving) {
         std::cout << "[robot thread] Start saving low dim data." << std::endl;
         json_file_start(_ctrl_robot_data_streams[id]);
@@ -275,8 +283,6 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       json_frame_ending(_ctrl_robot_data_streams[id]);
       _states_robot_seq_id[id]++;
     } else {
-      _ctrl_mtx.unlock();
-
       if (ctrl_flag_saving) {
         std::cout << "[robot thread] Stop saving low dim data." << std::endl;
         // save one last frame, so we can do the correct different frame ending
@@ -295,14 +301,11 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
     loop_profiler.start();
 
     // loop control
-    {
-      std::lock_guard<std::mutex> lock(_ctrl_mtx);
-      if (!_ctrl_flag_running) {
-        std::cout << "[robot thread] _ctrl_flag_running is false. Shuting "
-                     "down this thread."
-                  << std::endl;
-        break;
-      }
+    if (std::lock_guard<std::mutex> lock(_ctrl_mtx); !_ctrl_flag_running) {
+      std::cout << "[robot thread] _ctrl_flag_running is false. Shuting "
+                   "down this thread."
+                << std::endl;
+      break;
     }
 
     loop_profiler.stop("lock");
@@ -434,10 +437,7 @@ void ManipServer::eoat_loop(const RUT::TimePoint& time0, int id) {
     //           << ", eoat_cmd: " << eoat_cmd.transpose() << std::endl;
 
     // logging
-    _ctrl_mtx.lock();
-    if (_ctrl_flag_saving) {
-      _ctrl_mtx.unlock();
-
+    if (std::lock_guard<std::mutex> lock(_ctrl_mtx); _ctrl_flag_saving) {
       if (!ctrl_flag_saving) {
         std::cout << header << "Start saving eoat data." << std::endl;
         json_file_start(_ctrl_eoat_data_streams[id]);
@@ -450,8 +450,6 @@ void ManipServer::eoat_loop(const RUT::TimePoint& time0, int id) {
       json_frame_ending(_ctrl_eoat_data_streams[id]);
       _states_eoat_seq_id[id]++;
     } else {
-      _ctrl_mtx.unlock();
-
       if (ctrl_flag_saving) {
         std::cout << header << "Stop saving eoat data." << std::endl;
         // save one last frame, so we can do the correct different frame ending
@@ -464,15 +462,12 @@ void ManipServer::eoat_loop(const RUT::TimePoint& time0, int id) {
       }
     }
 
-    {
-      std::lock_guard<std::mutex> lock(_ctrl_mtx);
-      if (!_ctrl_flag_running) {
-        std::cout << header
-                  << "_ctrl_flag_running is false. Shuting "
-                     "down this thread."
-                  << std::endl;
-        break;
-      }
+    if (std::lock_guard<std::mutex> lock(_ctrl_mtx); !_ctrl_flag_running) {
+      std::cout << header
+                << "_ctrl_flag_running is false. Shuting "
+                   "down this thread."
+                << std::endl;
+      break;
     }
 
     loop_timer.sleep_till_next();
@@ -616,10 +611,7 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
     }
 
     // logging
-    _ctrl_mtx.lock();
-    if (_ctrl_flag_saving) {
-      _ctrl_mtx.unlock();
-
+    if (std::lock_guard<std::mutex> lock(_ctrl_mtx); _ctrl_flag_saving) {
       if (!ctrl_flag_saving) {
         std::cout << "[wrench thread] Start saving wrench data." << std::endl;
         json_file_start(_ctrl_wrench_data_streams[id]);
@@ -633,8 +625,6 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
       json_frame_ending(_ctrl_wrench_data_streams[id]);
       _states_wrench_seq_id[id]++;
     } else {
-      _ctrl_mtx.unlock();
-
       if (ctrl_flag_saving) {
         std::cout << "[wrench thread] Stop saving wrench data." << std::endl;
         // save one last frame, so we can do the correct different frame ending
@@ -648,14 +638,11 @@ void ManipServer::wrench_loop(const RUT::TimePoint& time0, int publish_rate,
       }
     }
 
-    {
-      std::lock_guard<std::mutex> lock(_ctrl_mtx);
-      if (!_ctrl_flag_running) {
-        std::cout << "[wrench thread] _ctrl_flag_running is false. Shuting "
-                     "down this thread."
-                  << std::endl;
-        break;
-      }
+    if (std::lock_guard<std::mutex> lock(_ctrl_mtx); !_ctrl_flag_running) {
+      std::cout << "[wrench thread] _ctrl_flag_running is false. Shuting "
+                   "down this thread."
+                << std::endl;
+      break;
     }
     loop_timer.sleep_till_next();
   }  // end of while loop
@@ -728,15 +715,12 @@ void ManipServer::rgb_loop(const RUT::TimePoint& time0, int id) {
 
     // std::cout << "t = " << timer.toc_ms() << ", get new rgb frame."
     //           << std::endl;
-    {
-      std::lock_guard<std::mutex> lock(_ctrl_mtx);
-      if (!_ctrl_flag_running) {
-        std::cout << "[rgb thread] _ctrl_flag_running is false. Shuting "
-                     "down this thread."
-                  << std::endl;
+    if (std::lock_guard<std::mutex> lock(_ctrl_mtx); !_ctrl_flag_running) {
+      std::cout << "[rgb thread] _ctrl_flag_running is false. Shuting "
+                   "down this thread."
+                << std::endl;
 
-        break;
-      }
+      break;
     }
   }
   {
@@ -774,19 +758,127 @@ void ManipServer::rgb_plot_loop() {
 
     cv::imshow("RGB", canvas);
 
-    {
-      std::lock_guard<std::mutex> lock(_ctrl_mtx);
-      if (!_ctrl_flag_running) {
-        std::cout << header
-                  << "[rgb plot thread] _ctrl_flag_running is false. Shuting "
-                     "down this thread"
-                  << std::endl;
-        break;
-      }
+    if (std::lock_guard<std::mutex> lock(_ctrl_mtx); !_ctrl_flag_running) {
+      std::cout << header
+                << "[rgb plot thread] _ctrl_flag_running is false. Shuting "
+                   "down this thread"
+                << std::endl;
+      break;
     }
 
     if (cv::waitKey(30) >= 0)
       break;
   }
   std::cout << "[plot thread] Joined." << std::endl;
+}
+
+void ManipServer::key_loop(const RUT::TimePoint& time0) {
+  std::string header = "[ManipServer][key thread]: ";
+  std::cout << header << "starting thread." << std::endl;
+  RUT::Timer timer;
+  timer.tic(time0);
+
+  struct input_event ev;
+  int fd;
+
+  const char* device = _config.key_event_device.c_str();
+  std::cout << header << "Using device: " << device << std::endl;
+  fd = open(device, O_RDONLY | O_NONBLOCK);
+  if (fd == -1) {
+    std::cerr << header << "Cannot open input device: " << device << std::endl;
+    std::cerr << "Check your key_event_device parameter It should be something "
+                 "like /dev/input/eventxx."
+              << std::endl;
+    std::cerr << "You can find the correct device by running 'ls -l "
+                 "/dev/input/by-path/ | grep kbd'."
+              << std::endl;
+    std::cerr << "If you have permission issue, run 'sudo chmod 777 "
+                 "/dev/input/eventxx'."
+              << std::endl;
+    throw std::runtime_error("Cannot open input device. Exiting key loop.");
+  }
+
+  std::cout << header << "Monitoring 'a' key ...\n" << std::endl;
+
+  {
+    std::lock_guard<std::mutex> lock(_ctrl_mtx);
+    _state_key_thread_ready = true;
+  }
+
+  // Set frame rate to 500Hz
+  timer.set_loop_rate_hz(500);
+
+  timer.start_timed_loop();
+  std::cout << header << "Loop started." << std::endl;
+  bool ctrl_flag_saving = false;  // local copy
+  while (true) {
+    int key_event =
+        -1;  // -1: no event. 0: 'a' is not pressed. 1: 'a' is pressed
+    if (std::lock_guard<std::mutex> lock(_ctrl_key_mtx);
+        _ctrl_listen_key_event) {
+      // Process input events
+      while (read(fd, &ev, sizeof(ev)) > 0) {
+        // Check only key events (type 1) for the 'a' key (code 30)
+        if (ev.type == EV_KEY && ev.code == KEY_CODE_A) {
+          if (ev.value == 1) {
+            // Key down event
+            key_event = 1;
+            std::cout << "Key DOWN: 'a' - value = " << key_event << std::endl;
+          } else if (ev.value == 0) {
+            // Key up event
+            key_event = 0;
+            std::cout << "Key UP: 'a' - value = " << key_event << std::endl;
+          }
+          // save current state
+          {
+            std::lock_guard<std::mutex> lock(_key_mtx);
+            _key_is_pressed = key_event;
+          }
+        }
+      }
+    }
+    // logging
+    if (std::lock_guard<std::mutex> lock(_ctrl_mtx); _ctrl_flag_saving) {
+      if (!ctrl_flag_saving) {
+        std::cout << "[key thread] Start saving key pressing data."
+                  << std::endl;
+        json_file_start(_ctrl_key_data_stream);
+        ctrl_flag_saving = true;
+      }
+
+      _state_key_thread_saving = true;
+      if (key_event >= 0) {
+        // new key event!
+        save_key_data_json(_ctrl_key_data_stream, _state_key_seq_id,
+                           timer.toc_ms(), key_event);
+        json_frame_ending(_ctrl_key_data_stream);
+        _state_key_seq_id++;
+      }
+    } else {
+      if (ctrl_flag_saving) {
+        std::cout << "[key thread] Stop saving key data." << std::endl;
+        // save one last frame, so we can do the correct different frame ending
+        save_key_data_json(_ctrl_key_data_stream, _state_key_seq_id,
+                           timer.toc_ms(), key_event);
+        json_file_ending(_ctrl_key_data_stream);
+        _ctrl_key_data_stream.close();
+        ctrl_flag_saving = false;
+        _state_key_thread_saving = false;
+      }
+    }
+    // Check if the key event thread should stop
+    if (std::lock_guard<std::mutex> lock(_ctrl_mtx); !_ctrl_flag_running) {
+      std::cout << header
+                << "_ctrl_flag_running is false. Shuting "
+                   "down this thread"
+                << std::endl;
+      break;
+    }
+    timer.sleep_till_next();
+  }
+
+  // Close the input device
+  close(fd);
+
+  std::cout << header << "Joined." << std::endl;
 }

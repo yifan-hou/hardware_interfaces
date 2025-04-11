@@ -21,6 +21,7 @@ reset_all_elgato_devices()
 server = ms.ManipServer()
 if not server.initialize(
     "/home/yifanhou/git/hardware_interfaces_internal/workcell/table_top_manip/config/single_arm_evaluation.yaml"
+    # "/home/yifan/git/hardware_interfaces_internal/workcell/table_top_manip/config/right_arm_coinft.yaml"
 ):
     raise RuntimeError("Failed to initialize server")
 server.set_high_level_maintain_position()
@@ -54,7 +55,8 @@ log_pose_cmd_z = []
 
 
 input("Press Enter to start the test...")
-
+server.start_listening_key_events()
+server.start_saving_data_for_a_new_episode("")
 deltas = np.array([0.00, -0.00])
 for i in range(2):
     wrench = server.get_robot_wrench(1)
@@ -88,9 +90,12 @@ for i in range(2):
     log_pose_cmd_y.append(pose_cmd[1])
     log_pose_cmd_z.append(pose_cmd[2])
 
-    sleep(10)
+    sleep(5)
 
 sleep(0.5)
+server.stop_saving_data()
+server.stop_listening_key_events()
+
 server.join_threads()
 print("start drawing")
 

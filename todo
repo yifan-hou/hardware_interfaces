@@ -1,0 +1,22 @@
+[Done] new manipserver config
+    [Done] run_key_thread
+    [Done] key_event_device
+
+
+[Done] member variable: current key, and its mtx
+[Done] _state_key_thread_ready
+
+[Done] _key_thread
+
+[Done] member variable: key loop control
+[Done] TODO: implement the control function
+
+
+add to key loop:
+    saving related member variables
+    finish the saving loop
+
+
+add the correction label in robot loop
+
+test correction 

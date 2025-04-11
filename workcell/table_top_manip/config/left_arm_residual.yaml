@@ -16,6 +16,7 @@ run_robot_thread: true
 run_eoat_thread: false
 run_wrench_thread: true
 run_rgb_thread: true
+run_key_thread: false
 plot_rgb: false
 
 rgb_buffer_size: 11
@@ -29,6 +30,7 @@ low_damping: [2.0, 2.0, 2.0, 0.1, 0.1, 0.1]
 output_rgb_hw: [224, 224]
 wrench_filter_parameters: [5, 0.000143, 5] # cutoff frequency, sampling time, order
 check_robot_loop_overrun: false
+key_event_device: "/dev/input/event17"
 
 
 ur_rtde0:
@@ -57,16 +59,15 @@ ati_netft0:
   sensor_name: "netft0"
   print_flag: false
   fullpath: "/tmp/netft0_data.txt"
-  publish_rate: 7000
+  publish_rate: 500
   noise_level: 0.0
   stall_threshold: 100
-  Foffset: [12.8997, -11.2638, 9.94988]
-  Toffset: [0.217999, 0.0990484, -0.253111]
-  Gravity: [0.0421691, -0.0229882, -1.37641]
-  Pcom: [-0.000674891, -0.0304953, -0.00424491]
-  WrenchSafety: [40.0, 40.0, 60.0, 3, 3, 3]
-  # PoseSensorTool: [0, 0, -0.079, -0.25882,  0,  0,  0.9659258]
-  PoseSensorTool: [0.00, 0, -0.02, 0.5,  -0.5,  -0.5,  0.5]
+  Foffset: [13.7324, 10.6306, 9.2794]
+  Toffset: [-0.0679116, 0.0648527, -0.0906809]
+  Gravity: [-0.0191099, 0.0209755, -1.40742]
+  Pcom: [0.000768952, 0.00617584, 0.0839475]
+  WrenchSafety: [60.0, 60.0, 80.0, 4, 4, 4]
+  PoseSensorTool: [0.00, 0, -0.045, 0.7071, 0., 0., 0.7071] # new blade, assuming tcp is at 50mm
 
 gopro0:
   # device_name: "/dev/video1"

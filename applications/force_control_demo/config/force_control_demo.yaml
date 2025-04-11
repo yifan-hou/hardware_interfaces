@@ -1,22 +1,3 @@
-ur_rtde:
-  robot_ip: "192.168.2.106"
-  rtde_frequency: 500.0
-  rt_receive_priority: 90
-  rt_control_priority: 85
-  interface_priority: 80
-  linear_vel: 0.5
-  linear_acc: 0.5
-  servoL_lookahead_time: 0.1
-  servoL_gain: 600
-  robot_interface_config:
-    zone_safety_mode: "SAFETY_MODE_TRUNCATE"
-    incre_safety_mode: "SAFETY_MODE_STOP"
-    operation_mode: "OPERATION_MODE_CARTESIAN"
-    max_incre_m: 0.03
-    max_incre_rad: 0.1
-    max_incre_joint_rad: 0.0628
-    safe_zone: [-0.5, 0.7, -0.9, -0.2, 0.2, 0.8]
-
 # ur_rtde:
 #   robot_ip: "192.168.2.106"
 #   rtde_frequency: 500.0
@@ -32,9 +13,48 @@ ur_rtde:
 #     incre_safety_mode: "SAFETY_MODE_STOP"
 #     operation_mode: "OPERATION_MODE_CARTESIAN"
 #     max_incre_m: 0.03
-#     max_incre_rad: 0.2
+#     max_incre_rad: 0.1
 #     max_incre_joint_rad: 0.0628
 #     safe_zone: [-0.5, 0.7, -0.9, -0.2, 0.2, 0.8]
+
+ur_rtde:
+  robot_ip: "192.168.2.105"
+  rtde_frequency: 500.0
+  rt_receive_priority: 90
+  rt_control_priority: 85
+  interface_priority: 80
+  linear_vel: 0.5
+  linear_acc: 0.5
+  servoL_lookahead_time: 0.1
+  servoL_gain: 600
+  robot_interface_config:
+    zone_safety_mode: "SAFETY_MODE_TRUNCATE"
+    incre_safety_mode: "SAFETY_MODE_STOP"
+    operation_mode: "OPERATION_MODE_CARTESIAN"
+    max_incre_m: 0.03
+    max_incre_rad: 0.2
+    max_incre_joint_rad: 0.0628
+    safe_zone: [-0.5, 0.7, -0.05, 0.9, 0.2, 0.8]
+
+
+ati_netft:
+  ip_address: "192.168.2.101"
+  counts_per_force: 1000000
+  counts_per_torque: 1000000
+  sensor_name: "netft0"
+  print_flag: false
+  fullpath: "/tmp/netft0_data.txt"
+  publish_rate: 500
+  noise_level: 0.0
+  stall_threshold: 100
+  Foffset: [13.7324, 10.6306, 9.2794]
+  Toffset: [-0.0679116, 0.0648527, -0.0906809]
+  Gravity: [-0.0191099, 0.0209755, -1.40742]
+  Pcom: [0.000768952, 0.00617584, 0.0839475]
+  WrenchSafety: [60.0, 60.0, 80.0, 4, 4, 4]
+  PoseSensorTool: [0.00, 0, -0.045, 0.7071, 0., 0., 0.7071] # new blade, assuming tcp is at 50mm
+
+
 
 coinft:
   port: "/dev/ttyACM0"
