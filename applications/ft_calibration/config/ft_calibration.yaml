@@ -72,8 +72,7 @@ ati_netft:
     Gravity: [0.0, 0.0, 0.0]
     Pcom: [0.0, 0.0, 0.0]
     WrenchSafety: [80.0, 80.0, 100.0, 4, 4, 4]
-    PoseSensorTool: [0, 0, -0.079, -0.25882,  0,  0,  0.9659258]
-    # PoseSensorTool: [0.0, 0, -0.02, 0.5,  -0.5,  -0.5,  0.5]
+    PoseSensorTool: [0.00, 0, -0.045, 0.7071, 0., 0., 0.7071] # new blade, assuming tcp is at 50mm
 
 
 admittance_controller:

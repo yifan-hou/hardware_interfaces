@@ -121,7 +121,8 @@ int main() {
 
   // open file
   const std::string CONFIG_PATH =
-      "/home/yifanhou/git/hardware_interfaces/applications/ft_calibration/"
+      "/home/yifanhou/git/hardware_interfaces_internal/applications/"
+      "ft_calibration/"
       "config/ft_calibration.yaml";
   YAML::Node config{};
   try {

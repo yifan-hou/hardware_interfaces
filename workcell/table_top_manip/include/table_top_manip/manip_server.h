@@ -40,6 +40,7 @@ struct ManipServerConfig {
   bool run_eoat_thread{false};
   bool run_wrench_thread{false};
   bool run_rgb_thread{false};
+  bool run_key_thread{false};
   bool plot_rgb{false};
   int rgb_buffer_size{5};
   int robot_buffer_size{100};
@@ -57,6 +58,7 @@ struct ManipServerConfig {
   std::vector<double>
       wrench_filter_parameters{};  // cutoff frequency, sampling time, order
   bool check_robot_loop_overrun{false};
+  std::string key_event_device{"/dev/input/event0"};
 
   bool deserialize(const YAML::Node& node) {
     try {
@@ -65,6 +67,7 @@ struct ManipServerConfig {
       run_eoat_thread = node["run_eoat_thread"].as<bool>();
       run_wrench_thread = node["run_wrench_thread"].as<bool>();
       run_rgb_thread = node["run_rgb_thread"].as<bool>();
+      run_key_thread = node["run_key_thread"].as<bool>();
       plot_rgb = node["plot_rgb"].as<bool>();
       rgb_buffer_size = node["rgb_buffer_size"].as<int>();
       robot_buffer_size = node["robot_buffer_size"].as<int>();
@@ -88,6 +91,7 @@ struct ManipServerConfig {
       wrench_filter_parameters =
           node["wrench_filter_parameters"].as<std::vector<double>>();
       check_robot_loop_overrun = node["check_robot_loop_overrun"].as<bool>();
+      key_event_device = node["key_event_device"].as<std::string>();
 
     } catch (const std::exception& e) {
       std::cerr << "Failed to load the config file: " << e.what() << std::endl;
@@ -177,6 +181,9 @@ class ManipServer {
                           int robot_id = 0);
 
   void clear_cmd_buffer();
+
+  void start_listening_key_events();
+  void stop_listening_key_events();
 
   // data logging
 
@@ -282,7 +289,7 @@ class ManipServer {
   std::vector<std::thread> _wrench_threads;
   std::vector<std::thread> _rgb_threads;
   std::thread _rgb_plot_thread;
-  std::thread _data_saving_thread;
+  std::thread _key_thread;
 
   // control variables to control the threads
   std::string _episode_folder;
@@ -290,9 +297,12 @@ class ManipServer {
   std::vector<std::ofstream> _ctrl_robot_data_streams;
   std::vector<std::ofstream> _ctrl_eoat_data_streams;
   std::vector<std::ofstream> _ctrl_wrench_data_streams;
+  std::ofstream _ctrl_key_data_stream;
   bool _ctrl_flag_running = false;  // flag to terminate the program
   bool _ctrl_flag_saving = false;   // flag for ongoing data collection
   std::mutex _ctrl_mtx;
+  bool _ctrl_listen_key_event = false;  // flag to enable key event detection
+  std::mutex _ctrl_key_mtx;             // give it a separate mutex
 
   // state variable indicating the status of the threads
   std::vector<bool> _states_robot_thread_ready{};
@@ -300,17 +310,19 @@ class ManipServer {
   std::vector<bool> _states_rgb_thread_ready{};
   std::vector<bool> _states_wrench_thread_ready{};
   bool _state_plot_thread_ready{false};
-  bool _state_data_saving_thread_ready{false};
+  bool _state_key_thread_ready{false};
 
   std::vector<bool> _states_robot_thread_saving{};
   std::vector<bool> _states_eoat_thread_saving{};
   std::vector<bool> _states_rgb_thread_saving{};
   std::vector<bool> _states_wrench_thread_saving{};
+  bool _state_key_thread_saving{false};
 
   std::vector<int> _states_robot_seq_id{};
   std::vector<int> _states_eoat_seq_id{};
   std::vector<int> _states_rgb_seq_id{};
   std::vector<int> _states_wrench_seq_id{};
+  int _state_key_seq_id{0};
 
   // shared variables between camera thread and plot thread
   std::vector<cv::Mat> _color_mats;
@@ -326,9 +338,9 @@ class ManipServer {
   std::vector<Eigen::VectorXd> _wrench_fb;
   std::deque<std::mutex> _wrench_fb_mtxs;
 
-  // variables for data saving
-  std::string _current_episode_folder;
-  std::vector<std::ofstream> _data_streams;
+  // shared variables between key thread and other threads
+  std::mutex _key_mtx;
+  int _key_is_pressed{0};  // 0: not pressed, 1: pressed
 
   // loop functions
   void robot_loop(const RUT::TimePoint& time0, int robot_id);
@@ -337,4 +349,5 @@ class ManipServer {
   void wrench_loop(const RUT::TimePoint& time0, int publish_rate,
                    int sensor_id);
   void rgb_plot_loop();  // opencv plotting does not support multi-threading
+  void key_loop(const RUT::TimePoint& time0);
 };

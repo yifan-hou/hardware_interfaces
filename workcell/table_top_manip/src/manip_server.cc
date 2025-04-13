@@ -478,6 +478,9 @@ bool ManipServer::initialize(const std::string& config_path) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
     _rgb_plot_thread = std::thread(&ManipServer::rgb_plot_loop, this);
   }
+  if (_config.run_key_thread) {
+    _key_thread = std::thread(&ManipServer::key_loop, this, std::ref(time0));
+  }
 
   // wait for threads to be ready
   std::cout << "[ManipServer] Waiting for threads to be ready.\n";
@@ -503,6 +506,9 @@ bool ManipServer::initialize(const std::string& config_path) {
       }
       if (_config.plot_rgb) {
         all_ready = all_ready && _state_plot_thread_ready;
+      }
+      if (_config.run_key_thread) {
+        all_ready = all_ready && _state_key_thread_ready;
       }
     }
     if (all_ready) {
@@ -561,6 +567,10 @@ void ManipServer::join_threads() {
     std::cout << "[ManipServer]: Waiting for plotting thread to join."
               << std::endl;
     _rgb_plot_thread.join();
+  }
+  if (_config.run_key_thread) {
+    std::cout << "[ManipServer]: Waiting for key thread to join." << std::endl;
+    _key_thread.join();
   }
 
   std::cout << "[ManipServer]: Threads have joined. Exiting." << std::endl;
@@ -814,6 +824,20 @@ void ManipServer::clear_cmd_buffer() {
       _eoat_waypoints_buffers[id].clear();
       _eoat_waypoints_timestamp_ms_buffers[id].clear();
     }
+  }
+}
+
+void ManipServer::start_listening_key_events() {
+  if (_config.run_key_thread) {
+    std::lock_guard<std::mutex> lock(_ctrl_key_mtx);
+    _ctrl_listen_key_event = true;
+  }
+}
+
+void ManipServer::stop_listening_key_events() {
+  if (_config.run_key_thread) {
+    std::lock_guard<std::mutex> lock(_ctrl_key_mtx);
+    _ctrl_listen_key_event = false;
   }
 }
 
@@ -1117,9 +1141,10 @@ void ManipServer::start_saving_data_for_a_new_episode(
   std::vector<std::string> robot_json_file_names;
   std::vector<std::string> eoat_json_file_names;
   std::vector<std::string> wrench_json_file_names;
+  std::string key_json_file_name;
   _episode_folder = create_folder_for_new_episode(
       data_folder_to_use, _id_list, _ctrl_rgb_folders, robot_json_file_names,
-      eoat_json_file_names, wrench_json_file_names);
+      eoat_json_file_names, wrench_json_file_names, key_json_file_name);
   std::cout << "[main] New episode. rgb_folder_name: " << _ctrl_rgb_folders[0]
             << std::endl;
 
@@ -1129,6 +1154,7 @@ void ManipServer::start_saving_data_for_a_new_episode(
     _ctrl_eoat_data_streams[id].open(eoat_json_file_names[id]);
     _ctrl_wrench_data_streams[id].open(wrench_json_file_names[id]);
   }
+  _ctrl_key_data_stream.open(key_json_file_name);
 
   {
     std::lock_guard<std::mutex> lock(_ctrl_mtx);
@@ -1156,6 +1182,9 @@ bool ManipServer::is_saving_data() {
     if (_config.run_wrench_thread) {
       is_saving = is_saving || _states_wrench_thread_saving[id];
     }
+  }
+  if (_config.run_key_thread) {
+    is_saving = is_saving || _state_key_thread_saving;
   }
   return is_saving;
 }

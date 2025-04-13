@@ -3,8 +3,6 @@
 #include <Eigen/Dense>
 #include <filesystem>
 
-#include "helpers.hpp"
-
 namespace fs = std::filesystem;
 
 inline std::string makeFixedLength(const int i, const int length) {
@@ -20,9 +18,11 @@ inline std::string create_folder_for_new_episode(
     std::vector<std::string>& rgb_folders,
     std::vector<std::string>& robot_json_files,
     std::vector<std::string>& eoat_json_files,
-    std::vector<std::string>& wrench_json_files) {
-  std::cout << "[create_folder_for_new_episode] Creating folder for new episode"
-            << std::endl;
+    std::vector<std::string>& wrench_json_files,
+    std::string& key_json_file_name) {
+  std::cout
+      << "[create_folder_for_new_episode] Creating folder for new episode at "
+      << data_folder << std::endl;
   int timestamp = std::chrono::seconds(std::time(NULL)).count();
   const auto timestamp_string = std::to_string(timestamp);
   std::string episode_folder = data_folder + "/episode_" + timestamp_string;
@@ -60,6 +60,7 @@ inline std::string create_folder_for_new_episode(
     std::cout << "[create_folder_for_new_episode] generated wrench file: "
               << wrench_json_file << std::endl;
   }
+  key_json_file_name = episode_folder + "/key_data.json";
   return episode_folder;
 }
 
@@ -107,6 +108,17 @@ inline bool save_wrench_data_json(std::ostream& os, int seq_id,
   os << "\t\t\"wrench\": [" << wrench.format(good_looking_fmt) << "],\n";
   os << "\t\t\"wrench_filtered\": [" << wrench_filtered.format(good_looking_fmt)
      << "],\n";
+  return true;
+}
+
+inline bool save_key_data_json(std::ostream& os, int seq_id,
+                               double timestamp_ms, int key_event) {
+  os << "\t{\n";
+  os << "\t\t\"seq_id\": " << seq_id << ",\n";
+  os << "\t\t\"key_event_time_stamps\": " << std::fixed << std::setprecision(2)
+     << timestamp_ms << ",\n";
+  os << std::fixed << std::setprecision(7);
+  os << "\t\t\"key_event\": " << key_event << "\n";
   return true;
 }
 

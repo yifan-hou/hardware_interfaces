@@ -16,6 +16,7 @@ run_robot_thread: true
 run_eoat_thread: false
 run_wrench_thread: true
 run_rgb_thread: true
+run_key_thread: false
 plot_rgb: false
 
 rgb_buffer_size: 11
@@ -29,6 +30,7 @@ low_damping: [2.0, 2.0, 2.0, 0.1, 0.1, 0.1]
 output_rgb_hw: [224, 224]
 wrench_filter_parameters: [5, 0.000143, 5] # cutoff frequency, sampling time, order
 check_robot_loop_overrun: false
+key_event_device: "/dev/input/event17"
 
 ur_rtde0:
   robot_ip: "192.168.2.105"
