@@ -70,6 +70,7 @@ bool URRTDE::Implementation::initialize(
 
   std::cout << "[URRTDE] Creating receive interface at: "
             << config.rtde_frequency << " Hz\n";
+  int retry_count = 0;
   while (true) {
     try {
       rtde_receive_ptr = std::shared_ptr<ur_rtde::RTDEReceiveInterface>(
@@ -79,13 +80,19 @@ bool URRTDE::Implementation::initialize(
       std::cerr
           << "\033[1;31m[URRTDE] Failed to create receive interface: \033[0m\n";
       std::cerr << e.what() << std::endl;
-      std::cerr << "[URRTDE] Retrying in 1 second.\n";
+      retry_count++;
+      if (retry_count >= 10) {
+        std::cerr << "[URRTDE] Exiting.\n";
+        return false;
+      }
+      std::cerr << "[URRTDE] Retrying " << retry_count << "/10 in 1 second.\n";
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
   }
 
   std::cout << "[URRTDE] Creating control interface at: "
             << config.rtde_frequency << " Hz\n";
+  retry_count = 0;
   while (true) {
     try {
       rtde_control_ptr = std::shared_ptr<ur_rtde::RTDEControlInterface>(
@@ -95,7 +102,12 @@ bool URRTDE::Implementation::initialize(
       std::cerr
           << "\033[1;31m[URRTDE] Failed to create control interface: \033[0m\n";
       std::cerr << e.what() << std::endl;
-      std::cerr << "[URRTDE] Retrying in 1 second.\n";
+      retry_count++;
+      if (retry_count >= 10) {
+        std::cerr << "[URRTDE] Exiting.\n";
+        return false;
+      }
+      std::cerr << "[URRTDE] Retrying " << retry_count << "/10 in 1 second.\n";
       std::this_thread::sleep_for(std::chrono::seconds(1));
     }
   }

@@ -15,7 +15,7 @@ int main() {
   // You may need to change this path to match your keyboard's input device
   // Use 'ls -l /dev/input/by-path/ | grep kbd' to find the right keyboard device
   // Then sudo chmod 777 /dev/input/eventX to allow access
-  const char* device = "/dev/input/event17";  // Change this as needed
+  const char* device = "/dev/input/event20";  // Change this as needed
 
   struct input_event ev;
   int fd;
