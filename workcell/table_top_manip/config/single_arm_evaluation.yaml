@@ -25,13 +25,13 @@ eoat_buffer_size: 100
 wrench_buffer_size: 1000
 camera_selection: "OAK"
 force_sensing_mode: "FORCE_MODE_ATI"
-# compliance_control_force_source: "ATI"
 compliance_control_force_source: "UR"
 low_damping: [2.0, 2.0, 2.0, 0.05, 0.05, 0.05]
 output_rgb_hw: [224, 224]
 wrench_filter_parameters: [5, 0.002, 5] # cutoff frequency, sampling time, order
 check_robot_loop_overrun: false
-key_event_device: "/dev/input/event17"
+key_event_device: "/dev/input/event6"
+take_over_mode: True
 
 ur_rtde0:
   robot_ip: "192.168.2.105"

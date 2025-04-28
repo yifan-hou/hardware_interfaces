@@ -823,20 +823,44 @@ void ManipServer::key_loop(const RUT::TimePoint& time0) {
           if (ev.value == 1) {
             // Key down event
             key_event = 1;
-            std::cout << "Key DOWN: 'a' - value = " << key_event << std::endl;
+            // save current state
+            {
+              std::lock_guard<std::mutex> lock(_key_mtx);
+              _key_is_pressed = key_event;
+            }
+            _key_is_pressed_delayed = key_event;
+            std::cout << "\nKey DOWN: 'a' - value = " << key_event << std::endl;
           } else if (ev.value == 0) {
             // Key up event
             key_event = 0;
-            std::cout << "Key UP: 'a' - value = " << key_event << std::endl;
-          }
-          // save current state
-          {
-            std::lock_guard<std::mutex> lock(_key_mtx);
-            _key_is_pressed = key_event;
+            // save current state
+            {
+              std::lock_guard<std::mutex> lock(_key_mtx);
+              _key_is_pressed = key_event;
+            }
+            _last_key_released_time_ms = _key_delayed_timer.toc_ms();
+            std::cout << "\nKey UP: 'a' - value = " << key_event << std::endl;
           }
         }
       }
     }
+
+    if (_config.take_over_mode) {
+      if ((_key_is_pressed_delayed == 1) && (_key_is_pressed == 0) &&
+          (_key_delayed_timer.toc_ms() - _last_key_released_time_ms > 1000)) {
+        _key_is_pressed_delayed = 0;
+      }
+      if (key_event == 1) {
+        std::cout << "\n===== taking over =====" << std::endl;
+        clear_cmd_buffer();
+        set_high_level_free_jogging();
+      } else if (key_event == 0) {
+        std::cout << "\n===== releasing control =====" << std::endl;
+        clear_cmd_buffer();  // still need to clear the command buffer
+        set_high_level_maintain_position();
+      }
+    }
+
     // logging
     if (std::lock_guard<std::mutex> lock(_ctrl_mtx); _ctrl_flag_saving) {
       if (!ctrl_flag_saving) {

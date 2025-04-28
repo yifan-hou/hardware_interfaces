@@ -7,7 +7,7 @@
 #    damping: low damping
 #    max_spring_force_magnitude: 15
 # always check the first few parameters:
-data_folder: "/shared_local/data/raw/stow_new_blade"
+data_folder: "/shared_local/data/raw/stow_new_blade_dagger1"
 mock_hardware: false
 bimanual: false
 use_perturbation_generator: false

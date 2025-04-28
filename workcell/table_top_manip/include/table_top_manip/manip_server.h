@@ -59,6 +59,8 @@ struct ManipServerConfig {
       wrench_filter_parameters{};  // cutoff frequency, sampling time, order
   bool check_robot_loop_overrun{false};
   std::string key_event_device{"/dev/input/event0"};
+  bool take_over_mode{
+      false};  // let human to take over via kinethetic teaching when key is pressed
 
   bool deserialize(const YAML::Node& node) {
     try {
@@ -92,6 +94,10 @@ struct ManipServerConfig {
           node["wrench_filter_parameters"].as<std::vector<double>>();
       check_robot_loop_overrun = node["check_robot_loop_overrun"].as<bool>();
       key_event_device = node["key_event_device"].as<std::string>();
+      // optional parameters
+      if (node["take_over_mode"]) {
+        take_over_mode = node["take_over_mode"].as<bool>();
+      }
 
     } catch (const std::exception& e) {
       std::cerr << "Failed to load the config file: " << e.what() << std::endl;
@@ -340,7 +346,10 @@ class ManipServer {
 
   // shared variables between key thread and other threads
   std::mutex _key_mtx;
-  int _key_is_pressed{0};  // 0: not pressed, 1: pressed
+  int _key_is_pressed{0};          // 0: not pressed, 1: pressed
+  int _key_is_pressed_delayed{0};  // 0: not pressed, 1: pressed
+  RUT::Timer _key_delayed_timer;
+  double _last_key_released_time_ms{0};  // time when the key was released
 
   // loop functions
   void robot_loop(const RUT::TimePoint& time0, int robot_id);

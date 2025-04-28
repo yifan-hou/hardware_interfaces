@@ -450,6 +450,7 @@ bool ManipServer::initialize(const std::string& config_path) {
     _wrench_filtered_timestamps_ms.push_back(Eigen::VectorXd());
     _robot_wrench_timestamps_ms.push_back(Eigen::VectorXd());
   }
+  _key_delayed_timer.tic();
 
   // kickoff the threads
   _ctrl_flag_running = true;
@@ -854,6 +855,12 @@ void ManipServer::stop_listening_key_events() {
 void ManipServer::schedule_waypoints(const Eigen::MatrixXd& waypoints,
                                      const Eigen::VectorXd& timepoints_ms,
                                      int robot_id) {
+  if (_config.take_over_mode) {
+    std::lock_guard<std::mutex> lock(_key_mtx);
+    if (_key_is_pressed_delayed == 1)
+      return;
+  }
+
   double curr_time = _timer.toc_ms();
   // check the shape of inputs
   if (waypoints.rows() != 7) {
@@ -945,6 +952,12 @@ void ManipServer::schedule_waypoints(const Eigen::MatrixXd& waypoints,
 void ManipServer::schedule_eoat_waypoints(const Eigen::MatrixXd& eoat_waypoints,
                                           const Eigen::VectorXd& timepoints_ms,
                                           int robot_id) {
+  if (_config.take_over_mode) {
+    std::lock_guard<std::mutex> lock(_key_mtx);
+    if (_key_is_pressed_delayed == 1)
+      return;
+  }
+
   double curr_time = _timer.toc_ms();
   // check the shape of inputs
   if (eoat_waypoints.rows() != 2) {
@@ -1042,6 +1055,12 @@ void ManipServer::schedule_eoat_waypoints(const Eigen::MatrixXd& eoat_waypoints,
 void ManipServer::schedule_stiffness(const Eigen::MatrixXd& stiffnesses,
                                      const Eigen::VectorXd& timepoints_ms,
                                      int robot_id) {
+  if (_config.take_over_mode) {
+    std::lock_guard<std::mutex> lock(_key_mtx);
+    if (_key_is_pressed_delayed == 1)
+      return;
+  }
+
   double curr_time = _timer.toc_ms();
   // check the shape of inputs
   if (stiffnesses.rows() != 6) {
