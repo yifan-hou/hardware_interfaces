@@ -1,26 +1,7 @@
 use_ati: true
 
-# ur_rtde:
-#   robot_ip: "192.168.2.105"
-#   rtde_frequency: 500.0
-#   rt_receive_priority: 90
-#   rt_control_priority: 85
-#   interface_priority: 80
-#   linear_vel: 0.5
-#   linear_acc: 0.5
-#   servoL_lookahead_time: 0.1
-#   servoL_gain: 600
-#   robot_interface_config:
-#     zone_safety_mode: "SAFETY_MODE_TRUNCATE"
-#     incre_safety_mode: "SAFETY_MODE_STOP"
-#     operation_mode: "OPERATION_MODE_CARTESIAN"
-#     max_incre_m: 0.01
-#     max_incre_rad: 0.0628
-#     max_incre_joint_rad: 0.0628
-#     safe_zone: [-0.5, 0.7, -0.05, 0.9, 0.2, 0.8]
-
 ur_rtde:
-  robot_ip: "192.168.2.106"
+  robot_ip: "192.168.2.105"
   rtde_frequency: 500.0
   rt_receive_priority: 90
   rt_control_priority: 85
@@ -33,10 +14,29 @@ ur_rtde:
     zone_safety_mode: "SAFETY_MODE_TRUNCATE"
     incre_safety_mode: "SAFETY_MODE_STOP"
     operation_mode: "OPERATION_MODE_CARTESIAN"
-    max_incre_m: 0.02
+    max_incre_m: 0.01
     max_incre_rad: 0.0628
     max_incre_joint_rad: 0.0628
-    safe_zone: [-0.5, 0.7, -0.9, 0.05, 0.2, 0.8]
+    safe_zone: [-0.5, 0.7, -0.05, 0.9, 0.2, 0.8]
+
+# ur_rtde:
+#   robot_ip: "192.168.2.106"
+#   rtde_frequency: 500.0
+#   rt_receive_priority: 90
+#   rt_control_priority: 85
+#   interface_priority: 80
+#   linear_vel: 0.5
+#   linear_acc: 0.5
+#   servoL_lookahead_time: 0.1
+#   servoL_gain: 600
+#   robot_interface_config:
+#     zone_safety_mode: "SAFETY_MODE_TRUNCATE"
+#     incre_safety_mode: "SAFETY_MODE_STOP"
+#     operation_mode: "OPERATION_MODE_CARTESIAN"
+#     max_incre_m: 0.02
+#     max_incre_rad: 0.0628
+#     max_incre_joint_rad: 0.0628
+#     safe_zone: [-0.5, 0.7, -0.9, 0.05, 0.2, 0.8]
 
 robotiq_ft_modbus:
   sensor_name: "RobotiqFTModbus"
@@ -54,8 +54,8 @@ robotiq_ft_modbus:
 
 
 ati_netft:
-    # ip_address: "192.168.2.101"
-    ip_address: "192.168.2.102"
+    ip_address: "192.168.2.101"
+    # ip_address: "192.168.2.102"
     # counts per force and torque are found from 'configuration' tab in the ati web interface.
     counts_per_force: 1000000
     counts_per_torque: 1000000
@@ -72,7 +72,8 @@ ati_netft:
     Gravity: [0.0, 0.0, 0.0]
     Pcom: [0.0, 0.0, 0.0]
     WrenchSafety: [80.0, 80.0, 100.0, 4, 4, 4]
-    PoseSensorTool: [0.00, 0, -0.045, 0.7071, 0., 0., 0.7071] # new blade, assuming tcp is at 50mm
+    # PoseSensorTool: [0.00, 0, -0.045, 0.7071, 0., 0., 0.7071] # new blade, assuming tcp is at 50mm
+    PoseSensorTool: [0.00, 0, -0.005, 0.7071, 0., 0., 0.7071] # new blade, assuming tcp is at 50mm
 
 
 admittance_controller:
@@ -82,8 +83,10 @@ admittance_controller:
   alert_overrun: false
   compliance6d:
     stiffness: [1, 1, 1, 0.1, 0.1, 0.1] # [100, 100, 100, 1, 1, 1] 
-    damping: [1.6, 1.6, 1.6, 0.03, 0.03, 0.03]
-    inertia: [0.1, 0.1, 0.1, 0.001, 0.001, 0.001]
+    # damping: [1.6, 1.6, 1.6, 0.03, 0.03, 0.03]
+    damping: [4, 4, 4, 0.2, 0.2, 0.2]
+    # inertia: [0.1, 0.1, 0.1, 0.001, 0.001, 0.001]
+    inertia: [1, 1, 1, 0.02, 0.02, 0.02] # wsg
     stiction: [5, 5, 5, 0, 0, 0]
   max_spring_force_magnitude: 20
   max_spring_torque_magnitude: 2
