@@ -7,7 +7,7 @@
 #    damping: low damping
 #    max_spring_force_magnitude: 15
 # always check the first few parameters:
-data_folder: "/shared_local/data/raw/belt_assembly_v1"
+data_folder: "/shared_local/data/raw/belt_assembly_50"
 mock_hardware: false
 bimanual: false
 use_perturbation_generator: false
