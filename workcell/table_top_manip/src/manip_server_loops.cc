@@ -414,14 +414,25 @@ void ManipServer::eoat_loop(const RUT::TimePoint& time0, int id) {
       intp_controller.get_control(time_now_ms, eoat_cmd);
     }
 
+    // keyboard interuption of gripper control
+    {
+      std::lock_guard<std::mutex> lock(_key_mtx);
+      if (_key_is_pressed == 2) {
+        eoat_cmd[0] = 0;  // close the gripper
+      }
+      if (_key_is_pressed == 1) {
+        eoat_cmd[0] = 110;  // open the gripper
+      }
+    }
+
     // Send command to EoAT
     double force_fb = 0;
-    {
-      std::lock_guard<std::mutex> lock(_wrench_fb_mtxs[id]);
-      // TODO: currently, assuming the grasping force is captured by Z axis of the first wrench sensor.
-      // Need to find a better way to specify it.
-      force_fb = _wrench_fb[id][2];
-    }
+    // {
+    //   std::lock_guard<std::mutex> lock(_wrench_fb_mtxs[id]);
+    //   // TODO: currently, assuming the grasping force is captured by Z axis of the first wrench sensor.
+    //   // Need to find a better way to specify it.
+    //   force_fb = _wrench_fb[id][2];
+    // }
     eoat_cmd[1] -= force_fb;
     if ((!_config.mock_hardware) && (!eoat_ptrs[id]->setJointsPosForce(
                                         eoat_cmd.head(1), eoat_cmd.tail(1)))) {
@@ -813,40 +824,46 @@ void ManipServer::key_loop(const RUT::TimePoint& time0) {
   bool ctrl_flag_saving = false;  // local copy
   while (true) {
     int key_event =
-        -1;  // -1: no event. 0: 'a' is not pressed. 1: 'a' is pressed
+        -1;  // -1: no event. 0: key is not pressed. 1: key is pressed
     if (std::lock_guard<std::mutex> lock(_ctrl_key_mtx);
         _ctrl_listen_key_event) {
       // Process input events
       while (read(fd, &ev, sizeof(ev)) > 0) {
-        // Check only key events (type 1) for the 'a' key (code 30)
-        if (ev.type == EV_KEY && ev.code == KEY_CODE_A) {
-          if (ev.value == 1) {
-            // Key down event
-            key_event = 1;
-            // save current state
-            {
-              std::lock_guard<std::mutex> lock(_key_mtx);
-              _key_is_pressed = key_event;
+        if (ev.type != EV_KEY)
+          continue;  // Skip non-key events
+        for (int kid = 0; kid < _config.keys_to_monitor.size(); kid++) {
+          if (ev.code == _config.keys_to_monitor[kid]) {
+            if (ev.value == 1) {
+              // Key down event
+              key_event = 1;
+              // save current state
+              {
+                std::lock_guard<std::mutex> lock(_key_mtx);
+                _key_is_pressed = kid + 1;
+              }
+              _key_is_pressed_delayed = key_event;
+              std::cout << "\nKey DOWN detected for key # " << kid + 1
+                        << std::endl;
+            } else if (ev.value == 0) {
+              // Key up event
+              key_event = 0;
+              // save current state
+              {
+                std::lock_guard<std::mutex> lock(_key_mtx);
+                _key_is_pressed = key_event;
+              }
+              _last_key_released_time_ms = _key_delayed_timer.toc_ms();
+              std::cout << "\nKey UP detected for key # " << kid + 1
+                        << std::endl;
             }
-            _key_is_pressed_delayed = key_event;
-            std::cout << "\nKey DOWN: 'a' - value = " << key_event << std::endl;
-          } else if (ev.value == 0) {
-            // Key up event
-            key_event = 0;
-            // save current state
-            {
-              std::lock_guard<std::mutex> lock(_key_mtx);
-              _key_is_pressed = key_event;
-            }
-            _last_key_released_time_ms = _key_delayed_timer.toc_ms();
-            std::cout << "\nKey UP: 'a' - value = " << key_event << std::endl;
+            break;  // break when we detect a key to avoid getting values overwritten
           }
-        }
+        }  // end for kid
       }
     }
 
     if (_config.take_over_mode) {
-      if ((_key_is_pressed_delayed == 1) && (_key_is_pressed == 0) &&
+      if ((_key_is_pressed_delayed > 0) && (_key_is_pressed == 0) &&
           (_key_delayed_timer.toc_ms() - _last_key_released_time_ms > 1000)) {
         _key_is_pressed_delayed = 0;
       }

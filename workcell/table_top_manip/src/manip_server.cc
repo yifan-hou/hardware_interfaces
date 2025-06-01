@@ -857,7 +857,7 @@ void ManipServer::schedule_waypoints(const Eigen::MatrixXd& waypoints,
                                      int robot_id) {
   if (_config.take_over_mode) {
     std::lock_guard<std::mutex> lock(_key_mtx);
-    if (_key_is_pressed_delayed == 1)
+    if (_key_is_pressed_delayed > 0)
       return;
   }
 
@@ -954,7 +954,7 @@ void ManipServer::schedule_eoat_waypoints(const Eigen::MatrixXd& eoat_waypoints,
                                           int robot_id) {
   if (_config.take_over_mode) {
     std::lock_guard<std::mutex> lock(_key_mtx);
-    if (_key_is_pressed_delayed == 1)
+    if (_key_is_pressed_delayed > 0)
       return;
   }
 
@@ -1057,7 +1057,7 @@ void ManipServer::schedule_stiffness(const Eigen::MatrixXd& stiffnesses,
                                      int robot_id) {
   if (_config.take_over_mode) {
     std::lock_guard<std::mutex> lock(_key_mtx);
-    if (_key_is_pressed_delayed == 1)
+    if (_key_is_pressed_delayed > 0)
       return;
   }
 

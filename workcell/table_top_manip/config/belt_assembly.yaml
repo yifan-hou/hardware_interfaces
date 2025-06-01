@@ -31,6 +31,7 @@ output_rgb_hw: [224, 224]
 wrench_filter_parameters: [5, 0.002, 5] # cutoff frequency, sampling time, order
 check_robot_loop_overrun: false
 key_event_device: "/dev/input/event3"
+keys_to_monitor: [30, 31, 32] # [a, s, d]
 take_over_mode: False
 
 ur_rtde0:

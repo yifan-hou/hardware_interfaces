@@ -59,6 +59,7 @@ struct ManipServerConfig {
       wrench_filter_parameters{};  // cutoff frequency, sampling time, order
   bool check_robot_loop_overrun{false};
   std::string key_event_device{"/dev/input/event0"};
+  std::vector<int> keys_to_monitor{};
   bool take_over_mode{
       false};  // let human to take over via kinethetic teaching when key is pressed
 
@@ -93,8 +94,11 @@ struct ManipServerConfig {
       wrench_filter_parameters =
           node["wrench_filter_parameters"].as<std::vector<double>>();
       check_robot_loop_overrun = node["check_robot_loop_overrun"].as<bool>();
-      key_event_device = node["key_event_device"].as<std::string>();
       // optional parameters
+      if (node["key_event_device"]) {
+        key_event_device = node["key_event_device"].as<std::string>();
+        keys_to_monitor = node["keys_to_monitor"].as<std::vector<int>>();
+      }
       if (node["take_over_mode"]) {
         take_over_mode = node["take_over_mode"].as<bool>();
       }
@@ -346,8 +350,8 @@ class ManipServer {
 
   // shared variables between key thread and other threads
   std::mutex _key_mtx;
-  int _key_is_pressed{0};          // 0: not pressed, 1: pressed
-  int _key_is_pressed_delayed{0};  // 0: not pressed, 1: pressed
+  int _key_is_pressed{0};          // 0: not pressed, 1: first key is pressed
+  int _key_is_pressed_delayed{0};  // 0: not pressed, 1: first key is pressed
   RUT::Timer _key_delayed_timer;
   double _last_key_released_time_ms{0};  // time when the key was released
 
