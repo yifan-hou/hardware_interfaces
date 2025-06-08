@@ -1,4 +1,8 @@
 # hardware_interface
+
+**Note: Release versions**
+The previous release is in branch v1.0. If you come here from [Adaptive Compliance Policy](https://github.com/yifan-hou/adaptive_compliance_policy), please use branch v1.0 instead of main.
+
 The purpose of this package is to provide standard interface for robot hardwares. Controllers using those standard interfaces do not need to assume any particular robot hardware. For example, our [force_control](https://github.com/yifan-hou/force_control) package can be used with either an ABB robot or a UR robot.
 Currently supporting the following interfaces:
 * Position-controlled robot arm
