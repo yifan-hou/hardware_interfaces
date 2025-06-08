@@ -57,9 +57,9 @@ bool GoPro::Implementation::initialize(RUT::TimePoint time0,
                  "something like\n";
     std::cout << "      Bus 010 Device 005: ID 0fd9:008a Elgato Systems GmbH "
                  "Elgato HD60 X\n";
-    std::cout
-        << "    Then run 'sudo hardware_interfaces/build/robots/gopro/USBRESET "
-           "/dev/bus/usb/010/005'.\n";
+    std::cout << "    Then run 'sudo "
+                 "hardware_interfaces/build/hardware/gopro/USBRESET "
+                 "/dev/bus/usb/010/005'.\n";
     return false;
   }
 
