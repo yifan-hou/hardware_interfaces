@@ -7,7 +7,7 @@
 #    damping: low damping
 #    max_spring_force_magnitude: 15
 # always check the first few parameters:
-data_folder: "/shared_local/data/raw/belt_assembly_50"
+data_folder: "/shared_local/data/raw/belt_angled_150"
 mock_hardware: false
 bimanual: false
 use_perturbation_generator: false
@@ -48,7 +48,7 @@ ur_rtde0:
     max_incre_m: 0.03
     max_incre_rad: 0.2
     max_incre_joint_rad: 0.0628
-    safe_zone: [-0.5, 0.7, -0.25, 0.9, 0.2, 0.8]
+    safe_zone: [-0.5, 0.7, -0.25, 0.9, 0.1, 0.8]
 
 ati_netft0:
   ip_address: "192.168.2.101"
@@ -101,12 +101,12 @@ admittance_controller0:
   compliance6d:
     stiffness: [500, 500, 800, 0.8, 0.8, 0.3] 
     # stiffness: [200, 200, 300, 0.3, 0.3, 0.3] 
-    damping: [5.1, 5.1, 5.1, 0.15, 0.15, 0.15] # for data collection
-    inertia: [0.6, 0.6, 0.6, 0.02, 0.02, 0.02]
+    damping: [2.1, 2.1, 2.1, 0.1, 0.1, 0.1] # for data collection
+    inertia: [0.4, 0.4, 0.4, 0.01, 0.01, 0.01]
     # inertia: [0.1, 0.1, 0.1, 0.001, 0.001, 0.001]
     stiction: [0, 0, 0, 0, 0, 0]
   max_spring_force_magnitude: 10
-  max_spring_torque_magnitude: 1
+  max_spring_torque_magnitude: 0.7
   direct_force_control_gains:
     P_trans: 0
     I_trans: 0

@@ -16,7 +16,7 @@ run_robot_thread: true
 run_eoat_thread: false
 run_wrench_thread: true
 run_rgb_thread: true
-run_key_thread: true
+run_key_thread: false
 plot_rgb: true
 
 rgb_buffer_size: 11
@@ -51,7 +51,7 @@ ur_rtde0:
     max_incre_m: 0.03
     max_incre_rad: 0.2
     max_incre_joint_rad: 0.0628
-    safe_zone: [-0.5, 0.7, -0.05, 0.9, 0.2, 0.8]
+    safe_zone: [-0.5, 0.7, -0.05, 0.9, 0.1, 0.8]
 
 ati_netft0:
   ip_address: "192.168.2.101"
