@@ -17,12 +17,12 @@ target_link_libraries(ur_demo
   ${YAMLLib}
 )
 
-add_executable(coinft_demo src/demo_with_coinft.cc)
-target_link_libraries(coinft_demo
-  HI_COMMON
-  UR_RTDE
-  COIN_FT
-  ${RUT}
-  ${FORCE_CONTROLLERS}
-  ${YAMLLib}
-)
+# add_executable(coinft_demo src/demo_with_coinft.cc)
+# target_link_libraries(coinft_demo
+#   HI_COMMON
+#   UR_RTDE
+#   COIN_FT
+#   ${RUT}
+#   ${FORCE_CONTROLLERS}
+#   ${YAMLLib}
+# )

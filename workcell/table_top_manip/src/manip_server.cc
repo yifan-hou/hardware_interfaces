@@ -101,25 +101,27 @@ bool ManipServer::initialize(const std::string& config_path) {
                       << ". Exiting." << std::endl;
             return false;
           }
-        } else if (_config.camera_selection == CameraSelection::REALSENSE) {
-          Realsense::RealsenseConfig realsense_config;
-          try {
-            realsense_config.deserialize(
-                config["realsense" + std::to_string(id)]);
-          } catch (const std::exception& e) {
-            std::cerr << "Failed to load the Realsense config file: "
-                      << e.what() << std::endl;
-            return false;
-          }
-          camera_ptrs.emplace_back(new Realsense);
-          Realsense* realsense_ptr =
-              static_cast<Realsense*>(camera_ptrs[id].get());
-          if (!realsense_ptr->init(time0, realsense_config)) {
-            std::cerr << "Failed to initialize realsense for id " << id
-                      << ". Exiting." << std::endl;
-            return false;
-          }
-        } else if (_config.camera_selection == CameraSelection::OAK) {
+        } 
+        // else if (_config.camera_selection == CameraSelection::REALSENSE) {
+        //   Realsense::RealsenseConfig realsense_config;
+        //   try {
+        //     realsense_config.deserialize(
+        //         config["realsense" + std::to_string(id)]);
+        //   } catch (const std::exception& e) {
+        //     std::cerr << "Failed to load the Realsense config file: "
+        //               << e.what() << std::endl;
+        //     return false;
+        //   }
+        //   camera_ptrs.emplace_back(new Realsense);
+        //   Realsense* realsense_ptr =
+        //       static_cast<Realsense*>(camera_ptrs[id].get());
+        //   if (!realsense_ptr->init(time0, realsense_config)) {
+        //     std::cerr << "Failed to initialize realsense for id " << id
+        //               << ". Exiting." << std::endl;
+        //     return false;
+        //   }
+        // } 
+        else if (_config.camera_selection == CameraSelection::OAK) {
           OAK::OAKConfig oak_config;
           try {
             oak_config.deserialize(config["oak" + std::to_string(id)]);
@@ -182,28 +184,30 @@ bool ManipServer::initialize(const std::string& config_path) {
             return false;
           }
           wrench_publish_rate.push_back(robotiq_config.publish_rate);
-        } else if (_config.force_sensing_mode ==
-                   ForceSensingMode::FORCE_MODE_COINFT) {
-          CoinFT::CoinFTConfig coinft_config;
-          try {
-            coinft_config.deserialize(config["coinft" + std::to_string(id)]);
-          } catch (const std::exception& e) {
-            std::cerr << "Failed to load the CoinFT config file: " << e.what()
-                      << std::endl;
-            return false;
-          }
-          force_sensor_ptrs.emplace_back(new CoinFT);
-          CoinFT* coinft_ptr =
-              static_cast<CoinFT*>(force_sensor_ptrs[id].get());
-          if (!coinft_ptr->init(time0, coinft_config)) {
-            std::cerr << "Failed to initialize CoinFT for id " << id
-                      << ". Exiting." << std::endl;
-            return false;
-          }
-          // CoinFT is blocking and don't need a timed loop.
-          // so the loop rate in manipserver can be anything faster than 360hz
-          wrench_publish_rate.push_back(1000);
-        } else {
+        } 
+        // else if (_config.force_sensing_mode ==
+        //            ForceSensingMode::FORCE_MODE_COINFT) {
+        //   CoinFT::CoinFTConfig coinft_config;
+        //   try {
+        //     coinft_config.deserialize(config["coinft" + std::to_string(id)]);
+        //   } catch (const std::exception& e) {
+        //     std::cerr << "Failed to load the CoinFT config file: " << e.what()
+        //               << std::endl;
+        //     return false;
+        //   }
+        //   force_sensor_ptrs.emplace_back(new CoinFT);
+        //   CoinFT* coinft_ptr =
+        //       static_cast<CoinFT*>(force_sensor_ptrs[id].get());
+        //   if (!coinft_ptr->init(time0, coinft_config)) {
+        //     std::cerr << "Failed to initialize CoinFT for id " << id
+        //               << ". Exiting." << std::endl;
+        //     return false;
+        //   }
+        //   // CoinFT is blocking and don't need a timed loop.
+        //   // so the loop rate in manipserver can be anything faster than 360hz
+        //   wrench_publish_rate.push_back(1000);
+        // } 
+        else {
           std::cerr << "Invalid force sensing mode. Exiting." << std::endl;
           return false;
         }

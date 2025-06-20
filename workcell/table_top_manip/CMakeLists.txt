@@ -4,7 +4,7 @@ project(table_top_manip)
 
 find_package(Eigen3 REQUIRED)
 find_package(OpenCV REQUIRED)
-find_package(realsense2 REQUIRED )
+# find_package(realsense2 REQUIRED )
 find_package(Boost REQUIRED COMPONENTS
   system
   thread
@@ -23,7 +23,7 @@ include_directories(
 
 add_library(ManipServer SHARED src/manip_server.cc src/manip_server_loops.cc src/perturbation_generator.cc)
 target_link_libraries(ManipServer
-  REALSENSE
+  # REALSENSE
   ATI_NETFT
   GoPro
   OAK
@@ -31,11 +31,11 @@ target_link_libraries(ManipServer
   RQSensorLinux
   UR_RTDE
   WSG_GRIPPER
-  COIN_FT
+  # COIN_FT
   HI_COMMON
   ${RUT}
   ${FORCE_CONTROLLERS}
-  ${realsense2_LIBRARY}
+  # ${realsense2_LIBRARY}
   ${OpenCV_LIBS}
   ${YAMLLib}
 )

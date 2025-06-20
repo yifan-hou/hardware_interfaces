@@ -1,4 +1,4 @@
-find_package(realsense2 REQUIRED )
+# find_package(realsense2 REQUIRED )
 find_package(OpenCV REQUIRED)
 
 include_directories(

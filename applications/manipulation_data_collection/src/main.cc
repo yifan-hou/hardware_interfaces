@@ -30,7 +30,7 @@ void main_print(const std::string& msg) {
 int main() {
   // read config files
   const std::string config_path =
-      "/home/xuxm/hardware_interfaces_internal/workcell/"
+      "/home/zhanyi/hardware_interfaces/workcell/"
       "table_top_manip/"
       "config/single_arm_data_collection.yaml";
 
