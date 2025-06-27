@@ -10,6 +10,10 @@
 
 #include "helpers.hpp"
 
+#include <cmath>
+#include <vector>
+#include <opencv2/imgproc.hpp>
+
 // Key code for 'a' (use 'a' lowercase)
 #define KEY_CODE_A 30
 
@@ -678,33 +682,64 @@ void ManipServer::rgb_loop(const RUT::TimePoint& time0, int id) {
   }
   std::cout << header << "Loop started." << std::endl;
 
-  cv::Mat resized_color_mat;
-  cv::Mat bgr[3];  //destination array
+  cv::Mat raw, tmp, resized_color_mat;
+  cv::Mat bgr[3];
   Eigen::MatrixXd bm, gm, rm;
   Eigen::MatrixXd rgb_row_combined;
 
+  const int ow = _config.output_rgb_hw[1];  // 224
+  const int oh = _config.output_rgb_hw[0];  // 224
+  // const std::string debug_dir = "/home/zhanyi/hardware_interfaces/debug_images";
+
+  int frame_counter = 0;
   while (true) {
     double time_now_ms = 0;
     {
       std::lock_guard<std::mutex> lock(_color_mat_mtxs[id]);
       if (!_config.mock_hardware) {
-        _color_mats[id] = camera_ptrs[id]->next_rgb_frame_blocking();
+        raw = camera_ptrs[id]->next_rgb_frame_blocking();  // **already RGB**
       } else {
-        // mock hardware
-        _color_mats[id] = cv::Mat::zeros(224, 224, CV_8UC3);
+        raw = cv::Mat::zeros(oh, ow, CV_8UC3);
         usleep(20 * 1000);  // 20ms, 50hz
       }
-      time_now_ms = timer.toc_ms();
-      cv::resize(_color_mats[id], resized_color_mat,
-                 cv::Size(_config.output_rgb_hw[1], _config.output_rgb_hw[0]),
-                 cv::INTER_LINEAR);
-      cv::split(resized_color_mat, bgr);  //split source
+      _color_mats[id] = raw;
+      time_now_ms     = timer.toc_ms();
     }
 
+    // === resize → center‐crop ===
+    int iw = raw.cols, ih = raw.rows;
+    int rw, rh;
+    int interp = cv::INTER_AREA;
+    if (float(iw)/ih >= float(ow)/oh) {
+      rh = oh;
+      rw = int(std::ceil(float(rh)/ih * iw));
+      if (oh > ih) interp = cv::INTER_LINEAR;
+    } else {
+      rw = ow;
+      rh = int(std::ceil(float(rw)/iw * ih));
+      if (ow > iw) interp = cv::INTER_LINEAR;
+    }
+    cv::resize(raw, tmp, cv::Size(rw, rh), 0.0, 0.0, interp);
+    int x0 = (rw - ow)/2, y0 = (rh - oh)/2;
+    resized_color_mat = tmp(cv::Rect(x0, y0, ow, oh)).clone();
+
+    // // === DEBUG save first 20 frames ===
+    // if (frame_counter < 20) {
+    //   std::ostringstream oss;
+    //   oss << debug_dir
+    //       << "/rgb_" << id << "_"
+    //       << std::setw(5) << std::setfill('0')
+    //       << frame_counter << ".png";
+    //   cv::imwrite(oss.str(), resized_color_mat);
+    // }
+    // ++frame_counter;
+
+    // === pipeline into Eigen buffer (unchanged) ===
+    cv::split(resized_color_mat, bgr);
     cv::cv2eigen(bgr[0], bm);
     cv::cv2eigen(bgr[1], gm);
     cv::cv2eigen(bgr[2], rm);
-    rgb_row_combined.resize(resized_color_mat.rows * 3, resized_color_mat.cols);
+    rgb_row_combined.resize(oh * 3, ow);
     rgb_row_combined << rm, gm, bm;
     {
       std::lock_guard<std::mutex> lock(_camera_rgb_buffer_mtxs[id]);
