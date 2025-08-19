@@ -208,6 +208,9 @@ class ManipServer {
   bool is_saving_data();
   std::string get_episode_folder() const;
 
+  // debugging
+  void displayForceControlInternalStates() const;
+
  private:
   // config
   ManipServerConfig _config;

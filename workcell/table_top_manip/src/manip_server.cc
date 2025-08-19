@@ -1229,3 +1229,10 @@ bool ManipServer::is_saving_data() {
 std::string ManipServer::get_episode_folder() const {
   return _episode_folder;
 }
+
+void ManipServer::displayForceControlInternalStates() const {
+  std::cout << "[ManipServer] Displaying Force Control Internal States:" << std::endl;
+  for (const auto& controller : _controllers) {
+    controller.displayStates();
+  }
+}

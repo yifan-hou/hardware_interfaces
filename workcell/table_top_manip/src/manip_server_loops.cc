@@ -29,6 +29,7 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
   RUT::Vector7d pose_target_waypoint;
   RUT::Vector6d vel_fb;
   RUT::Vector7d force_control_ref_pose;
+  RUT::Vector6d force_control_ref_vel, force_control_ref_acc;
   RUT::Vector7d pose_rdte_cmd;
   // The following two initial values are used in mock hardware mode
   pose_fb << id, 0, 0, 1, 0, 0, 0;
@@ -54,6 +55,8 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
 
   force_control_ref_pose = pose_fb;
   wrench_WTr.setZero();
+  force_control_ref_vel.setZero();
+  force_control_ref_acc.setZero();
 
   bool ctrl_flag_saving = false;  // local copy
 
@@ -149,7 +152,8 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
     loop_profiler.start();
 
     // update control target from interpolation controller
-    if (!intp_controller.get_control(time_now_ms, force_control_ref_pose)) {
+    if (!intp_controller.get_control(time_now_ms, force_control_ref_pose,
+                                     force_control_ref_vel)) {
       bool new_wp_found = false;
       {
         // need to get new waypoint from buffer
@@ -179,8 +183,13 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
         //           << pose_target_waypoint.transpose() << std::endl;
         intp_controller.keep_the_last_target(time_now_ms);
       }
-      intp_controller.get_control(time_now_ms, force_control_ref_pose);
+      intp_controller.get_control(time_now_ms, force_control_ref_pose,
+                                  force_control_ref_vel);
     }
+
+    // force_control_ref_vel *= 0.; // debug: disable vel tracking
+    force_control_ref_vel *= 1000.0;  // time is ms, so vel need to be scaled up
+    force_control_ref_vel *= 40;      // hack: roughly 2.5/0.0628
 
     loop_profiler.stop("intp_controller");
     loop_profiler.start();
@@ -236,7 +245,9 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
       loop_profiler.start();
       _controllers[id].setRobotStatus(pose_fb, wrench_fb);
       // Update robot reference
-      _controllers[id].setRobotReference(force_control_ref_pose, wrench_WTr);
+      _controllers[id].setRobotTrackingReference(
+          force_control_ref_pose, force_control_ref_vel, force_control_ref_acc,
+          wrench_WTr);
 
       // Update stiffness matrix
       if (new_stiffness_found) {

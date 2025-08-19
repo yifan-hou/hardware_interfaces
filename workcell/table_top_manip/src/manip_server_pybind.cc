@@ -67,7 +67,8 @@ PYBIND11_MODULE(manip_server_pybind, m)
         .def("stop_listening_key_events", &ManipServer::stop_listening_key_events)
         .def("start_saving_data_for_a_new_episode", &ManipServer::start_saving_data_for_a_new_episode)
         .def("stop_saving_data", &ManipServer::stop_saving_data)
-        .def("get_episode_folder", &ManipServer::get_episode_folder);
+        .def("get_episode_folder", &ManipServer::get_episode_folder)
+        .def("displayForceControlInternalStates", &ManipServer::displayForceControlInternalStates);
 
 }
 // clang-format on
