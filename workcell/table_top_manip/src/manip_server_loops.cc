@@ -191,6 +191,21 @@ void ManipServer::robot_loop(const RUT::TimePoint& time0, int id) {
     force_control_ref_vel *= 1000.0;  // time is ms, so vel need to be scaled up
     force_control_ref_vel *= 40;      // hack: roughly 2.5/0.0628
 
+    // limit vel ref
+    double trans_vel_limit = 10.0;
+    double rot_vel_limit = 10.0;
+    for (int i = 0; i < 3; i++) {
+      if (force_control_ref_vel[i] > trans_vel_limit)
+        force_control_ref_vel[i] = trans_vel_limit;
+      if (force_control_ref_vel[i] < -trans_vel_limit)
+        force_control_ref_vel[i] = -trans_vel_limit;
+
+      if (force_control_ref_vel[i + 3] > rot_vel_limit)
+        force_control_ref_vel[i + 3] = rot_vel_limit;
+      if (force_control_ref_vel[i + 3] < -rot_vel_limit)
+        force_control_ref_vel[i + 3] = -rot_vel_limit;
+    }
+
     loop_profiler.stop("intp_controller");
     loop_profiler.start();
 
